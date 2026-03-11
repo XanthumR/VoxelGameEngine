@@ -133,6 +133,7 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="default.comp" />
     <None Include="default.frag" />
     <None Include="default.vert" />
   </ItemGroup>
