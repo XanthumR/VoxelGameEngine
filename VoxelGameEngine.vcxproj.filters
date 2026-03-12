@@ -24,6 +24,9 @@
     <ClCompile Include="glad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rayCast.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="default.vert">
@@ -41,6 +44,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FastNoiseLite.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rayCast.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

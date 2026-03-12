@@ -8,6 +8,7 @@
 #include <string>
 #include <cmath>
 #include "FastNoiseLite.h"
+#include "rayCast.h"
 
 // --- Helper Math Includes (GLM) ---
 #include <glm/glm.hpp>
@@ -70,7 +71,41 @@ char* shaderLoader(const char* file) {
     return buffer;
 }
 
+void checkMouseInput(GLFWwindow* window, std::vector<GLubyte>& voxelData, GLuint voxelTex){
 
+    // Inside main loop:
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        RayHit hit = raycast(cameraPos, cameraFront, 1.1f,VOXEL_WIDTH,VOXEL_HEIGHT,VOXEL_DEPTH,voxelData); // 0.1 is reach distance in world units
+        if (hit.hit) {
+            size_t idx = ((size_t)hit.mapPos.z * VOXEL_WIDTH * VOXEL_HEIGHT) + ((size_t)hit.mapPos.y * VOXEL_WIDTH) + hit.mapPos.x;
+            voxelData[idx] = 0; // Remove block in CPU data
+
+            // Update GPU texture (1x1x1 pixel)
+            GLubyte val = 0;
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_3D, voxelTex);
+            glTexSubImage3D(GL_TEXTURE_3D, 0, hit.mapPos.x, hit.mapPos.y, hit.mapPos.z, 1, 1, 1, GL_RED, GL_UNSIGNED_BYTE, &val);
+        }
+    }
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+        RayHit hit = raycast(cameraPos, cameraFront, 1.1f, VOXEL_WIDTH, VOXEL_HEIGHT, VOXEL_DEPTH, voxelData);
+        if (hit.hit) {
+            glm::ivec3 placePos = hit.mapPos + hit.normal; // Offset by normal to place NEXT to the block
+
+            // Bounds check
+            if (placePos.x >= 0 && placePos.x < VOXEL_WIDTH) {
+                size_t idx = ((size_t)placePos.z * VOXEL_WIDTH * VOXEL_HEIGHT) + ((size_t)placePos.y * VOXEL_WIDTH) + placePos.x;
+                voxelData[idx] = 3; // Place Stone
+
+                GLubyte val = 3;
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_3D, voxelTex);
+                glTexSubImage3D(GL_TEXTURE_3D, 0, placePos.x, placePos.y, placePos.z, 1, 1, 1, GL_RED, GL_UNSIGNED_BYTE, &val);
+            }
+        }
+    }
+}
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     float xpos = static_cast<float>(xposIn);
@@ -164,7 +199,7 @@ int main() {
         return -1;
     }
     glfwMakeContextCurrent(window);
-
+    glfwSwapInterval(1);
     // --- Input Setup ---
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -247,7 +282,7 @@ int main() {
     glShaderSource(computeShader, 1, &computeShaderSource, NULL);
     glCompileShader(computeShader);
     checkShaderErrors(computeShader, "COMPUTE");
-
+    free(computeShaderSource);
     GLuint computeProgram = glCreateProgram();
     glAttachShader(computeProgram, computeShader);
     glLinkProgram(computeProgram);
@@ -261,15 +296,26 @@ int main() {
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
     glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex, 0);
-
+    bool leftMouseWasPressed = false;
+    bool rightMouseWasPressed = false;
     while (!glfwWindowShouldClose(window)) {
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
         // Process Input
-        processInput(window, deltaTime);
-
+        processInput(window, deltaTime);   
+        bool leftMouseIsPressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+        bool rightMouseIsPressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+        if (leftMouseIsPressed && !leftMouseWasPressed) {
+            checkMouseInput(window, voxelData, voxelTex);
+        }
+        if (rightMouseIsPressed && !rightMouseWasPressed)
+        {
+            checkMouseInput(window, voxelData, voxelTex);
+        }
+        leftMouseWasPressed = leftMouseIsPressed;
+        rightMouseWasPressed = rightMouseIsPressed;
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glm::mat4 proj = glm::perspective(glm::radians(60.0f), (float)WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
 

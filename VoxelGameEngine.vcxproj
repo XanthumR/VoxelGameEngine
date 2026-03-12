@@ -131,6 +131,7 @@
   <ItemGroup>
     <ClCompile Include="glad.c" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="rayCast.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="default.comp" />
@@ -140,6 +141,7 @@
   <ItemGroup>
     <ClInclude Include="FastNoiseLite.h" />
     <ClInclude Include="linmath.h" />
+    <ClInclude Include="rayCast.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
