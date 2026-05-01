@@ -1,7 +1,7 @@
 #include "rayCast.h"
 
 
-RayHit raycast(glm::vec3 origin, glm::vec3 dir, float maxDist, int VOXEL_WIDTH, int VOXEL_HEIGHT, int VOXEL_DEPTH,std::vector<GLubyte>& voxelData) {
+RayHit raycast(glm::vec3 origin, glm::vec3 dir, float maxDist, int VOXEL_WIDTH, int VOXEL_HEIGHT, int VOXEL_DEPTH, std::vector<GLubyte>& voxelData) {
     // Transform origin to grid space (0.0 to dimX)
     glm::vec3 rayPos = origin * (float)VOXEL_WIDTH;
     glm::ivec3 mapPos = glm::floor(rayPos);

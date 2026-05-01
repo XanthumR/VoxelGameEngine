@@ -103,6 +103,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Gaming\Documents\Libraries\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -120,6 +121,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Gaming\Documents\Libraries\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,16 +134,22 @@
     <ClCompile Include="glad.c" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="rayCast.cpp" />
+    <ClCompile Include="voxelUpdate.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="anim.comp" />
     <None Include="default.comp" />
     <None Include="default.frag" />
     <None Include="default.vert" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="chunk.h" />
     <ClInclude Include="FastNoiseLite.h" />
+    <ClInclude Include="animation.hpp" />
     <ClInclude Include="linmath.h" />
+    <ClInclude Include="modelLoader.hpp" />
     <ClInclude Include="rayCast.h" />
+    <ClInclude Include="voxelUpdate.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -27,6 +27,9 @@
     <ClCompile Include="rayCast.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="voxelUpdate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="default.vert">
@@ -38,6 +41,9 @@
     <None Include="default.comp">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="anim.comp">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="linmath.h">
@@ -47,6 +53,18 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="rayCast.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="chunk.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="voxelUpdate.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="animation.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modelLoader.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

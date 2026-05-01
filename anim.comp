@@ -1,0 +1,72 @@
+#version 440 core
+layout(local_size_x = 64) in;
+
+layout(r8, binding = 1) uniform image3D voxelMap;
+
+struct Plant {
+    ivec4 posAndFrame; 
+    vec4 timeData;     
+};
+
+layout(std430, binding = 3) buffer PlantBuffer {
+    Plant plants[];
+};
+
+uniform float time;
+uniform int numPlants;
+
+const ivec3 frames[48] = ivec3[](
+    // Frame 0: Center (No sway)
+    ivec3(0,0,0), ivec3(0,1,0), ivec3(1,0,1), ivec3(-1,0,1), ivec3(1,0,-1), ivec3(-1,0,-1),
+    
+    // Frame 1: Slight Right (+X)
+    ivec3(0,0,0), ivec3(1,1,0), ivec3(2,0,1), ivec3(0,0,1), ivec3(2,0,-1), ivec3(0,0,-1),
+    
+    // Frame 2: Heavy Right (++X)
+    ivec3(0,0,0), ivec3(2,1,0), ivec3(3,0,1), ivec3(1,0,1), ivec3(3,0,-1), ivec3(1,0,-1),
+    
+    // Frame 3: Slight Right (+X)
+    ivec3(0,0,0), ivec3(1,1,0), ivec3(2,0,1), ivec3(0,0,1), ivec3(2,0,-1), ivec3(0,0,-1),
+    
+    // Frame 4: Center (No sway)
+    ivec3(0,0,0), ivec3(0,1,0), ivec3(1,0,1), ivec3(-1,0,1), ivec3(1,0,-1), ivec3(-1,0,-1),
+    
+    // Frame 5: Slight Left (-X)
+    ivec3(0,0,0), ivec3(-1,1,0), ivec3(0,0,1), ivec3(-2,0,1), ivec3(0,0,-1), ivec3(-2,0,-1),
+    
+    // Frame 6: Heavy Left (--X)
+    ivec3(0,0,0), ivec3(-2,1,0), ivec3(-1,0,1), ivec3(-3,0,1), ivec3(-1,0,-1), ivec3(-3,0,-1),
+    
+    // Frame 7: Slight Left (-X)
+    ivec3(0,0,0), ivec3(-1,1,0), ivec3(0,0,1), ivec3(-2,0,1), ivec3(0,0,-1), ivec3(-2,0,-1)
+);
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= numPlants) return; 
+
+    ivec3 root = plants[idx].posAndFrame.xyz;
+    int lastFrame = plants[idx].posAndFrame.w;
+    float timeOffset = plants[idx].timeData.x;
+
+    // Calculate current frame (4 FPS)
+    int newFrame = int((time + timeOffset) * 4.0) % 8;
+
+    if (newFrame != lastFrame) {
+        
+        // 1. ERASE the old blocks blindly (No imageLoad needed!)
+        for(int i = 0; i < 6; i++) {
+            ivec3 erasePos = root + frames[(lastFrame * 3) + i];
+            imageStore(voxelMap, erasePos, vec4(0.0)); // Air
+        }
+
+        // 2. DRAW the new blocks (5.5 prevents floating point round-down bugs)
+        for(int i = 0; i < 6; i++) {
+            ivec3 drawPos = root + frames[(newFrame * 3) + i];
+            imageStore(voxelMap, drawPos, vec4(5.0 / 255.0, 0.1, 0.1, 0.1)); // Grass
+        }
+
+        // 3. Save state
+        plants[idx].posAndFrame.w = newFrame;
+    }
+}
