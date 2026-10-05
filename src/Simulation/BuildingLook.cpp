@@ -42,40 +42,67 @@ void BuildLook(const BuildingType& type, uint8_t rotation, std::vector<uint8_t>&
         ids[(size_t)x + (size_t)size.x * ((size_t)z + (size_t)size.y * (size_t)y)] = id;
     };
 
-    // Walls: the footprint inset by one column (the eaves overhang that ring), wooden corner posts
     const int u0 = 1, u1 = width - 2, v0 = 1, v1 = depth - 2;
-    for (int y = 0; y < type.wallHeight; y++) {
-        for (int u = u0; u <= u1; u++) {
-            set(u, v0, y, type.wallBlock);
-            set(u, v1, y, type.wallBlock);
-        }
-        for (int v = v0; v <= v1; v++) {
-            set(u0, v, y, type.wallBlock);
-            set(u1, v, y, type.wallBlock);
-        }
-        set(u0, v0, y, Block::WOOD);
-        set(u1, v0, y, Block::WOOD);
-        set(u0, v1, y, Block::WOOD);
-        set(u1, v1, y, Block::WOOD);
-    }
 
-    // Gable ends: wall up to the underside of the roof
-    for (int v = v0 + 1; v < v1; v++) {
-        for (int y = type.wallHeight; y < RoofY(type, v) - 1; y++) {
-            set(u0, v, y, type.wallBlock);
-            set(u1, v, y, type.wallBlock);
+    if (type.style == LookStyle::Stall) {
+        // Market stall: corner posts holding the awning, a waist-high counter round the sides with
+        // an opening in the middle of the front, crates inside
+        for (int y = 0; y < type.wallHeight; y++) {
+            set(u0, v0, y, Block::WOOD);
+            set(u1, v0, y, Block::WOOD);
+            set(u0, v1, y, Block::WOOD);
+            set(u1, v1, y, Block::WOOD);
         }
-    }
+        for (int u = u0 + 1; u < u1; u++) {
+            if (u < width / 2 - 2 || u > width / 2 + 1) set(u, v0, 0, type.wallBlock);
+            set(u, v1, 0, type.wallBlock);
+        }
+        for (int v = v0 + 1; v < v1; v++) {
+            set(u0, v, 0, type.wallBlock);
+            set(u1, v, 0, type.wallBlock);
+        }
+        for (int u = u0 + 2; u <= u1 - 2; u += 3) set(u, depth / 2, 0, Block::WOOD); // Crates
+    } else {
+        // Walls: the footprint inset by one column (the eaves overhang that ring), wooden corner
+        // posts; a two-storey house has a masonry ground floor
+        for (int y = 0; y < type.wallHeight; y++) {
+            uint8_t wall = (type.style == LookStyle::TwoStorey && y < 3) ? Block::STONE_WALL : type.wallBlock;
+            for (int u = u0; u <= u1; u++) {
+                set(u, v0, y, wall);
+                set(u, v1, y, wall);
+            }
+            for (int v = v0; v <= v1; v++) {
+                set(u0, v, y, wall);
+                set(u1, v, y, wall);
+            }
+            set(u0, v0, y, Block::WOOD);
+            set(u1, v0, y, Block::WOOD);
+            set(u0, v1, y, Block::WOOD);
+            set(u1, v1, y, Block::WOOD);
+        }
 
-    // Door (2 wide, 3 tall) in the middle of the front, windows either side, front and back
-    for (int y = 0; y < 3; y++) {
-        set(width / 2 - 1, v0, y, Block::WOOD);
-        set(width / 2, v0, y, Block::WOOD);
-    }
-    for (int y = 2; y < std::min(4, type.wallHeight - 1); y++) {
-        for (int u : { u0 + 2, u1 - 2 }) {
-            set(u, v0, y, Block::WOOD);
-            set(u, v1, y, Block::WOOD);
+        // Gable ends: wall up to the underside of the roof
+        for (int v = v0 + 1; v < v1; v++) {
+            for (int y = type.wallHeight; y < RoofY(type, v) - 1; y++) {
+                set(u0, v, y, type.wallBlock);
+                set(u1, v, y, type.wallBlock);
+            }
+        }
+
+        // Door (2 wide, 3 tall) in the middle of the front, windows either side, front and back
+        // (and on the upper floor of a two-storey house)
+        for (int y = 0; y < 3; y++) {
+            set(width / 2 - 1, v0, y, Block::WOOD);
+            set(width / 2, v0, y, Block::WOOD);
+        }
+        for (int floorY : { 2, 5 }) {
+            if (floorY == 5 && type.style != LookStyle::TwoStorey) continue;
+            for (int y = floorY; y < std::min(floorY + 2, type.wallHeight - 1); y++) {
+                for (int u : { u0 + 2, u1 - 2 }) {
+                    set(u, v0, y, Block::WOOD);
+                    set(u, v1, y, Block::WOOD);
+                }
+            }
         }
     }
 

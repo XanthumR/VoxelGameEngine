@@ -70,3 +70,23 @@ TEST(BuildingLookTest, HasWallsRoofAndADoorOnTheFront) {
         EXPECT_EQ(At(ids, size, 0, 0, 0), Block::AIR);
     }
 }
+
+TEST(BuildingLookTest, UpgradedHouseFitsTheSameFootprintAndIsTaller) {
+    const BuildingType& farmer = BUILDING_TYPES[BUILDING_FARMER_HOUSE];
+    const BuildingType& worker = BUILDING_TYPES[BUILDING_WORKER_HOUSE];
+    for (uint8_t rotation = 0; rotation < 4; rotation++) {
+        EXPECT_EQ(FootprintTiles(farmer, rotation), FootprintTiles(worker, rotation));
+    }
+    EXPECT_GT(BuildingHeight(worker), BuildingHeight(farmer));
+}
+
+TEST(BuildingLookTest, MarketplaceIsAnOpenStall) {
+    const BuildingType& market = BUILDING_TYPES[BUILDING_MARKETPLACE];
+    std::vector<uint8_t> ids;
+    BuildLook(market, 0, ids);
+    glm::ivec2 size = FootprintColumns(market, 0);
+    EXPECT_GT(std::count(ids.begin(), ids.end(), Block::AWNING), 0);
+    // The middle of the front is open at counter height (no door, no wall)
+    EXPECT_EQ(At(ids, size, size.x / 2, 0, 1), Block::AIR);
+    EXPECT_EQ(At(ids, size, size.x / 2, 1, 1), Block::AIR);
+}

@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Economy/PopulationNeeds.h"
 #include "Simulation/IslandRegistry.h"
 
 #include <glm/glm.hpp>
 
+#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -25,12 +27,25 @@ struct VoxelAnchorComponent {
     glm::ivec2 footprint = glm::ivec2(1); // Columns along x and z
 };
 
-// Whether a building is linked by road to a warehouse (computed by LogisticsSystem every time
-// roads or buildings change)
+// Whether a building is linked by road to a warehouse and to a marketplace (computed by
+// LogisticsSystem every time roads or buildings change)
 struct LogisticsComponent {
     GameObjectId warehouse = INVALID_GAME_OBJECT; // The warehouse it is connected to
     uint16_t roadDistance = 0xFFFF;               // Road tiles to that warehouse
     bool connected = false;
+    GameObjectId market = INVALID_GAME_OBJECT;    // The marketplace whose reach it is in
+    uint16_t marketDistance = 0xFFFF;
+    bool inMarketRange = false;
+};
+
+// A house: its residents and how well each of its tier's needs is met (PopulationSystem). The tier
+// is the building type's (BuildingType::tier).
+struct ResidenceComponent {
+    uint8_t residents = 0;
+    uint16_t growthTicks = 0;    // Ticks since residents last moved in or out
+    uint16_t upgradeTicks = 0;   // Ticks the house has been full with every need met
+    uint16_t downgradeTicks = 0; // Ticks an upper-tier house has had no more than the tier below's maximum
+    std::array<int16_t, MAX_NEEDS> needSupply = {}; // Per mille, in the tier's need order
 };
 
 // Owns every game object. Components live in flat arrays indexed by slot, all allocated up front,
@@ -54,6 +69,8 @@ public:
     const VoxelAnchorComponent& Anchor(GameObjectId id) const { return m_Anchors[SlotOf(id)]; }
     LogisticsComponent& Logistics(GameObjectId id) { return m_Logistics[SlotOf(id)]; }
     const LogisticsComponent& Logistics(GameObjectId id) const { return m_Logistics[SlotOf(id)]; }
+    ResidenceComponent& Residence(GameObjectId id) { return m_Residences[SlotOf(id)]; }
+    const ResidenceComponent& Residence(GameObjectId id) const { return m_Residences[SlotOf(id)]; }
 
     // Iteration: slots below SlotCount() may hold an object; IdAtSlot is INVALID for empty ones
     uint32_t SlotCount() const { return m_UsedSlots; }
@@ -66,6 +83,7 @@ private:
     std::vector<BuildingComponent> m_Buildings;
     std::vector<VoxelAnchorComponent> m_Anchors;
     std::vector<LogisticsComponent> m_Logistics;
+    std::vector<ResidenceComponent> m_Residences;
     std::vector<uint16_t> m_Generations; // Current generation per slot; never 0
     std::vector<uint8_t> m_Alive;
     std::vector<uint32_t> m_FreeSlots;   // Destroyed slots, reused before new ones

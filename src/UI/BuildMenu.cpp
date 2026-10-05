@@ -34,14 +34,16 @@ void DrawBuildMenu(BuildTool& tool, uint32_t buildingCount) {
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
     ImGui::Begin("Build Menu", nullptr, flags);
 
-    // One button per building type, then the road tool
+    // One button per buildable type (hotkeys 1, 2, ...), then the road tool
     char label[64];
-    for (int type = 0; type < (int)BUILDING_TYPES.size(); type++) {
+    int buildable = BuildTool::BuildableCount();
+    for (int i = 0; i < buildable; i++) {
+        int type = BuildTool::BuildableAt(i);
         const BuildingType& building = BUILDING_TYPES[type];
-        std::snprintf(label, sizeof(label), "%s\n%dx%d  [%d]", building.name, building.footprintWidth, building.footprintDepth, type + 1);
+        std::snprintf(label, sizeof(label), "%s\n%dx%d  [%d]", building.name, building.footprintWidth, building.footprintDepth, i + 1);
         SelectButton(tool, type, label);
     }
-    std::snprintf(label, sizeof(label), "Road\n1x1  [%d]", (int)BUILDING_TYPES.size() + 1);
+    std::snprintf(label, sizeof(label), "Road\n1x1  [%d]", buildable + 1);
     SelectButton(tool, BuildTool::ROAD, label);
 
     ImGui::BeginDisabled(tool.SelectedType() == BuildTool::NO_TYPE);
@@ -49,16 +51,20 @@ void DrawBuildMenu(BuildTool& tool, uint32_t buildingCount) {
     ImGui::EndDisabled();
 
     // Status line
-    if (tool.SelectedType() == BuildTool::ROAD) {
+    int selected = tool.SelectedType();
+    if (selected == BuildTool::ROAD) {
         ImGui::TextDisabled("Drag: build road | right-drag: remove road | right click: cancel");
-    } else if (tool.SelectedType() != BuildTool::NO_TYPE) {
+    } else if (selected != BuildTool::NO_TYPE) {
         PlacementError error = tool.LastError();
+        BuildingRole role = BUILDING_TYPES[selected].role;
         if (!tool.HasPlacementPreview()) {
             ImGui::TextDisabled("Point at an island");
         } else if (error != PlacementError::None) {
             ImGui::TextColored(ERROR_COLOR, "%s", PlacementErrorText(error));
-        } else if (tool.SelectedType() != BUILDING_WAREHOUSE && !tool.PreviewConnected()) {
+        } else if (role != BuildingRole::Storage && !tool.PreviewConnected()) {
             ImGui::TextColored(WARNING_COLOR, "OK, but no road to a warehouse here");
+        } else if (role == BuildingRole::Residence && !tool.PreviewInMarketRange()) {
+            ImGui::TextColored(WARNING_COLOR, "OK, but no marketplace in reach: nobody will move in");
         } else {
             ImGui::TextColored(OK_COLOR, "OK");
         }

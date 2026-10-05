@@ -22,6 +22,7 @@ constexpr uint8_t ROOF = 42;        // Roof tiles
 constexpr uint8_t STONE_WALL = 43;  // Masonry walls
 // Roads replace the grass layer (see RoadTool); 45 is kept for a cobbled road
 constexpr uint8_t ROAD_DIRT = 44;
+constexpr uint8_t AWNING = 46;     // Striped market awning (stripes drawn by the shader)
 } // namespace Block
 
 // Grass tufts and water are drawn, but the player, raycasts and projectiles pass through them

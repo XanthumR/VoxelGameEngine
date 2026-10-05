@@ -23,6 +23,8 @@ public:
         PREVIEW_INVALID = 4,   // Red
         PREVIEW_REMOVE = 5,    // Orange
         WAREHOUSE_REACH = 6,   // Bright blue: the selected or previewed warehouse's roads
+        MARKET_IN_RANGE = 7,   // Soft amber: roads a marketplace reaches
+        MARKET_REACH = 8,      // Bright amber: the selected or previewed marketplace's roads
     };
 
     void Init();

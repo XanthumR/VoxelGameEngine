@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Economy/IslandEconomy.h"
+#include "Economy/PopulationSystem.h"
 #include "Simulation/GameObjects.h"
 #include "Simulation/IslandRegistry.h"
 #include "Simulation/Logistics.h"
@@ -35,6 +36,8 @@ public:
     const IslandEconomyManager& Economy() const { return m_Economy; }
     LogisticsSystem& Logistics() { return m_Logistics; }
     const LogisticsSystem& Logistics() const { return m_Logistics; }
+    PopulationSystem& Population() { return m_Population; }
+    const PopulationSystem& Population() const { return m_Population; }
 
     // Everything placement checks against, for this world
     PlacementContext MakePlacementContext(const VoxelWorld& world) { return { world, m_Islands, m_Occupancy, m_Roads }; }
@@ -50,6 +53,7 @@ private:
     RoadNetwork m_Roads;
     IslandEconomyManager m_Economy;
     LogisticsSystem m_Logistics;
+    PopulationSystem m_Population;
 
     uint64_t m_TickCount = 0;
     double m_SimulationSeconds = 0.0;

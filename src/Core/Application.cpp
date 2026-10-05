@@ -3,6 +3,7 @@
 #include "Core/Screenshot.h"
 #include "Simulation/BuildingTypes.h"
 #include "UI/BuildMenu.h"
+#include "UI/BuildingInfo.h"
 #include "UI/BuildingMarkers.h"
 #include "UI/IslandPanel.h"
 #include "UI/Hud.h"
@@ -241,7 +242,8 @@ void Application::UpdatePicking() {
 }
 
 // Rebuilds the per-tile ground highlights when anything they show changed: road range colors
-// while building (or hovering a warehouse), a warehouse's reach, and the road tool's path
+// while building (warehouse reach, or marketplace reach for houses and marketplaces), the reach of
+// a hovered or previewed warehouse or marketplace, and the road tool's path
 void Application::UpdateTileOverlay() {
     glm::ivec3 focus = glm::ivec3(glm::floor(m_StrategyCamera.FocusPoint() * VOXELS_PER_UNIT));
     bool moved = m_TileOverlay.Recenter(glm::ivec2(ColumnToTile(focus.x), ColumnToTile(focus.z)));
@@ -254,9 +256,14 @@ void Application::UpdateTileOverlay() {
     key.roadPreviewRevision = m_RoadTool.PreviewRevision();
     key.selection = m_BuildTool.SelectedType();
     GameObjectId hovered = m_BuildTool.HoveredBuilding();
-    if (objects.IsAlive(hovered) && objects.Building(hovered).type == BUILDING_WAREHOUSE) key.highlightedWarehouse = hovered;
-    key.warehousePreview = key.selection == BUILDING_WAREHOUSE && m_BuildTool.HasPlacementPreview();
-    if (key.warehousePreview) {
+    if (objects.IsAlive(hovered)) {
+        BuildingRole role = BUILDING_TYPES[objects.Building(hovered).type].role;
+        if (role == BuildingRole::Storage) key.highlightedWarehouse = hovered;
+        if (role == BuildingRole::Market) key.highlightedMarket = hovered;
+    }
+    bool reachPreview = (key.selection == BUILDING_WAREHOUSE || key.selection == BUILDING_MARKETPLACE) && m_BuildTool.HasPlacementPreview();
+    if (reachPreview) {
+        key.previewReachType = key.selection;
         key.previewMinTile = m_BuildTool.PreviewMinTile();
         key.previewTiles = m_BuildTool.PreviewTiles();
     }
@@ -264,16 +271,24 @@ void Application::UpdateTileOverlay() {
     m_TileOverlayKey = key;
 
     m_TileOverlay.Clear();
-    if (key.selection != BuildTool::NO_TYPE || key.highlightedWarehouse != INVALID_GAME_OBJECT) {
+    bool anyHighlight = key.highlightedWarehouse != INVALID_GAME_OBJECT || key.highlightedMarket != INVALID_GAME_OBJECT;
+    if (key.selection != BuildTool::NO_TYPE || anyHighlight) {
+        // Houses and marketplaces care about marketplace reach, everything else about warehouse reach
+        bool marketView = key.selection == BUILDING_FARMER_HOUSE || key.selection == BUILDING_MARKETPLACE || key.highlightedMarket != INVALID_GAME_OBJECT;
         roads.ForEach([&](glm::ivec2 tile, const RoadTile& road) {
-            uint8_t color = road.distance <= WAREHOUSE_ROAD_RANGE ? TileOverlay::ROAD_IN_RANGE : TileOverlay::ROAD_OUT_OF_RANGE;
+            uint8_t color;
+            if (marketView) color = road.marketDistance <= MARKET_ROAD_RANGE ? TileOverlay::MARKET_IN_RANGE : TileOverlay::ROAD_OUT_OF_RANGE;
+            else color = road.distance <= WAREHOUSE_ROAD_RANGE ? TileOverlay::ROAD_IN_RANGE : TileOverlay::ROAD_OUT_OF_RANGE;
             if (key.highlightedWarehouse != INVALID_GAME_OBJECT && road.warehouse == key.highlightedWarehouse) color = TileOverlay::WAREHOUSE_REACH;
+            if (key.highlightedMarket != INVALID_GAME_OBJECT && road.market == key.highlightedMarket) color = TileOverlay::MARKET_REACH;
             m_TileOverlay.Set(tile, color);
         });
     }
-    if (key.warehousePreview) {
-        m_Simulation.Logistics().PreviewReach(roads, key.previewMinTile, key.previewTiles, m_ReachScratch);
-        for (const glm::ivec2& tile : m_ReachScratch) m_TileOverlay.Set(tile, TileOverlay::WAREHOUSE_REACH);
+    if (key.previewReachType >= 0) {
+        bool market = key.previewReachType == BUILDING_MARKETPLACE;
+        m_Simulation.Logistics().PreviewReach(roads, key.previewMinTile, key.previewTiles,
+            market ? MARKET_ROAD_RANGE : WAREHOUSE_ROAD_RANGE, m_ReachScratch);
+        for (const glm::ivec2& tile : m_ReachScratch) m_TileOverlay.Set(tile, market ? TileOverlay::MARKET_REACH : TileOverlay::WAREHOUSE_REACH);
     }
     if (key.selection == BuildTool::ROAD) {
         const std::vector<glm::ivec2>& path = m_RoadTool.PathTiles();
@@ -319,6 +334,9 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     // --- Game simulation: fixed steps, independent of the frame rate ---
     int steps = m_Clock.StepsToRun(frameSeconds);
     for (int i = 0; i < steps; i++) m_Simulation.FixedUpdate((float)GameClock::TICK_SECONDS);
+    // Houses that upgraded or downgraded get their new look
+    for (GameObjectId id : m_Simulation.Population().LookChanges()) m_BuildTool.RefreshLook(id);
+    m_Simulation.Population().ClearLookChanges();
 
     // --- UI ---
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
@@ -329,6 +347,9 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_CameraMode == CameraMode::Strategy) {
         DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
         DrawIslandPanel(m_PanelIsland, m_Simulation.Economy());
+        if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && !ImGui::GetIO().WantCaptureMouse) {
+            DrawBuildingInfo(m_BuildTool.HoveredBuilding(), m_Simulation.Objects(), m_Simulation.Economy());
+        }
         int width, height;
         glfwGetWindowSize(m_Window, &width, &height);
         DrawBuildingMarkers(m_StrategyCamera, m_Simulation.Objects(), glm::ivec2(width, height));

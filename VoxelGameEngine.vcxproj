@@ -138,6 +138,8 @@
     <ClCompile Include="src\Core\LaunchOptions.cpp" />
     <ClCompile Include="src\Core\Screenshot.cpp" />
     <ClCompile Include="src\Economy\IslandEconomy.cpp" />
+    <ClCompile Include="src\Economy\PopulationNeeds.cpp" />
+    <ClCompile Include="src\Economy\PopulationSystem.cpp" />
     <ClCompile Include="src\Gameplay\BuildTool.cpp" />
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp" />
     <ClCompile Include="src\Gameplay\FreeFlyCamera.cpp" />
@@ -163,6 +165,7 @@
     <ClCompile Include="src\Simulation\RoadNetwork.cpp" />
     <ClCompile Include="src\Simulation\Simulation.cpp" />
     <ClCompile Include="src\UI\BuildMenu.cpp" />
+    <ClCompile Include="src\UI\BuildingInfo.cpp" />
     <ClCompile Include="src\UI\BuildingMarkers.cpp" />
     <ClCompile Include="src\UI\DebugOverlay.cpp" />
     <ClCompile Include="src\UI\Hud.cpp" />
@@ -206,6 +209,8 @@
     <ClInclude Include="src\Core\SafeQueue.h" />
     <ClInclude Include="src\Core\Screenshot.h" />
     <ClInclude Include="src\Economy\IslandEconomy.h" />
+    <ClInclude Include="src\Economy\PopulationNeeds.h" />
+    <ClInclude Include="src\Economy\PopulationSystem.h" />
     <ClInclude Include="src\Gameplay\BuildTool.h" />
     <ClInclude Include="src\Gameplay\Camera.h" />
     <ClInclude Include="src\Gameplay\DebugEditTool.h" />
@@ -237,6 +242,7 @@
     <ClInclude Include="src\Simulation\Simulation.h" />
     <ClInclude Include="src\ThirdParty\FastNoiseLite.h" />
     <ClInclude Include="src\UI\BuildMenu.h" />
+    <ClInclude Include="src\UI\BuildingInfo.h" />
     <ClInclude Include="src\UI\BuildingMarkers.h" />
     <ClInclude Include="src\UI\DebugOverlay.h" />
     <ClInclude Include="src\UI\Hud.h" />

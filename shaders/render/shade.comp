@@ -38,6 +38,8 @@ vec4 tileOverlayColor(uint index) {
     if (index == 4u) return vec4(1.00, 0.25, 0.20, 0.55); // Preview: invalid
     if (index == 5u) return vec4(1.00, 0.55, 0.10, 0.55); // Preview: remove
     if (index == 6u) return vec4(0.20, 0.75, 1.00, 0.70); // Warehouse reach
+    if (index == 7u) return vec4(1.00, 0.70, 0.20, 0.55); // Road in a marketplace's reach
+    if (index == 8u) return vec4(1.00, 0.80, 0.10, 0.75); // Marketplace reach
     return vec4(0.0);
 }
 
@@ -61,7 +63,7 @@ vec3 getFalseColor(float level) {
     return c;
 }
 
-// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 building materials, 44 road)
+// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 and 46 building materials, 44 road)
 vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     vec3 albedo = vec3(1.0);
     if (voxelID == 1) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000); // Grass
@@ -106,6 +108,7 @@ vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     else if (voxelID == 40) albedo = vec3(0.30, 0.18, 0.08); // Wood
     else if (voxelID == 41) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 5.0) >= 0.5 ? vec3(0.62, 0.45, 0.26) : vec3(0.56, 0.40, 0.22); // Planks
     else if (voxelID == 42) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 11.0) >= 0.5 ? vec3(0.55, 0.16, 0.10) : vec3(0.48, 0.13, 0.08); // Roof tiles
+    else if (voxelID == 46) albedo = ((mapPos.x + mapPos.z) / 2) % 2 == 0 ? vec3(0.70, 0.12, 0.10) : vec3(0.85, 0.80, 0.68); // Awning stripes
     else if (voxelID == 44) albedo = mix(vec3(0.36, 0.27, 0.17), vec3(0.44, 0.33, 0.21), hash(vec2(mapPos.xz) * 0.73)); // Dirt road
     else if (voxelID == 43) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.70, 0.66, 0.58) : vec3(0.62, 0.58, 0.51); // Masonry
     else if (voxelID == 34) albedo = mix(vec3(0.12, 0.55, 0.05), vec3(0.30, 0.85, 0.12), hash(vec2(mapPos.xz) + float(mapPos.y) * 7.0)); // Grass tuft

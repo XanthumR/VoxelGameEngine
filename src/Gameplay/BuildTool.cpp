@@ -32,16 +32,39 @@ BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& s
     m_LookBuffer.reserve(largest);
 }
 
+int BuildTool::BuildableCount() {
+    int count = 0;
+    for (const BuildingType& type : BUILDING_TYPES) count += type.buildable ? 1 : 0;
+    return count;
+}
+
+int BuildTool::BuildableAt(int index) {
+    for (int type = 0; type < (int)BUILDING_TYPES.size(); type++) {
+        if (!BUILDING_TYPES[type].buildable) continue;
+        if (index-- == 0) return type;
+    }
+    return NO_TYPE;
+}
+
+// The tallest building, for clearing the space of one whose look changes
+static int MaxBuildingHeight() {
+    int height = 0;
+    for (const BuildingType& type : BUILDING_TYPES) height = std::max(height, BuildingHeight(type));
+    return height;
+}
+
 void BuildTool::SelectType(int type) {
     if (m_SelectedType == ROAD && type != ROAD) m_RoadTool.Cancel();
     m_SelectedType = type;
 }
 
 void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFree, bool keyboardFree) {
-    // Hotkeys (shown on the build menu buttons): 1 / 2 pick a building, 3 the road tool
-    if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS, m_Key1WasPressed)) SelectType(BUILDING_WAREHOUSE);
-    if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS, m_Key2WasPressed)) SelectType(BUILDING_FARMER_HOUSE);
-    if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS, m_Key3WasPressed)) SelectType(ROAD);
+    // Hotkeys (shown on the build menu buttons): 1, 2, ... pick a building, the next number the road
+    int buildable = BuildableCount();
+    for (int key = 0; key <= buildable && key < (int)m_NumberWasPressed.size(); key++) {
+        bool down = keyboardFree && glfwGetKey(window, GLFW_KEY_1 + key) == GLFW_PRESS;
+        if (Pressed(down, m_NumberWasPressed[key])) SelectType(key < buildable ? BuildableAt(key) : ROAD);
+    }
     if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS, m_RWasPressed)) m_Rotation = (m_Rotation + 1) & 3;
     bool leftClick = Pressed(mouseFree && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS, m_LeftWasPressed);
     bool rightClick = Pressed(mouseFree && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS, m_RightWasPressed);
@@ -50,6 +73,7 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
     m_LastCheck = PlacementCheck();
     m_HasPlacement = false;
     m_PreviewConnected = false;
+    m_PreviewInMarket = false;
     m_HoveredBuilding = INVALID_GAME_OBJECT;
 
     // The road tool owns the mouse while it is selected
@@ -86,6 +110,7 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         glm::ivec2 minTile = hoverTile - tiles / 2;
         m_LastCheck = ValidatePlacement(m_Simulation.MakePlacementContext(m_World), (uint16_t)m_SelectedType, m_Rotation, minTile);
         m_PreviewConnected = LogisticsSystem::ConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
+        m_PreviewInMarket = LogisticsSystem::MarketConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
 
         if (leftClick && m_LastCheck.error == PlacementError::None) {
             m_HoveredBuilding = Place((uint16_t)m_SelectedType, m_Rotation, minTile);
@@ -131,6 +156,19 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     BuildLook(building, rotation, m_LookBuffer);
     m_Editor.WriteBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), m_LookBuffer);
     return id;
+}
+
+void BuildTool::RefreshLook(GameObjectId id) {
+    GameObjectRegistry& objects = m_Simulation.Objects();
+    if (!objects.IsAlive(id)) return;
+    const VoxelAnchorComponent anchor = objects.Anchor(id);
+    const BuildingComponent component = objects.Building(id);
+    const BuildingType& building = BUILDING_TYPES[component.type];
+
+    // Clear the tallest a building can be (the old look may have been taller), then stamp the new one
+    m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, MaxBuildingHeight(), anchor.footprint.y), Block::AIR);
+    BuildLook(building, component.rotation, m_LookBuffer);
+    m_Editor.WriteBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), m_LookBuffer);
 }
 
 // Clears the building's voxels (the ground under it was never changed) and frees its tiles

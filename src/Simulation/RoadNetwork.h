@@ -8,11 +8,13 @@
 #include <unordered_map>
 #include <vector>
 
-// One road tile. distance and warehouse are filled in by the logistics pass (Simulation)
+// One road tile. The reach fields are filled in by the logistics pass (Simulation)
 struct RoadTile {
     static constexpr uint16_t UNREACHED = 0xFFFF;
     uint16_t distance = UNREACHED;                // Road tiles from the nearest warehouse (1 = touching it)
     GameObjectId warehouse = INVALID_GAME_OBJECT; // That warehouse
+    uint16_t marketDistance = UNREACHED;          // Road tiles from the nearest (connected) marketplace
+    GameObjectId market = INVALID_GAME_OBJECT;    // That marketplace
 };
 
 // The set of build tiles (see TILE_SIZE) that are road. Only the data: the road voxels are written

@@ -63,6 +63,12 @@
     <ClCompile Include="src\Economy\IslandEconomy.cpp">
       <Filter>src\Economy</Filter>
     </ClCompile>
+    <ClCompile Include="src\Economy\PopulationNeeds.cpp">
+      <Filter>src\Economy</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Economy\PopulationSystem.cpp">
+      <Filter>src\Economy</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\BuildTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
@@ -136,6 +142,9 @@
       <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\UI\BuildMenu.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI\BuildingInfo.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
     <ClCompile Include="src\UI\BuildingMarkers.cpp">
@@ -259,6 +268,12 @@
     <ClInclude Include="src\Economy\IslandEconomy.h">
       <Filter>src\Economy</Filter>
     </ClInclude>
+    <ClInclude Include="src\Economy\PopulationNeeds.h">
+      <Filter>src\Economy</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Economy\PopulationSystem.h">
+      <Filter>src\Economy</Filter>
+    </ClInclude>
     <ClInclude Include="src\Gameplay\BuildTool.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
@@ -350,6 +365,9 @@
       <Filter>src\ThirdParty</Filter>
     </ClInclude>
     <ClInclude Include="src\UI\BuildMenu.h">
+      <Filter>src\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI\BuildingInfo.h">
       <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\UI\BuildingMarkers.h">

@@ -4,6 +4,7 @@
 
 class IslandEconomyManager;
 
-// Top-right window with an island's storage: goods, capacity and warehouse count, or a hint to
-// build a warehouse on an unsettled island. Call between ImGui::NewFrame and ImGui::Render.
-void DrawIslandPanel(IslandId island, const IslandEconomyManager& economy);
+// Top-right window with an island's population (per tier, with how well each need is supplied),
+// its storage (goods, capacity, warehouses), and a debug button that adds goods. An unsettled
+// island shows a hint to build a warehouse. Call between ImGui::NewFrame and ImGui::Render.
+void DrawIslandPanel(IslandId island, IslandEconomyManager& economy);

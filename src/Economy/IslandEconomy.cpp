@@ -52,6 +52,10 @@ int IslandEconomyManager::Add(IslandId island, ItemType item, int amount) {
     return added;
 }
 
+void IslandEconomyManager::AddAll(IslandId island, int amount) {
+    for (int i = 0; i < ITEM_COUNT; i++) Add(island, (ItemType)i, amount);
+}
+
 int IslandEconomyManager::Remove(IslandId island, ItemType item, int amount) {
     IslandStorage* storage = Find(island);
     if (!storage || amount <= 0) return 0;

@@ -130,8 +130,65 @@ TEST(LogisticsTest, PreviewReachMatchesARealWarehouse) {
     LogisticsFixture f;
     f.AddRoadX(4, 4 + WAREHOUSE_ROAD_RANGE + 5, 1);
     std::vector<glm::ivec2> reach;
-    f.logistics.PreviewReach(f.roads, { 0, 0 }, { 4, 4 }, reach);
+    f.logistics.PreviewReach(f.roads, { 0, 0 }, { 4, 4 }, WAREHOUSE_ROAD_RANGE, reach);
     EXPECT_EQ(reach.size(), (size_t)WAREHOUSE_ROAD_RANGE);
     EXPECT_NE(std::find(reach.begin(), reach.end(), glm::ivec2(4, 1)), reach.end());
     EXPECT_EQ(std::find(reach.begin(), reach.end(), glm::ivec2(4 + WAREHOUSE_ROAD_RANGE, 1)), reach.end());
+}
+
+// Marketplace: 4x3 tiles at (6, 2)-(9, 4), touching the road at z = 1 along x 6..9
+TEST(LogisticsTest, MarketReachSpreadsFromAConnectedMarketplace) {
+    LogisticsFixture f;
+    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddRoadX(4, 40, 1);
+    GameObjectId market = f.AddBuilding(BUILDING_MARKETPLACE, { 6, 2 });
+    f.Run();
+    EXPECT_EQ(f.roads.Find({ 9, 1 })->marketDistance, 1);
+    EXPECT_EQ(f.roads.Find({ 9, 1 })->market, market);
+    EXPECT_EQ(f.roads.Find({ 9 + MARKET_ROAD_RANGE - 1, 1 })->marketDistance, MARKET_ROAD_RANGE);
+    EXPECT_EQ(f.roads.Find({ 9 + MARKET_ROAD_RANGE, 1 })->marketDistance, RoadTile::UNREACHED);
+}
+
+TEST(LogisticsTest, HouseInMarketReachIsServed) {
+    LogisticsFixture f;
+    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddRoadX(4, 40, 1);
+    GameObjectId market = f.AddBuilding(BUILDING_MARKETPLACE, { 6, 2 });
+    GameObjectId near = f.AddBuilding(BUILDING_FARMER_HOUSE, { 12, 2 });
+    GameObjectId far = f.AddBuilding(BUILDING_FARMER_HOUSE, { 9 + MARKET_ROAD_RANGE + 1, 2 });
+    f.Run();
+    EXPECT_TRUE(f.objects.Logistics(near).inMarketRange);
+    EXPECT_EQ(f.objects.Logistics(near).market, market);
+    EXPECT_TRUE(f.objects.Logistics(far).connected);       // Still within the warehouse's reach
+    EXPECT_FALSE(f.objects.Logistics(far).inMarketRange);  // But no marketplace reaches it
+}
+
+TEST(LogisticsTest, MarketplaceWithoutWarehouseServesNobody) {
+    LogisticsFixture f;
+    f.AddRoadX(4, 40, 1);
+    f.AddBuilding(BUILDING_MARKETPLACE, { 6, 2 });
+    GameObjectId house = f.AddBuilding(BUILDING_FARMER_HOUSE, { 12, 2 });
+    f.Run();
+    EXPECT_FALSE(f.objects.Logistics(house).inMarketRange);
+    EXPECT_EQ(f.roads.Find({ 9, 1 })->marketDistance, RoadTile::UNREACHED);
+}
+
+TEST(LogisticsTest, NearestMarketplaceWins) {
+    LogisticsFixture f;
+    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddRoadX(4, 40, 1);
+    GameObjectId west = f.AddBuilding(BUILDING_MARKETPLACE, { 6, 2 });
+    GameObjectId east = f.AddBuilding(BUILDING_MARKETPLACE, { 26, 2 });
+    GameObjectId house = f.AddBuilding(BUILDING_FARMER_HOUSE, { 22, 2 }); // Touching road 14 tiles from the west one, 3 from the east one
+    f.Run();
+    EXPECT_EQ(f.objects.Logistics(house).market, east);
+    (void)west;
+}
+
+TEST(LogisticsTest, PreviewReachUsesTheGivenRange) {
+    LogisticsFixture f;
+    f.AddRoadX(4, 60, 1);
+    std::vector<glm::ivec2> reach;
+    f.logistics.PreviewReach(f.roads, { 0, 0 }, { 4, 3 }, MARKET_ROAD_RANGE, reach);
+    EXPECT_EQ(reach.size(), (size_t)MARKET_ROAD_RANGE);
 }

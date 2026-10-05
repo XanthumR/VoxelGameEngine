@@ -1,14 +1,14 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestone 1 is done; Milestone 2 is in progress.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1 and 2 are done; Milestone 3 is in progress.
 
 ## Roadmap
 
 | # | Milestone | Result you can see |
 |---|---|---|
 | 1 (done) | Foundation & first building | Strategy camera, the island under the cursor is identified, place and demolish a building on a grid with a green/red preview, 10 Hz simulation tick, first tests |
-| **2** | **Roads & warehouses** | Paint roads; buildings only work when connected by road to a warehouse; each warehouse reaches a set distance along its roads; storage per island |
-| 3 | Housing & population | Farmer residences; needs (fish, work clothes) with supply %; population per island; houses upgrade or shrink |
+| 2 (done) | Roads & warehouses | Paint roads; buildings only work when connected by road to a warehouse; each warehouse reaches a set distance along its roads; storage per island |
+| **3** | **Housing & population** | Farmer residences; needs (fish, work clothes) with supply %; population per island; houses upgrade or shrink |
 | 4 | Production chains | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
 | 5 | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
 | 6 | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
@@ -91,7 +91,7 @@ Follows `CLAUDE.md`: flat, pre-reserved component arrays and stable `uint32_t` I
 ### Order of work
 1, then 2+3 (you can look around and point at things), then 4, then 5+6, then 7, then 8, then 9. Build and play-test after each step. Commit per step.
 
-## Milestone 2, in detail
+## Milestone 2, in detail (done)
 
 Roads are dragged as an L-shaped path and sit flush with the ground (the grass layer becomes a road block). A warehouse's range spreads along roads (30 road tiles); a building is connected when a road tile touching it is in range. Storage is per island and grows with each warehouse. No production, carts or costs yet (Milestones 4 and 5).
 
@@ -190,3 +190,103 @@ Roads, the road-path preview and the warehouse range are all per-tile highlights
 1 → 2 → 3 → 4 (roads can be painted and seen) → 5 → 6 (range and connection visible) → 7.
 - Build and play-test after each step, and commit per step.
 - Steps 1+2 and 5+6 can be reviewed together, as in M1.
+
+## Milestone 3, in detail
+
+Residents move into houses that are connected to a warehouse and within a marketplace's road reach, and consume goods from island storage (a debug button adds goods until production arrives in Milestone 4). Each need's supply decides how many residents a house holds; a full, fully supplied Farmer house upgrades to a Worker house (2 planks), and a Worker house that stays at Farmer size falls back.
+
+### 1. Data: goods, tiers, new buildings
+- **`src/Simulation/ItemType.h`:** add `Sausages`, a Worker need, to the item list, and extend `STARTING_GOODS` to match.
+- **`src/Economy/PopulationNeeds.h/.cpp`** (the name `CLAUDE.md` uses): a `constexpr` tier table.
+
+  | Tier | Max residents | Needs (residents granted) | Consumption per resident per minute |
+  |---|---|---|---|
+  | Farmers | 10 | Market (2), Fish (4), Work Clothes (4) | Fish 0.050, Work Clothes 0.040 |
+  | Workers | 20 | Market (2), Fish (6), Work Clothes (6), Sausages (6) | same, Sausages 0.030 |
+
+  - A need is either a `Service` (Market) or a `Good`, with the residents it grants and its consumption.
+  - Consumption is stored as **milli-goods per resident per minute**, so it stays integer.
+- **`src/Simulation/BuildingTypes.h`:** add `Marketplace` (4×3 tiles) and `Worker House` (3×3, so it can replace a Farmer house in place).
+  - New fields:
+    - `role`: Storage, Residence or Market;
+    - `tier`, for residences;
+    - `lookStyle`.
+  - The Worker house is **not** in the build menu; it only comes from upgrades.
+- **`src/Simulation/BuildingLook.cpp`:** style variants.
+  - The **Worker house** is taller, with a masonry ground floor and plank walls above.
+  - The **marketplace** has low plank walls and a striped awning roof: new block `AWNING = 46`, with its color added in `shade.comp`.
+
+### 2. Marketplace reach along roads
+- **`src/Simulation/Logistics.cpp`:** turn the breadth-first search into a helper, `SpreadAlongRoads(sources, range, field)`, used twice:
+  - warehouses, as now (`RoadTile.distance` and `warehouse`);
+  - marketplaces: new `RoadTile.marketDistance` and `market` fields, with `MARKET_ROAD_RANGE = 20`.
+- **What counts:** a marketplace only acts as a source when it is itself connected to a warehouse.
+- **`LogisticsComponent`** gains `market`, `marketDistance` and `inMarketRange`. A house is "supplied" when it is connected to a warehouse **and** is in a market's range.
+- **`TileOverlay`:**
+  - new color `MARKET_REACH` (amber);
+  - a hovered marketplace shows its reach;
+  - placing a marketplace shows its preview reach (`PreviewReach` is generalized with a range parameter);
+  - with a house or marketplace selected, roads in market range are tinted.
+
+### 3. Population simulation
+- **`ResidenceComponent`** (new flat array in `GameObjectRegistry`): `tier`, `residents`, a `growthTicks` counter, an `upgradeTicks` counter, `downgradeTicks`, and `needSupply[MAX_NEEDS]` (per mille).
+- **`src/Economy/PopulationSystem.h/.cpp`:** `Update(objects, economy, ticks)` runs in `Simulation::FixedUpdate` after logistics.
+  1. **Every second (10 ticks), consumption per island:**
+     - Tiers go in order, Farmers first, so they get scarce goods first.
+     - For each good the tier needs, the demand is the residents in supplied houses × the rate. It goes into a per-mille accumulator per (island, tier, good), owing at most 1 good.
+     - Whole goods are removed from storage.
+     - The cycle's supply fraction is what was delivered ÷ what was due. If nothing was due, it is 1 when the good is in stock and 0 otherwise, so new houses can start.
+     - Island supply per (tier, good) moves a quarter of the way towards this cycle's fraction (exactly onto it when within 4‰), kept in `IslandStorage`.
+  2. **Per house:**
+     - `needSupply`: a Service need is 1000 if the house is in market range, otherwise 0. A Good need takes the island's tier supply if the house is supplied, otherwise 0.
+     - The target is Σ ⌊grant × supply / 1000⌋.
+     - Residents move ±1 toward the target every 20 ticks (2 s).
+  3. **Upgrade:** a Farmer house with the maximum residents (10) and every need ≥ 900‰ for 100 ticks (10 s) upgrades, as long as the island has **2 Planks**.
+     - The planks are removed.
+     - The building type becomes Worker House, and the tier becomes Workers.
+     - The id is pushed to a reserved `m_LookChanges` list.
+  4. **Downgrade:** a Worker house with ≤ 10 residents for 300 ticks (30 s) becomes a Farmer house again, keeping ≤ 10 residents. Its id is pushed to `m_LookChanges` too.
+  5. **Island totals:** population per tier, written to `IslandStorage.population[tier]`.
+- **`Simulation`** owns `PopulationSystem` and exposes `ConsumeLookChanges()`.
+- **Demolish:** removing a house simply removes its residents; the totals are recomputed every second.
+
+### 4. Look refresh
+- **`BuildTool::RefreshLook(id)`:** restamps the voxels with `BuildLook` for the object's current type through `WorldEditor::WriteBox`. It works because the footprint is the same and the height may differ: clear `max(oldHeight, newHeight)` first.
+- **`Application`:** after the simulation steps each frame, it drains `ConsumeLookChanges()` and calls `RefreshLook`.
+
+### 5. UI
+- **`BuildMenu`:**
+  - buttons: Warehouse [1], Farmer House [2], Marketplace [3], Road [4];
+  - status line: "no marketplace in range" (yellow) when placing a house.
+- **`IslandPanel`:**
+  - population per tier (Farmers 40, Workers 20);
+  - per-tier need supply bars (Fish 85%…);
+  - goods (Sausages added);
+  - a small **"+10 all goods (debug)"** button.
+- **`src/UI/BuildingInfo.h/.cpp`:** a tooltip by the cursor while hovering a building with nothing selected.
+  - **House:** tier, residents/max, each need with its %, and upgrade progress, or the reason it can't upgrade (needs, residents, planks).
+  - **Marketplace:** houses in reach.
+  - **Warehouse:** island goods summary.
+- **`BuildingMarkers`:** keep the red "!" for no road, and add an **amber cart badge** for houses with a road but no marketplace in range.
+- **F3 overlay:** total population and the number of upgrades this session.
+
+### 6. Tests and docs
+- **`tests/PopulationTests.cpp`:** objects, roads and economy built synthetically, with no voxels. Ticks run through `Simulation`-like fixtures.
+  - A supplied house with goods in stock grows to 10 residents at +1 per 2 s.
+  - Without a market it has 0 residents; without fish the target is Market and Work Clothes only.
+  - Goods are used at the set rate, e.g. 100 residents use 5 fish per minute ±1.
+  - Farmers are served before Workers when goods are scarce.
+  - **Upgrade:** happens after 10 s fully supplied, uses 2 planks and emits a look change. Without planks there is no upgrade.
+  - **Downgrade:** happens after 30 s at ≤ 10 residents.
+- **`LogisticsTests`:**
+  - market reach;
+  - a marketplace that isn't connected to a warehouse supplies nothing;
+  - the nearest marketplace wins.
+- **`BuildingLookTests`:** new styles keep the volume = footprint × height; the Worker house has the same footprint as the Farmer house.
+- **Docs:** `docs/ROADMAP.md` (M2 done, M3 detail) and the `CLAUDE.md` layout (`PopulationNeeds`, `PopulationSystem`, `BuildingInfo`).
+
+### Order of work
+1 → 2 → 3 → 4 → 5 → 6.
+- Build and test throughout.
+- One temporary demo patch for screenshots, which is removed afterwards.
+- Play-test before committing, then one commit for M3.

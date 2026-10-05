@@ -99,6 +99,12 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     ImGui::Text("Islands discovered: %zu | Objects: %u", c.simulation.Islands().IslandCount(), c.simulation.Objects().AliveCount());
     ImGui::Text("Road tiles: %zu | Connected buildings: %u / %u", c.simulation.Roads().Count(),
         c.simulation.Logistics().ConnectedBuildings(), c.simulation.Logistics().TotalBuildings());
+    int population = 0;
+    for (size_t i = 0; i < c.simulation.Economy().IslandSlotCount(); i++) {
+        for (int residents : c.simulation.Economy().IslandAt(i).population) population += residents;
+    }
+    ImGui::Text("Population: %d | Upgrades: %u | Downgrades: %u", population, c.simulation.Population().Upgrades(),
+        c.simulation.Population().Downgrades());
     const BuildTool& build = c.buildTool;
     if (build.SelectedType() != BuildTool::NO_TYPE) {
         const char* facing[] = { "-z", "+x", "+z", "-x" };
@@ -112,7 +118,7 @@ void DebugOverlay::Draw(const OverlayContext& c) {
         ImGui::Text("Building under cursor: %s (object %u, island #%u)", BUILDING_TYPES[building.type].name,
             build.HoveredBuilding(), building.island);
         const LogisticsComponent& logistics = c.simulation.Objects().Logistics(build.HoveredBuilding());
-        if (building.type == BUILDING_WAREHOUSE) {
+        if (BUILDING_TYPES[building.type].role == BuildingRole::Storage) {
             ImGui::Text("  Warehouse: reaches %d road tiles", WAREHOUSE_ROAD_RANGE);
         } else if (logistics.connected) {
             ImGui::Text("  Connected to warehouse %u, %u road tiles away", logistics.warehouse, (unsigned)logistics.roadDistance);
@@ -132,7 +138,7 @@ void DebugOverlay::Draw(const OverlayContext& c) {
 
     ImGui::Text("--- CONTROLS & EDITOR ---");
     ImGui::Text("Strategy: WASD/edge pan, Q/E rotate, wheel zoom, middle-drag pan");
-    ImGui::Text("Build: menu at the bottom (1/2/3), R rotate, right click demolish, Esc cancel");
+    ImGui::Text("Build: menu at the bottom (1-4), R rotate, right click demolish, Esc cancel");
     if (glfwGetInputMode(c.window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Free-fly: [TAB] frees the mouse for the UI.");
     }
