@@ -86,6 +86,8 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     } else {
         ImGui::Text("Hovered: nothing");
     }
+    ImGui::Text("Simulation: tick %llu (%.1f s at 10 Hz), %llu dropped", (unsigned long long)c.simulationTick,
+        c.simulationSeconds, (unsigned long long)c.droppedSimulationSteps);
 
     ImGui::Separator();
 

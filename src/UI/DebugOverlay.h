@@ -31,6 +31,9 @@ struct OverlayContext {
     int grassAnimationRadius;
     const char* cameraMode;
     PickResult hover;
+    uint64_t simulationTick;
+    double simulationSeconds;
+    uint64_t droppedSimulationSteps;
 };
 
 // The F3 debug window: engine metrics, a top-down minimap and the editor and render controls

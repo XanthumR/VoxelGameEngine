@@ -34,6 +34,9 @@
     <Filter Include="src\Rendering">
       <UniqueIdentifier>{87246072-1d5b-52ed-8b5f-6eeaa266ebad}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\Simulation">
+      <UniqueIdentifier>{8034b040-c9d8-5a9d-aded-19cbd3bb607f}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\ThirdParty">
       <UniqueIdentifier>{d7bc550f-0846-53cf-a861-662a129e6851}</UniqueIdentifier>
     </Filter>
@@ -89,6 +92,12 @@
     </ClCompile>
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp">
       <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation\GameClock.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation\Simulation.cpp">
+      <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\UI\DebugOverlay.cpp">
       <Filter>src\UI</Filter>
@@ -243,6 +252,12 @@
     </ClInclude>
     <ClInclude Include="src\Rendering\VoxelRenderer.h">
       <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\GameClock.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\Simulation.h">
+      <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\ThirdParty\FastNoiseLite.h">
       <Filter>src\ThirdParty</Filter>

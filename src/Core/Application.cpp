@@ -155,10 +155,12 @@ int Application::Run() {
     double lastTime = glfwGetTime();
     while (!glfwWindowShouldClose(m_Window)) {
         double frameStartTime = glfwGetTime();
-        // Clamp so a stall (window drag, breakpoint) can't launch the player through walls
-        float deltaTime = (float)std::min(frameStartTime - lastTime, 0.05);
+        // The simulation gets the real elapsed time (GameClock caps it); cameras get a clamped
+        // one so a stall (window drag, breakpoint) can't launch the player through walls
+        double frameSeconds = frameStartTime - lastTime;
+        float deltaTime = (float)std::min(frameSeconds, 0.05);
         lastTime = frameStartTime;
-        RunFrame(frameStartTime, deltaTime);
+        RunFrame(frameStartTime, frameSeconds, deltaTime);
     }
     return 0;
 }
@@ -219,7 +221,7 @@ void Application::UpdatePicking() {
     }
 }
 
-void Application::RunFrame(double frameStartTime, float deltaTime) {
+void Application::RunFrame(double frameStartTime, double frameSeconds, float deltaTime) {
     // Window size and render targets
     glfwGetFramebufferSize(m_Window, &m_WindowWidth, &m_WindowHeight);
     bool minimized = (m_WindowWidth == 0 || m_WindowHeight == 0);
@@ -243,10 +245,15 @@ void Application::RunFrame(double frameStartTime, float deltaTime) {
     if (m_CameraMode == CameraMode::FreeFly) m_EditTool.HandleMouse(m_Window, m_FreeFlyCamera);
     UpdatePicking();
 
+    // --- Game simulation: fixed steps, independent of the frame rate ---
+    int steps = m_Clock.StepsToRun(frameSeconds);
+    for (int i = 0; i < steps; i++) m_Simulation.FixedUpdate((float)GameClock::TICK_SECONDS);
+
     // --- UI ---
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
         m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS,
-        m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover };
+        m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover,
+        m_Simulation.TickCount(), m_Simulation.SimulationSeconds(), m_Clock.DroppedSteps() };
     m_Overlay.Draw(overlay);
 
     if (minimized) {

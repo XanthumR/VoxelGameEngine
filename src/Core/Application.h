@@ -11,6 +11,8 @@
 #include "Rendering/RenderSettings.h"
 #include "Rendering/ShoreMap.h"
 #include "Rendering/VoxelRenderer.h"
+#include "Simulation/GameClock.h"
+#include "Simulation/Simulation.h"
 #include "UI/DebugOverlay.h"
 #include "World/ChunkStreamer.h"
 #include "World/TerrainGenerator.h"
@@ -34,7 +36,7 @@ private:
 
     bool Init();
     void Spawn();
-    void RunFrame(double frameStartTime, float deltaTime);
+    void RunFrame(double frameStartTime, double frameSeconds, float deltaTime);
     void HandleKeys(float deltaTime);
     void UpdatePicking();
     void SetCameraMode(CameraMode mode);
@@ -70,6 +72,10 @@ private:
     CameraMode m_CameraMode = CameraMode::Strategy;
     DebugEditTool m_EditTool;
     PickResult m_Hover; // What the cursor (or the free-fly crosshair) points at
+
+    // Game simulation (fixed 10 Hz steps)
+    GameClock m_Clock;
+    Simulation m_Simulation;
 
     // Rendering
     RenderSettings m_Settings;

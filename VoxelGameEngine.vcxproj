@@ -149,6 +149,8 @@
     <ClCompile Include="src\Rendering\ShoreMap.cpp" />
     <ClCompile Include="src\Rendering\SkyLighting.cpp" />
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp" />
+    <ClCompile Include="src\Simulation\GameClock.cpp" />
+    <ClCompile Include="src\Simulation\Simulation.cpp" />
     <ClCompile Include="src\UI\DebugOverlay.cpp" />
     <ClCompile Include="src\UI\Hud.cpp" />
     <ClCompile Include="src\World\ChunkStreamer.cpp" />
@@ -203,6 +205,8 @@
     <ClInclude Include="src\Rendering\ShoreMap.h" />
     <ClInclude Include="src\Rendering\SkyLighting.h" />
     <ClInclude Include="src\Rendering\VoxelRenderer.h" />
+    <ClInclude Include="src\Simulation\GameClock.h" />
+    <ClInclude Include="src\Simulation\Simulation.h" />
     <ClInclude Include="src\ThirdParty\FastNoiseLite.h" />
     <ClInclude Include="src\UI\DebugOverlay.h" />
     <ClInclude Include="src\UI\Hud.h" />
