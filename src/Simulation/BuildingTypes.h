@@ -7,7 +7,7 @@
 
 // Buildings sit on a grid of build tiles, TILE_SIZE x TILE_SIZE columns each. Footprints, the
 // occupancy grid and placement snapping all work in tiles.
-constexpr int TILE_SIZE = 4;
+constexpr int TILE_SIZE = 12;
 
 // Floor division of a world column to its tile (also for negative columns)
 constexpr int ColumnToTile(int column) { return column >= 0 ? column / TILE_SIZE : -((-column + TILE_SIZE - 1) / TILE_SIZE); }
@@ -30,7 +30,8 @@ struct BuildingType {
     const char* name;
     int footprintWidth; // Tiles along the front (the side with the door)
     int footprintDepth; // Tiles from front to back
-    int wallHeight;     // Voxels; a gable roof sits on top (see BuildingLook)
+    int wallHeight;     // Voxels (procedural look); a gable roof sits on top (see BuildingLook)
+    int height;         // Voxels from the ground to the top: placement clearance, preview, models
     uint8_t wallBlock;
     uint8_t roofBlock;
     BuildingRole role;
@@ -41,10 +42,10 @@ struct BuildingType {
 
 // Index = BuildingComponent::type
 constexpr std::array<BuildingType, 4> BUILDING_TYPES = { {
-    { "Warehouse", 4, 4, 6, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true },
-    { "Farmer House", 3, 3, 5, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true },
-    { "Marketplace", 4, 3, 4, Block::PLANK, Block::AWNING, BuildingRole::Market, 0, LookStyle::Stall, true },
-    { "Worker House", 3, 3, 8, Block::PLANK, Block::ROOF, BuildingRole::Residence, 1, LookStyle::TwoStorey, false },
+    { "Warehouse", 4, 4, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true },
+    { "Farmer House", 3, 3, 14, 30, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true },
+    { "Marketplace", 4, 3, 10, 24, Block::PLANK, Block::AWNING, BuildingRole::Market, 0, LookStyle::Stall, true },
+    { "Worker House", 3, 3, 24, 42, Block::PLANK, Block::ROOF, BuildingRole::Residence, 1, LookStyle::TwoStorey, false },
 } };
 constexpr uint16_t BUILDING_WAREHOUSE = 0;
 constexpr uint16_t BUILDING_FARMER_HOUSE = 1;
@@ -57,3 +58,6 @@ constexpr std::array<uint16_t, 2> RESIDENCE_FOR_TIER = { BUILDING_FARMER_HOUSE, 
 static_assert(BUILDING_TYPES[BUILDING_FARMER_HOUSE].footprintWidth == BUILDING_TYPES[BUILDING_WORKER_HOUSE].footprintWidth &&
               BUILDING_TYPES[BUILDING_FARMER_HOUSE].footprintDepth == BUILDING_TYPES[BUILDING_WORKER_HOUSE].footprintDepth,
     "Residence tiers replace each other in place");
+
+// Everything must fit between the ground (SEA_LEVEL + ISLAND_HEIGHT = 46) and the world top (128)
+static_assert(BUILDING_TYPES[BUILDING_WAREHOUSE].height <= 80 && BUILDING_TYPES[BUILDING_WORKER_HOUSE].height <= 80, "Too tall for the world");

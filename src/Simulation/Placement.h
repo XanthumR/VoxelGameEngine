@@ -13,7 +13,7 @@ class VoxelWorld;
 
 // Buildings and roads stand on flat island ground: the first air voxel above the grass
 constexpr int BUILD_GROUND_Y = SEA_LEVEL + ISLAND_HEIGHT;
-constexpr int ROAD_CLEARANCE = 3; // Voxels of air a road needs above it (walkers are 3 tall)
+constexpr int ROAD_CLEARANCE = 12; // Voxels of air a road needs above it (people and carts)
 
 enum class PlacementError {
     None,

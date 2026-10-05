@@ -20,8 +20,9 @@ constexpr uint8_t WOOD = 40;        // Posts, door
 constexpr uint8_t PLANK = 41;       // Timber walls
 constexpr uint8_t ROOF = 42;        // Roof tiles
 constexpr uint8_t STONE_WALL = 43;  // Masonry walls
-// Roads replace the grass layer (see RoadTool); 45 is kept for a cobbled road
+// Roads replace the grass layer (see RoadTool): dirt, with a stone kerb along open sides
 constexpr uint8_t ROAD_DIRT = 44;
+constexpr uint8_t ROAD_EDGE = 45;
 constexpr uint8_t AWNING = 46;     // Striped market awning (stripes drawn by the shader)
 // Walking residents: drawn straight into the GPU chunk data each frame (WalkerRenderer), never in
 // the CPU world

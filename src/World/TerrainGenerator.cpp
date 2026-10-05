@@ -11,11 +11,12 @@
 TerrainGenerator::TerrainGenerator(const VoxModel& trees) : m_Trees(trees) {
     m_Noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
 
-    // Low-frequency mask deciding land vs ocean: islands a few hundred voxels across
+    // Low-frequency mask deciding land vs ocean: islands about a thousand voxels across, with
+    // enough octaves to keep the coastline ragged at that size
     m_IslandNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    m_IslandNoise.SetFrequency(0.0025f);
+    m_IslandNoise.SetFrequency(0.0005f);
     m_IslandNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
-    m_IslandNoise.SetFractalOctaves(3);
+    m_IslandNoise.SetFractalOctaves(5);
     m_IslandNoise.SetSeed(7);
 
     m_BiomeNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -38,7 +39,9 @@ float TerrainGenerator::BiomeNoise(int wx, int wz) {
 // 0 = open ocean, 1 = island interior, smooth in between (the coast)
 float TerrainGenerator::IslandMask(int wx, int wz) {
     float n = m_IslandNoise.GetNoise((float)wx, (float)wz);
-    float t = glm::clamp(n / 0.3f, 0.0f, 1.0f);
+    // Land from 0.3 up; the coast is the band just below, kept narrow in noise units so beaches
+    // stay a sensible width at this low frequency
+    float t = glm::clamp((n - 0.24f) / 0.06f, 0.0f, 1.0f);
     return t * t * (3.0f - 2.0f * t);
 }
 
@@ -197,7 +200,7 @@ glm::ivec2 TerrainGenerator::FindSpawnColumn(glm::ivec2 searchStart) {
     auto isLand = [this](int wx, int wz) {
         return TerrainHeightAt(wx, wz) >= SEA_LEVEL + ISLAND_HEIGHT;
     };
-    const int STEP = 16, PROBE = 24, MAX_RINGS = 400;
+    const int STEP = 48, PROBE = 72, MAX_RINGS = 400;
     for (int ring = 0; ring <= MAX_RINGS; ring++) {
         for (int dz = -ring; dz <= ring; dz++) {
             for (int dx = -ring; dx <= ring; dx++) {

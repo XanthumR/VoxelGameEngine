@@ -11,6 +11,7 @@ RoadTool::RoadTool(const VoxelWorld& world, WorldEditor& editor, Simulation& sim
     : m_World(world), m_Editor(editor), m_Simulation(simulation) {
     m_Path.reserve(MAX_PATH_TILES * 2);
     m_PathValid.reserve(MAX_PATH_TILES * 2);
+    m_PaintBuffer.reserve(TILE_SIZE * TILE_SIZE);
 }
 
 void RoadTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFree) {
@@ -104,14 +105,39 @@ bool RoadTool::Build(glm::ivec2 tile) {
     m_Simulation.Roads().Add(tile);
 
     glm::ivec3 minColumn(tile.x * TILE_SIZE, BUILD_GROUND_Y - 1, tile.y * TILE_SIZE);
-    m_Editor.FillBox(minColumn, glm::ivec3(TILE_SIZE, 1, TILE_SIZE), Block::ROAD_DIRT);
     m_Editor.FillBox(minColumn + glm::ivec3(0, 1, 0), glm::ivec3(TILE_SIZE, ROAD_CLEARANCE, TILE_SIZE), Block::AIR); // Grass tufts
+    PaintTile(tile);
+    PaintNeighbours(tile); // Their kerb on this side goes
     return true;
+}
+
+void RoadTool::PaintTile(glm::ivec2 tile) {
+    const RoadNetwork& roads = m_Simulation.Roads();
+    if (!roads.IsRoad(tile)) return;
+    bool west = roads.IsRoad(tile + glm::ivec2(-1, 0)), east = roads.IsRoad(tile + glm::ivec2(1, 0));
+    bool north = roads.IsRoad(tile + glm::ivec2(0, -1)), south = roads.IsRoad(tile + glm::ivec2(0, 1));
+
+    m_PaintBuffer.assign(TILE_SIZE * TILE_SIZE, Block::ROAD_DIRT);
+    for (int z = 0; z < TILE_SIZE; z++) {
+        for (int x = 0; x < TILE_SIZE; x++) {
+            bool kerb = (x == 0 && !west) || (x == TILE_SIZE - 1 && !east) || (z == 0 && !north) || (z == TILE_SIZE - 1 && !south);
+            if (kerb) m_PaintBuffer[(size_t)z * TILE_SIZE + x] = Block::ROAD_EDGE;
+        }
+    }
+    m_Editor.WriteBox(glm::ivec3(tile.x * TILE_SIZE, BUILD_GROUND_Y - 1, tile.y * TILE_SIZE), glm::ivec3(TILE_SIZE, 1, TILE_SIZE), m_PaintBuffer);
+}
+
+void RoadTool::PaintNeighbours(glm::ivec2 tile) {
+    PaintTile(tile + glm::ivec2(-1, 0));
+    PaintTile(tile + glm::ivec2(1, 0));
+    PaintTile(tile + glm::ivec2(0, -1));
+    PaintTile(tile + glm::ivec2(0, 1));
 }
 
 bool RoadTool::Demolish(glm::ivec2 tile) {
     if (!m_Simulation.Roads().Remove(tile)) return false;
     glm::ivec3 minColumn(tile.x * TILE_SIZE, BUILD_GROUND_Y - 1, tile.y * TILE_SIZE);
     m_Editor.FillBox(minColumn, glm::ivec3(TILE_SIZE, 1, TILE_SIZE), Block::GRASS);
+    PaintNeighbours(tile); // Their kerb comes back on this side
     return true;
 }

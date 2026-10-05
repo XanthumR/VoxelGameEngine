@@ -9,7 +9,7 @@
 namespace {
 
 const float FIELD_OF_VIEW = 60.0f;  // Degrees; must match VoxelRenderer::Render
-const float MAX_PICK_DISTANCE = 0.6f; // World units (768 voxels): past the strategy camera's max zoom
+const float MAX_PICK_DISTANCE = 2.0f; // World units (2560 voxels): past the strategy camera's max zoom
 
 } // namespace
 

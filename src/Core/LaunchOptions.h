@@ -12,7 +12,7 @@
 //   --screenshot FILE SECONDS  save the window as a PPM after SECONDS, then quit
 // The last three make runs reproducible, for before/after screenshot comparisons.
 struct LaunchOptions {
-    int renderDistance = 18;
+    int renderDistance = 24;
     float renderScale = 1.0f;
     float fixedTime = -1.0f; // < 0: real time
     bool lockCamera = false;

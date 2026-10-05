@@ -63,7 +63,9 @@ bool WalkerSystem::Spawn(IslandId island, const GameObjectRegistry& objects, con
         walker.island = island;
         walker.tile = start;
         walker.previous = start;
-        walker.lane = glm::ivec2(1 + (int)(Random() & 1), 1 + (int)(Random() & 1));
+        // Lanes a quarter of the way in from either side of the road
+        auto lane = [this]() { return (Random() & 1) ? TILE_SIZE / 4 : TILE_SIZE - 1 - TILE_SIZE / 4; };
+        walker.lane = glm::ivec2(lane(), lane());
         walker.progress = 0.0f;
         walker.tier = type.tier;
         walker.next = ChooseNext(walker, roads);

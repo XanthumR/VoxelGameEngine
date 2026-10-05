@@ -44,7 +44,7 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 ### Game Mechanics (Anno 1800 Style)
 * **Population System:** Managed per-island via an `IslandEconomy` manager. Citizen tiers are processed sequentially (Farmers -> Workers -> Artisans -> Engineers -> Investors).
 * **Deterministic Logic:** The production simulation runs on a decoupled `FixedUpdate(float tickRate)` loop (e.g., 10Hz). The render loop interpolates visual states.
-* **Voxel Terrain:** Fixed-size chunks (32 × 32 × 32) storing 8-bit voxel IDs (`uint8_t`, up to 255 block types; buildings are `GameObject`s, not voxel IDs). 
+* **Voxel Terrain:** Fixed-size chunks (32 × 32 × 32) storing 8-bit voxel IDs (`uint8_t`, up to 255 block types; buildings are `GameObject`s, not voxel IDs). Buildings, roads and ranges use a build grid of 12 x 12 voxel columns per tile (`TILE_SIZE` in `src/Simulation/BuildingTypes.h`); building heights come from the type table. 
 
 ---
 

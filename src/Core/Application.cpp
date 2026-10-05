@@ -129,7 +129,7 @@ bool Application::Init() {
     m_ImGuiReady = true;
 
     m_Overlay.Init();
-    m_TileOverlay.Init();
+    m_TileOverlay.Init(TILE_SIZE);
     m_ReachScratch.reserve(8192);
 
     // The tree model must be loaded before the workers start generating

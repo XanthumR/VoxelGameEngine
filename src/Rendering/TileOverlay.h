@@ -27,7 +27,8 @@ public:
         MARKET_REACH = 8,      // Bright amber: the selected or previewed marketplace's roads
     };
 
-    void Init();
+    void Init(int tileSize); // tileSize: world columns per tile
+    int TileSize() const { return m_TileSize; }
 
     // Moves the window when focusTile is far from its center; true if it moved (contents cleared)
     bool Recenter(glm::ivec2 focusTile);
@@ -41,6 +42,7 @@ public:
 
 private:
     GLuint m_Texture = 0;
+    int m_TileSize = 1;
     std::vector<uint8_t> m_Tiles = std::vector<uint8_t>((size_t)SIZE * SIZE, NONE);
     glm::ivec2 m_Origin = glm::ivec2(0);
     bool m_Centered = false;

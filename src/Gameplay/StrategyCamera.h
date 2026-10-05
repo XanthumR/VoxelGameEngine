@@ -12,8 +12,8 @@ struct GLFWwindow;
 // The cursor stays visible for picking and building.
 class StrategyCamera : public ICamera {
 public:
-    static constexpr float MIN_DISTANCE = 25.0f;  // Voxels from the target
-    static constexpr float MAX_DISTANCE = 450.0f;
+    static constexpr float MIN_DISTANCE = 60.0f;  // Voxels from the target
+    static constexpr float MAX_DISTANCE = 1200.0f;
     static constexpr float MIN_PITCH = 35.0f;     // Degrees below the horizon
     static constexpr float MAX_PITCH = 80.0f;
 
@@ -41,7 +41,7 @@ private:
     glm::vec3 m_Target = glm::vec3(0.5f, 0.0f, 0.5f); // World units, on the ground
     float m_Yaw = -90.0f;     // Degrees; -90 looks toward -Z, like the free-fly camera at start
     float m_Pitch = 55.0f;    // Degrees below the horizon
-    float m_Distance = 140.0f; // Voxels
+    float m_Distance = 320.0f; // Voxels
     float m_PendingScroll = 0.0f;
 
     bool m_Dragging = false;

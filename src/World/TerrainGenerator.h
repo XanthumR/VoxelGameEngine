@@ -26,7 +26,7 @@ public:
     // The tuft in a GRASS_CELL x GRASS_CELL cell of columns, if it has one
     bool GrassTuftInCell(int gx, int gz, GrassTuft& tuft);
 
-    // Nearest column (searched in rings from searchStart) that is solid land with land 24
+    // Nearest column (searched in rings from searchStart) that is solid land with land 72
     // voxels around it too, so the player does not start on a sliver of beach
     glm::ivec2 FindSpawnColumn(glm::ivec2 searchStart);
 

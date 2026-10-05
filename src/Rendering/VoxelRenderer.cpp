@@ -47,6 +47,7 @@ void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     previewMax = loc("previewMax");
     overlayOrigin = loc("overlayOrigin");
     overlayGroundY = loc("overlayGroundY");
+    overlayTileSize = loc("overlayTileSize");
 }
 
 bool VoxelRenderer::LoadPass(Pass& pass, const char* path) {
@@ -148,6 +149,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glUniform2i(u.overlayOrigin, overlayOrigin.x, overlayOrigin.y);
         // Buildings and roads stand on SEA_LEVEL + ISLAND_HEIGHT; no overlay draws below the world
         glUniform1i(u.overlayGroundY, frame.overlay ? SEA_LEVEL + ISLAND_HEIGHT : -1000);
+        glUniform1i(u.overlayTileSize, frame.overlay ? frame.overlay->TileSize() : 1);
     };
 
     GLuint fullGroupsX = (m_Targets.Width() + 7) / 8, fullGroupsY = (m_Targets.Height() + 7) / 8;

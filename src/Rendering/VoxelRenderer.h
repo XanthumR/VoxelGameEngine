@@ -51,7 +51,7 @@ private:
         GLint dimX, dimY, dimZ, cameraPos, inverseView, inverseProj, time;
         GLint sunDir, moonDir, lightDir, lightColor, skyColor, ambient;
         GLint previewState, previewMin, previewMax;
-        GLint overlayOrigin, overlayGroundY;
+        GLint overlayOrigin, overlayGroundY, overlayTileSize;
 
         void Locate(GLuint program);
     };

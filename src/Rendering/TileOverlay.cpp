@@ -3,7 +3,8 @@
 #include <algorithm>
 #include <cstdlib>
 
-void TileOverlay::Init() {
+void TileOverlay::Init(int tileSize) {
+    m_TileSize = tileSize;
     glGenTextures(1, &m_Texture);
     glBindTexture(GL_TEXTURE_2D, m_Texture);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8UI, SIZE, SIZE);

@@ -28,7 +28,7 @@ struct IslandInfo {
 class IslandRegistry {
 public:
     static constexpr int CELL_SIZE = 8;              // Columns per cell side
-    static constexpr int MAX_ISLAND_CELLS = 16384;   // 1024 x 1024 columns
+    static constexpr int MAX_ISLAND_CELLS = 65536;   // 2048 x 2048 columns
 
     explicit IslandRegistry(TerrainGenerator& terrain);
 

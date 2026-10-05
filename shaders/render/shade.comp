@@ -28,7 +28,7 @@ layout(binding = 13) uniform usampler2D tileOverlay;
 uniform ivec2 overlayOrigin; // Tile of texel (0, 0)
 uniform int overlayGroundY;  // Highlights tint the top faces of the voxel layer just below this
 const int TILE_OVERLAY_SIZE = 256;
-const int OVERLAY_TILE_SIZE = 4; // Columns per tile (TILE_SIZE)
+uniform int overlayTileSize; // Columns per tile (TILE_SIZE)
 
 // Palette of TileOverlay::Color: rgb and blend strength
 vec4 tileOverlayColor(uint index) {
@@ -63,7 +63,7 @@ vec3 getFalseColor(float level) {
     return c;
 }
 
-// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 and 46 building materials, 44 road, 47-50 walkers)
+// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 and 46 building materials, 44-45 road, 47-50 walkers)
 vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     vec3 albedo = vec3(1.0);
     if (voxelID == 1) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000); // Grass
@@ -113,6 +113,7 @@ vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     else if (voxelID == 48) albedo = vec3(0.22, 0.18, 0.15); // Walker trousers
     else if (voxelID == 49) albedo = vec3(0.62, 0.42, 0.20); // Farmer shirt
     else if (voxelID == 50) albedo = vec3(0.18, 0.36, 0.72); // Worker shirt
+    else if (voxelID == 45) albedo = hash(vec2(mapPos.xz) * 1.3) >= 0.5 ? vec3(0.50, 0.48, 0.44) : vec3(0.42, 0.40, 0.37); // Road kerb stones
     else if (voxelID == 44) albedo = mix(vec3(0.36, 0.27, 0.17), vec3(0.44, 0.33, 0.21), hash(vec2(mapPos.xz) * 0.73)); // Dirt road
     else if (voxelID == 43) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.70, 0.66, 0.58) : vec3(0.62, 0.58, 0.51); // Masonry
     else if (voxelID == 34) albedo = mix(vec3(0.12, 0.55, 0.05), vec3(0.30, 0.85, 0.12), hash(vec2(mapPos.xz) + float(mapPos.y) * 7.0)); // Grass tuft
@@ -270,11 +271,12 @@ void main() {
 
     // Tile overlay on the ground's top faces
     if (hit && normalIndex == 2 && mapPos.y == overlayGroundY - 1) {
-        ivec2 tile = (mapPos.xz >> 2) - overlayOrigin; // Arithmetic shift: floor division by OVERLAY_TILE_SIZE
+        ivec2 worldTile = ivec2(floor(vec2(mapPos.xz) / float(overlayTileSize)));
+        ivec2 tile = worldTile - overlayOrigin;
         if (all(greaterThanEqual(tile, ivec2(0))) && all(lessThan(tile, ivec2(TILE_OVERLAY_SIZE)))) {
             vec4 overlay = tileOverlayColor(texelFetch(tileOverlay, tile, 0).r);
             // Thin darker tile borders make single tiles readable
-            ivec2 inTile = mapPos.xz & (OVERLAY_TILE_SIZE - 1);
+            ivec2 inTile = mapPos.xz - worldTile * overlayTileSize;
             bool border = inTile.x == 0 || inTile.y == 0;
             colorResult.rgb = mix(colorResult.rgb, overlay.rgb * (border ? 0.7 : 1.0), overlay.a);
         }

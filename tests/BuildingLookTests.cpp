@@ -14,7 +14,7 @@ uint8_t At(const std::vector<uint8_t>& ids, glm::ivec2 size, int x, int y, int z
 } // namespace
 
 TEST(BuildingLookTest, FootprintSwapsForSidewaysRotations) {
-    BuildingType wide{ "Test", 2, 3, 4, Block::PLANK, Block::ROOF };
+    BuildingType wide{ "Test", 2, 3, 4, 10, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true };
     EXPECT_EQ(FootprintTiles(wide, 0), glm::ivec2(2, 3));
     EXPECT_EQ(FootprintTiles(wide, 1), glm::ivec2(3, 2));
     EXPECT_EQ(FootprintTiles(wide, 2), glm::ivec2(2, 3));

@@ -26,7 +26,7 @@ public:
     static constexpr int MIN_RENDER_DISTANCE = 4;
     static constexpr int MAX_RENDER_DISTANCE = 128;
     static constexpr int GPU_EVICT_MARGIN = 2;                // GPU chunks are evicted this far past the render distance
-    static constexpr int CPU_RADIUS = 16;                     // CPU voxel data is loaded within this radius...
+    static constexpr int CPU_RADIUS = 20;                     // CPU voxel data is loaded within this radius...
     static constexpr int CPU_KEEP_RADIUS = CPU_RADIUS + 2;    // ...and freed (unless edited) beyond this one
 
     ChunkStreamer(VoxelWorld& world, GpuChunkCache& cache, const VoxModel& trees);

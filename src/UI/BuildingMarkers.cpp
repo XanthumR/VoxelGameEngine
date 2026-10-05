@@ -10,7 +10,7 @@
 
 namespace {
 
-const float MAX_MARKER_DISTANCE = 0.5f; // World units (640 voxels)
+const float MAX_MARKER_DISTANCE = 1.5f; // World units (1920 voxels)
 const float BADGE_RADIUS = 11.0f;       // Pixels
 
 } // namespace

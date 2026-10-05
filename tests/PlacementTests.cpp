@@ -81,22 +81,30 @@ TEST(PlacementTest, RoadUnderTheFootprintIsRejected) {
 
 TEST(PlacementTest, WaterIsRejected) {
     PlacementFixture f;
-    const VoxelWorld& world = TestWorld::Get().world;
-    // A loaded tile whose first column is open water
-    int reach = TestWorld::RADIUS_CHUNKS * 32 - 32;
+    TestWorld& test = TestWorld::Get();
+    // The nearest open sea to the spawn (from the terrain noise), then generate the world there
     bool found = false;
-    for (int dz = -reach; dz < reach && !found; dz += TILE_SIZE) {
-        for (int dx = -reach; dx < reach && !found; dx += TILE_SIZE) {
-            glm::ivec2 tile = SpawnTile() + glm::ivec2(dx, dz) / TILE_SIZE;
-            glm::ivec2 column = tile * TILE_SIZE;
-            if (world.GetVoxel(column.x, SEA_LEVEL, column.y) != Block::WATER) continue;
-            if (world.GetVoxel(column.x, SEA_LEVEL + 1, column.y) != Block::AIR) continue;
-            EXPECT_EQ(ValidatePlacement(f.context, BUILDING_FARMER_HOUSE, 0, tile).error, PlacementError::Water);
-            EXPECT_EQ(ValidateRoadTile(f.context, tile).error, PlacementError::Water);
-            found = true;
+    glm::ivec2 sea(0);
+    const glm::ivec2 directions[8] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
+    for (int ring = 1; ring < 200 && !found; ring++) {
+        for (const glm::ivec2& direction : directions) {
+            if (found) break;
+            glm::ivec2 column = test.spawnColumn + direction * ring * 32;
+            if (test.terrain.TerrainHeightAt(column.x, column.y) < SEA_LEVEL - 6) {
+                sea = column;
+                found = true;
+            }
         }
     }
-    EXPECT_TRUE(found) << "No water near the spawn island";
+    ASSERT_TRUE(found) << "No sea near the spawn island";
+    test.LoadAround(sea, 1);
+
+    // A tile whose first column is that open water
+    glm::ivec2 tile(ColumnToTile(sea.x), ColumnToTile(sea.y));
+    glm::ivec2 column = tile * TILE_SIZE;
+    ASSERT_EQ(test.world.GetVoxel(column.x, SEA_LEVEL, column.y), Block::WATER);
+    EXPECT_EQ(ValidatePlacement(f.context, BUILDING_FARMER_HOUSE, 0, tile).error, PlacementError::Water);
+    EXPECT_EQ(ValidateRoadTile(f.context, tile).error, PlacementError::Water);
 }
 
 TEST(PlacementTest, SomethingSolidInTheVolumeBlocksIt) {

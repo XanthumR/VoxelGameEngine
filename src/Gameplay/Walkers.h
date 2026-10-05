@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Simulation/BuildingTypes.h"
 #include "Simulation/GameObjects.h"
 
 #include <glm/glm.hpp>
@@ -23,7 +24,7 @@ class WalkerSystem {
 public:
     static constexpr int MAX_WALKERS = 512;
     static constexpr int RESIDENTS_PER_WALKER = 5;
-    static constexpr float TILES_PER_SECOND = 0.8f; // About 3 voxels per second
+    static constexpr float TILES_PER_SECOND = 5.0f / TILE_SIZE; // About 5 voxels per second
     static constexpr float SPAWN_INTERVAL = 0.3f;   // Seconds between walkers leaving houses, per island
 
     WalkerSystem();
@@ -43,7 +44,7 @@ private:
         glm::ivec2 tile;     // Road tile it is leaving
         glm::ivec2 next;     // Road tile it is walking to
         glm::ivec2 previous; // Where it came from (avoids turning back unless at a dead end)
-        glm::ivec2 lane;     // Column inside a tile (1 or 2 on each axis), so walkers do not all overlap
+        glm::ivec2 lane;     // Column inside a tile (one of two lanes on each axis), so walkers pass each other
         float progress;      // 0..1 from tile to next
         uint8_t tier;
     };

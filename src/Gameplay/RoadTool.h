@@ -42,6 +42,10 @@ public:
     uint32_t PreviewRevision() const { return m_PreviewRevision; } // Changes when the preview does
 
 private:
+    // Writes a road tile's surface: dirt, with a stone kerb along each side that has no road next to it
+    void PaintTile(glm::ivec2 tile);
+    void PaintNeighbours(glm::ivec2 tile);
+
     void SetPath(glm::ivec2 start, glm::ivec2 end, bool removing);
     void ClearPath();
 
@@ -59,4 +63,5 @@ private:
     uint32_t m_PreviewRevision = 0;
     bool m_CancelRequested = false;
     bool m_LeftWasDown = false, m_RightWasDown = false;
+    std::vector<uint8_t> m_PaintBuffer; // One tile's surface, reused
 };

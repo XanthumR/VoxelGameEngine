@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1 and 2 are done; Milestone 3 is in progress.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-3 are done; a scale-up of the world (bigger grid, detailed buildings and people, bigger islands) comes before Milestone 4.
 
 ## Roadmap
 
@@ -8,7 +8,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 |---|---|---|
 | 1 (done) | Foundation & first building | Strategy camera, the island under the cursor is identified, place and demolish a building on a grid with a green/red preview, 10 Hz simulation tick, first tests |
 | 2 (done) | Roads & warehouses | Paint roads; buildings only work when connected by road to a warehouse; each warehouse reaches a set distance along its roads; storage per island |
-| **3** | **Housing & population** | Farmer residences; needs (fish, work clothes) with supply %; population per island; houses upgrade or shrink |
+| 3 (done) | Housing & population | Farmer residences; needs (fish, work clothes) with supply %; population per island; houses upgrade or shrink |
 | 4 | Production chains | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
 | 5 | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
 | 6 | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
@@ -191,7 +191,7 @@ Roads, the road-path preview and the warehouse range are all per-tile highlights
 - Build and play-test after each step, and commit per step.
 - Steps 1+2 and 5+6 can be reviewed together, as in M1.
 
-## Milestone 3, in detail
+## Milestone 3, in detail (done)
 
 Residents move into houses that are connected to a warehouse and within a marketplace's road reach, and consume goods from island storage (a debug button adds goods until production arrives in Milestone 4). Each need's supply decides how many residents a house holds; a full, fully supplied Farmer house upgrades to a Worker house (2 planks), and a Worker house that stays at Farmer size falls back.
 
@@ -292,3 +292,105 @@ Residents also show up as **walkers**: one little voxel person (trousers, a shir
 - Build and test throughout.
 - One temporary demo patch for screenshots, which is removed afterwards.
 - Play-test before committing, then one commit for M3.
+
+## Scale-up, in detail (before Milestone 4)
+
+Build tiles grow from 4 to 12 voxels (a farmer house is 36x36, roads are 12 wide, room for carts with horses), buildings become editable MagicaVoxel models, people about 10 voxels tall, and islands about 5x bigger (800-1150 voxels across).
+
+### 1. Grid scale: `TILE_SIZE` 4 → 12
+- **`src/Simulation/BuildingTypes.h`:**
+  - set `TILE_SIZE = 12`;
+  - add a `height` field (voxels) to `BuildingType`. It is the single source of truth for placement clearance, the preview box and the models.
+
+  | Building | Height |
+  |---|---|
+  | Farmer house | 30 |
+  | Worker house | 42 |
+  | Warehouse | 40 |
+  | Marketplace | 24 |
+
+  - The world is 128 high and the ground sits at 46, so everything fits.
+- **`BuildLook`:** stays as the procedural fallback when a model is missing, and is what the tests use. It scales its walls, door and windows to the bigger tiles and to `height`.
+- **Everything else is in tiles and doesn't change:** footprints, occupancy, roads, ranges (warehouse 30 tiles = 360 voxels, market 20 tiles), logistics and population.
+- **`ROAD_CLEARANCE`:** 3 → 12, so people and carts fit.
+- **Roads:**
+  - `RoadTool::Build` writes a 12×12 road with a 1-voxel `ROAD_EDGE` stone border (new block) and dirt with ruts inside;
+  - removing a road restores grass.
+- **Shade pass:** the tile overlay in `shade.comp` uses a floor division by 12 instead of `>> 2`, and tile borders come from `TILE_SIZE`, passed as a uniform.
+- **Camera and screen code:**
+  - `StrategyCamera`: zoom 60–1200 voxels, default 320, pan speed ×3;
+  - `Picking`: `MAX_PICK_DISTANCE` 0.6 → 2.0 units;
+  - `BuildingMarkers`: draw distance ×3.
+- **Streaming:**
+  - the CPU window grows from 16 → 20 chunks, so placement works at the screen edges when zoomed out. Empty upper layers cost little memory;
+  - the default render distance becomes 24 (32 needs a second 768 MB chunk pool).
+
+### 2. Bigger islands
+- **`src/World/TerrainGenerator.cpp`:**
+  - island noise frequency 0.0025 → 0.0005, with FBm octaves 3 → 5 so the coastlines keep their detail;
+  - the coast blend band gets narrower in noise units (`n / 0.3` → `n / 0.06`), so beaches stay a sensible width instead of 5× wider.
+- **Spawn search:** `FindSpawnColumn` probes 72 instead of 24, and its rings use step 48.
+- **`IslandRegistry`:** `MAX_ISLAND_CELLS` 16384 → 65536.
+- **`TestWorld`** (tests): radius 6 → 16 chunks, so water is still reachable from the spawn island.
+- **Regression baseline:** the terrain changes on purpose, so the screenshot gets a **new** baseline after this step.
+
+### 3. Building model pipeline
+- **Palette convention:** palette index = block ID, so MagicaVoxel colors are the in-game colors.
+  - New building material block IDs 60–95 in `src/World/BlockTypes.h`:
+    - plaster white/cream, timber dark/light, thatch, roof tiles red/dark, stone light/dark, cobble;
+    - window glass, window frame, door, shutters green/blue/red, chimney brick, flower box, fence, hay, crate, barrel, awning red/white.
+  - Their colors live in a `const vec3` table indexed by ID in `shaders/render/shade.comp`, replacing the long if-chain for these IDs.
+  - Windows get a warm glow at night.
+- **`src/World/BuildingModel.h/.cpp`:** loads a `.vox` file into a dense `uint8_t` grid. It reuses the RIFF reading from `VoxModel.cpp` and converts MagicaVoxel's z-up to our y-up.
+- **`BuildingModelLibrary`** loads `assets/buildings/<name>_<n>.vox` at startup.
+  - Each type has 1–3 variants.
+  - It checks the size against the footprint × 12 and `height`.
+  - A missing or wrong file falls back to `BuildLook` with a console warning.
+- **`BuildingComponent`** gains a `variant`, chosen at placement from the object ID, so neighbours differ.
+- **`BuildTool::Place` and `RefreshLook`** stamp the model, rotated with the same quarter-turn mapping `BuildLook` uses. Upgrades swap to the Worker house model.
+
+### 4. Generated detailed models
+- **`tools/building_models/generate.py`** (Python, no dependencies) writes valid MagicaVoxel `.vox` files: `SIZE`, `XYZI`, and `RGBA` holding our palette.
+
+  | Model | Size | Variants | Details |
+  |---|---|---|---|
+  | Farmer house | 36×36×30 | 3 | Timber frame with plaster infill, thatched roof, chimney, door with frame and step, shuttered windows, flower boxes, small fenced garden |
+  | Worker house | 36×36×42 | 2 | Stone ground floor, framed plaster upper floor, tiled roof with dormer, two chimneys |
+  | Warehouse | 48×48×40 | 1 | Stone and timber barn, big doors, hoist beam, crates and barrels outside |
+  | Marketplace | 48×36×24 | 1 | Several striped stalls, goods crates, a well in the middle |
+
+  - Variants change colors, chimney position and extensions.
+- **Committed:** the script and the generated files in `assets/buildings/`.
+- **`assets/buildings/README.md`:** the palette convention, the size rules (footprint × 12 by `height`, the front facing −y in MagicaVoxel), and how to regenerate.
+
+### 5. Detailed people
+- **`shaders/people/walkers.comp`:** walkers become ~10-voxel figures.
+  - Two legs (4 tall, with a gap between them) and a torso 3 wide.
+  - Arms at the sides that swing against the legs.
+  - Head 2 tall, with a hat for Farmers (straw brim) and a cap for Workers.
+  - A **3-frame walk cycle**, driven by the distance walked.
+  - Figures are **rotated to the walking direction**.
+  - Variety comes from skin, shirt and trousers variants: new person block IDs 51–59 with colors.
+- **`WalkerFigure.w`** packs tier, direction, frame and variant.
+- **Erasing** wipes the figure's bounding box (5×3×10), but only voxels that hold person IDs.
+- **`WalkerSystem`:**
+  - speed in voxels, about 5 voxels a second;
+  - lanes at 3 and 8 columns into the 12-wide road, so people pass each other;
+  - one walker per 5 residents, as now.
+
+### 6. Tests, docs, baseline
+- **Tests:**
+  - `TestWorld` radius grows (step 2);
+  - building look tests check `height`;
+  - new `BuildingModelTests` load a generated `.vox` and check its size and that rotation keeps its blocks. The test project copies `assets/buildings` paths relative to the repo.
+  - The existing tests stay in tiles, so most are unchanged.
+- **Regression:** new baseline screenshot images. The old ones can't match because the terrain changed.
+- **Docs:**
+  - `CLAUDE.md`: layout lines for `BuildingModel`, `tools/`, `assets/buildings`, and the new scale;
+  - `docs/ROADMAP.md`: add this scale-up between M3 and M4.
+
+### Order of work
+- Step 1, then step 2: play-test the scale and the islands, then commit.
+- Steps 3–4: play-test the buildings, then commit.
+- Step 5: play-test the people, then commit.
+- The temporary demo patch screenshots each part and is removed afterwards.
