@@ -1,11 +1,7 @@
 #ifndef RAYCAST_H
 #define RAYCAST_H
 
-
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <vector>
 
 struct RayHit {
     bool hit;
@@ -13,8 +9,7 @@ struct RayHit {
     glm::ivec3 normal; // Useful for placing blocks on faces
 };
 
-
-RayHit raycast(glm::vec3 origin, glm::vec3 dir, float maxDist, int VOXEL_WIDTH, int VOXEL_HEIGHT, int VOXEL_DEPTH,std::vector<GLubyte>& voxelData);
-
+// origin and maxDist are in world units (1 unit = VOXELS_PER_UNIT voxels)
+RayHit raycast(glm::vec3 origin, glm::vec3 dir, float maxDist);
 
 #endif

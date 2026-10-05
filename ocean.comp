@@ -1,0 +1,121 @@
+#version 440 core
+// FFT ocean (Tessendorf), driven by Ocean.cpp. One source, compiled twice:
+//   PASS_SPECTRUM - evolves the initial spectrum h0(k) to time t and builds the spectra of every
+//                   field the renderer needs, packed two real fields per complex number
+//   PASS_FFT      - one radix-2 inverse FFT along each row (or column) of every cascade, in
+//                   shared memory; run once horizontally then once vertically
+//
+// Packed spectra (each RGBA holds two complex numbers, X + iY for real fields X and Y):
+//   A = (Dx + i Dz, h + i dDx/dz)        B = (dh/dx + i dh/dz, dDx/dx + i dDz/dz)
+// After both FFT passes the real and imaginary parts are exactly those fields:
+//   A = (Dx, Dz, h, dDx/dz)              B = (dh/dx, dh/dz, dDx/dx, dDz/dz)
+// D is the horizontal (choppy) displacement; h the height; all in voxels.
+
+#define N 256
+#define LOG_N 8
+const float PI = 3.14159265358979;
+const float GRAVITY = 9.81; // 1 voxel = 1 m
+
+vec2 cmul(vec2 a, vec2 b) { return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
+
+// =====================================================================================
+#if defined(PASS_SPECTRUM)
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// h0 = (h0(k).re, h0(k).im, conj(h0(-k)).re, conj(h0(-k)).im), built once on the CPU
+layout(rgba32f, binding = 0) uniform readonly image2DArray initialSpectrum;
+layout(rgba32f, binding = 2) uniform writeonly image2DArray spectrumA;
+layout(rgba32f, binding = 3) uniform writeonly image2DArray spectrumB;
+
+uniform float time;
+uniform vec3 tileSizes; // Tile size of each cascade, in voxels
+
+void main() {
+    ivec3 id = ivec3(gl_GlobalInvocationID);
+    vec2 k = 2.0 * PI * (vec2(id.xy) - float(N / 2)) / tileSizes[id.z];
+    float kLength = length(k);
+    if (kLength < 1e-6) {
+        imageStore(spectrumA, id, vec4(0.0));
+        imageStore(spectrumB, id, vec4(0.0));
+        return;
+    }
+
+    // Deep-water dispersion: each wave travels at its own speed
+    vec4 h0 = imageLoad(initialSpectrum, id);
+    float phase = sqrt(GRAVITY * kLength) * time;
+    vec2 rotation = vec2(cos(phase), sin(phase));
+    vec2 h = cmul(h0.xy, rotation) + cmul(h0.zw, vec2(rotation.x, -rotation.y));
+    vec2 ih = vec2(-h.y, h.x); // i * h
+
+    vec2 dx = -(k.x / kLength) * ih;     // Choppy displacement
+    vec2 dz = -(k.y / kLength) * ih;
+    vec2 slopeX = k.x * ih;              // Height slope
+    vec2 slopeZ = k.y * ih;
+    vec2 dxdx = (k.x * k.x / kLength) * h; // Displacement derivatives (Jacobian, for foam)
+    vec2 dzdz = (k.y * k.y / kLength) * h;
+    vec2 dxdz = (k.x * k.y / kLength) * h;
+
+    // Pack X + iY
+    imageStore(spectrumA, id, vec4(dx.x - dz.y, dx.y + dz.x, h.x - dxdz.y, h.y + dxdz.x));
+    imageStore(spectrumB, id, vec4(slopeX.x - slopeZ.y, slopeX.y + slopeZ.x, dxdx.x - dzdz.y, dxdx.y + dzdz.x));
+}
+
+// =====================================================================================
+#elif defined(PASS_FFT)
+
+layout(local_size_x = N) in; // One thread per element of a line; one workgroup per line
+
+layout(rgba32f, binding = 0) uniform readonly image2DArray inputA;
+layout(rgba32f, binding = 1) uniform readonly image2DArray inputB;
+layout(rgba32f, binding = 2) uniform writeonly image2DArray outputA;
+layout(rgba32f, binding = 3) uniform writeonly image2DArray outputB;
+
+uniform int horizontal; // 1 = transform rows, 0 = columns
+uniform int finalPass;  // 1 = apply the (-1)^(x+z) sign from the centered spectrum
+
+shared vec4 lineA[N];
+shared vec4 lineB[N];
+
+void main() {
+    uint i = gl_LocalInvocationID.x;
+    int line = int(gl_WorkGroupID.x);
+    int layer = int(gl_WorkGroupID.y);
+
+    // Load in bit-reversed order, then iterative radix-2 butterflies in place
+    int source = int(bitfieldReverse(i) >> (32 - LOG_N));
+    ivec3 src = horizontal == 1 ? ivec3(source, line, layer) : ivec3(line, source, layer);
+    lineA[i] = imageLoad(inputA, src);
+    lineB[i] = imageLoad(inputB, src);
+    barrier();
+
+    for (int stage = 1; stage <= LOG_N; stage++) {
+        uint halfSize = 1u << (stage - 1);
+        if (i < uint(N / 2)) {
+            uint k = i % halfSize;
+            uint top = (i / halfSize) * (halfSize * 2u) + k;
+            uint bottom = top + halfSize;
+            float angle = 2.0 * PI * float(k) / float(halfSize * 2u); // + sign: inverse FFT
+            vec2 w = vec2(cos(angle), sin(angle));
+
+            vec4 a = lineA[top], b = lineA[bottom];
+            vec4 bw = vec4(cmul(b.xy, w), cmul(b.zw, w));
+            lineA[top] = a + bw;
+            lineA[bottom] = a - bw;
+
+            a = lineB[top]; b = lineB[bottom];
+            bw = vec4(cmul(b.xy, w), cmul(b.zw, w));
+            lineB[top] = a + bw;
+            lineB[bottom] = a - bw;
+        }
+        barrier();
+    }
+
+    ivec3 dst = horizontal == 1 ? ivec3(int(i), line, layer) : ivec3(line, int(i), layer);
+    float sign = 1.0;
+    if (finalPass == 1 && ((dst.x + dst.y) & 1) == 1) sign = -1.0;
+    imageStore(outputA, dst, lineA[i] * sign);
+    imageStore(outputB, dst, lineB[i] * sign);
+}
+
+#endif

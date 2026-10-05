@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -7,7 +9,9 @@ struct Offset {
     int x, y, z, blockType;
 };
 
-std::vector<Offset> loadVoxToOffsets(const std::string& filepath) {
+// Loads a MagicaVoxel model as offsets from its root: centered on X/Z, base at y = 0.
+// The palette index is kept as the block ID so it matches the colors in default.comp.
+inline std::vector<Offset> loadVoxToOffsets(const std::string& filepath) {
     std::vector<Offset> offsets;
     std::ifstream file(filepath, std::ios::binary);
 
@@ -22,31 +26,30 @@ std::vector<Offset> loadVoxToOffsets(const std::string& filepath) {
     file.read(magic, 4);
     file.read((char*)&version, 4);
 
-    if (std::string(magic, 4) != "VOX ") {
+    if (!file || std::string(magic, 4) != "VOX ") {
         std::cerr << "Not a valid MagicaVoxel file!" << std::endl;
         return offsets;
     }
 
+    int sizeX = 0, sizeY = 0, sizeZ = 0;
+
     // 2. Parse chunks
-    while (!file.eof()) {
+    while (true) {
         char chunkId[4];
         int contentSize, childrenSize;
 
         file.read(chunkId, 4);
-        if (file.eof()) break;
-
         file.read((char*)&contentSize, 4);
         file.read((char*)&childrenSize, 4);
+        if (!file) break;
 
         std::string id(chunkId, 4);
 
-        if (id == "MAIN" || id == "PACK") {
-            // Container chunks, keep reading forward
+        if (id == "MAIN") {
+            // Container chunk, its children follow directly
             continue;
         }
         else if (id == "SIZE") {
-            // Read dimensions (useful if you want to center the model)
-            int sizeX, sizeY, sizeZ;
             file.read((char*)&sizeX, 4);
             file.read((char*)&sizeY, 4);
             file.read((char*)&sizeZ, 4);
@@ -56,17 +59,21 @@ std::vector<Offset> loadVoxToOffsets(const std::string& filepath) {
             int numVoxels;
             file.read((char*)&numVoxels, 4);
 
-            for (int i = 0; i < numVoxels; ++i) {
-                unsigned char x, y, z, colorIndex;
-                file.read((char*)&x, 1);
-                file.read((char*)&y, 1);
-                file.read((char*)&z, 1);
-                file.read((char*)&colorIndex, 1);
+            for (int i = 0; i < numVoxels && file; ++i) {
+                unsigned char v[4]; // x, y, z, colorIndex
+                file.read((char*)v, 4);
 
-                // Note: MagicaVoxel uses Z as the vertical "Up" axis.
-                // Depending on your coordinate system (e.g., OpenGL often uses Y as Up),
-                // you might want to swap Y and Z here.
-                offsets.push_back({ (int)x, (int)z, (int)y, (int)5 });
+                int blockType = v[3];
+                // Palette slots that collide with gameplay blocks: 1-4 are terrain (grass, dirt,
+                // stone, sand), so they move to 36-39 (same colors, see default.comp); 30 and 32
+                // (cavern glow, artifact) are swapped for similar leaf colors.
+                if (blockType >= 1 && blockType <= 4) blockType += 35;
+                else if (blockType == 30) blockType = 31;
+                else if (blockType == 32) blockType = 28;
+
+                // MagicaVoxel uses Z as the vertical "Up" axis, so swap Y and Z;
+                // its Y is mirrored to keep the model's handedness in a Y-up world
+                offsets.push_back({ (int)v[0] - sizeX / 2, (int)v[2], (sizeY - 1 - (int)v[1]) - sizeY / 2, blockType });
             }
         }
         else {
@@ -74,8 +81,6 @@ std::vector<Offset> loadVoxToOffsets(const std::string& filepath) {
             file.seekg(contentSize, std::ios::cur);
         }
     }
-
-    
 
     return offsets;
 }

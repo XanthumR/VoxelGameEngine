@@ -1,9 +1,64 @@
 #version 440 core
+// One source, compiled three times. The loader inserts one of these after #version:
+//   PASS_TRACE  - one camera ray per pixel, writes what it hit into the G-buffer
+//   PASS_SHADOW - one thread per 2x2 pixel quad, soft shadows at half resolution
+//   PASS_SHADE  - per pixel lighting, overlays, final color
+//   PASS_SHORE_SEED, PASS_SHORE_JFA, PASS_SHORE_FINAL - build the shore map (Shore.cpp)
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(rgba32f, binding = 0) uniform image2D imgOutput;
-layout(binding = 1) uniform sampler3D voxelTex;
+layout(binding = 1) uniform isampler3D pageTable;
+
+// Chunk voxel data is split over up to 4 pool textures, each a 64 x 64 x N grid of 32^3 slots,
+// with a brick mask beside each (pool downscaled 8x: non-zero if the 8^3 brick has a solid voxel).
+// Global slot indices run through the pools in order; poolBase holds the first slot of pools 1..3.
+layout(binding = 2) uniform sampler3D chunkPool0;
+layout(binding = 3) uniform sampler3D brickMask0;
+layout(binding = 4) uniform sampler3D chunkPool1;
+layout(binding = 5) uniform sampler3D brickMask1;
+layout(binding = 6) uniform sampler3D chunkPool2;
+layout(binding = 7) uniform sampler3D brickMask2;
+layout(binding = 8) uniform sampler3D chunkPool3;
+layout(binding = 9) uniform sampler3D brickMask3;
+uniform ivec3 poolBase;
+const int PAGE_TABLE_WRAP = 512;
+
+// FFT ocean (Ocean.cpp / ocean.comp): one layer per cascade, sampled at worldXZ / tile size
+layout(binding = 10) uniform sampler2DArray oceanDisplacement; // Dx, Dz, height, dDx/dz
+layout(binding = 11) uniform sampler2DArray oceanSlope;        // dh/dx, dh/dz, dDx/dx, dDz/dz
+uniform vec3 oceanTileSizes;
+uniform float oceanChoppiness;
+
+// Shore map (Shore.cpp): per voxel column around the player. x = signed distance to the coast
+// (+ over water, - on land), y = water depth, zw = direction inland
+layout(binding = 12) uniform sampler2D shoreMap;
+uniform ivec2 shoreOrigin;
+const int SHORE_MAP_SIZE = 1024;
+
+// G-buffer written by the trace pass: xyz = hit voxel, w = packed info (see packHitInfo)
+#if defined(PASS_TRACE)
+layout(rgba32i, binding = 2) uniform writeonly iimage2D gBuffer;
+#else
+layout(rgba32i, binding = 2) uniform readonly iimage2D gBuffer;
+#endif
+
+// Half-resolution shadows: value, plus the voxel/normal they were computed for
+#if defined(PASS_SHADOW)
+layout(r32f, binding = 3) uniform writeonly image2D shadowValue;
+layout(rgba32i, binding = 4) uniform writeonly iimage2D shadowKey;
+#elif defined(PASS_SHADE)
+layout(r32f, binding = 3) uniform readonly image2D shadowValue;
+layout(rgba32i, binding = 4) uniform readonly iimage2D shadowKey;
+layout(rgba32f, binding = 0) uniform writeonly image2D imgOutput;
+#endif
+
+uniform int renderDistanceVoxels; // Horizontal ray cutoff, set from the render distance slider
+uniform int seaLevel;             // Ocean surface height (top water voxel when calm)
+uniform vec3 beaconPos;           // Spawn beacon base, world units
+uniform int chunkViewerEnabled;
+uniform int lightVisualizerEnabled;
+uniform int halfResShadows;       // 1 = use the shadow pass results, 0 = every pixel traces its own
+uniform ivec2 renderSize;         // Full-resolution render target size
 
 uniform vec3 cameraPos;
 uniform mat4 inverseView;
@@ -14,40 +69,307 @@ uniform int dimY;
 uniform int dimZ;
 uniform float time;
 
+uniform vec3 sunDir;
+uniform vec3 moonDir;
+uniform vec3 lightDir;
+uniform vec3 lightColor;
+uniform vec3 skyColor;
+uniform float ambient;
+
+// Project Strata: Laser Beam Uniforms
+uniform int laserBeamActive;
+uniform vec3 laserBeamStart;
+uniform vec3 laserBeamEnd;
+uniform vec3 laserBeamColor;
+
+// Project Strata: Flare Uniforms
+struct Flare {
+    vec3 pos;
+    vec3 color;
+    float intensity;
+};
+uniform int numFlares;
+uniform Flare flares[8];
+
+// Project Strata: Held Clump (Gravity Tether visual)
+uniform int heldClumpActive;
+uniform vec3 heldClumpPos;
+uniform float heldClumpRadius;
+uniform int heldClumpIsArtifact;
+
+// --- Voxel Lookup ---
+
+// Chunk coordinate of a voxel (arithmetic shift == floor division by 32, also for negatives)
+ivec3 chunkOf(ivec3 ipos) {
+    return ipos >> 5;
+}
+
+// Returns the pool slot holding this chunk, or -1 when it has none.
+// No slot means every voxel in the chunk reads as air (empty or not uploaded).
+int getChunkSlot(ivec3 chunkCoord) {
+    // Horizontal coordinates wrap toroidally; Y remains bounded [0, 3]
+    if (chunkCoord.y < 0 || chunkCoord.y >= 4) return -1;
+
+    int ptX = chunkCoord.x % PAGE_TABLE_WRAP; if (ptX < 0) ptX += PAGE_TABLE_WRAP;
+    int ptY = chunkCoord.y;
+    int ptZ = chunkCoord.z % PAGE_TABLE_WRAP; if (ptZ < 0) ptZ += PAGE_TABLE_WRAP;
+
+    ivec4 pageData = texelFetch(pageTable, ivec3(ptX, ptY, ptZ), 0);
+
+    int slotIndex = pageData.x - 1;
+    ivec3 storedCoord = pageData.yzw;
+
+    // Validate that the slot actually contains data for our chunk (and not a wrapped old chunk)
+    // Component-wise comparison avoids driver-dependent bvec3-to-boolean casting issues
+    if (slotIndex < 0 ||
+        storedCoord.x != chunkCoord.x ||
+        storedCoord.y != chunkCoord.y ||
+        storedCoord.z != chunkCoord.z) {
+        return -1;
+    }
+    return slotIndex;
+}
+
+// Splits a global slot index into its pool and the slot's grid position inside that pool
+int locateSlot(int slotIndex, out ivec3 slotPos) {
+    int pool = slotIndex >= poolBase.z ? 3 : slotIndex >= poolBase.y ? 2 : slotIndex >= poolBase.x ? 1 : 0;
+    int local = slotIndex - (pool == 0 ? 0 : poolBase[pool - 1]);
+    slotPos = ivec3(local % 64, (local / 64) % 64, local / 4096);
+    return pool;
+}
+
+// Reads a voxel from a chunk already resolved to its pool slot
+float sampleSlot(int slotIndex, ivec3 ipos) {
+    ivec3 slotPos;
+    int pool = locateSlot(slotIndex, slotPos);
+    ivec3 coord = slotPos * 32 + (ipos & 31);
+    if (pool == 0) return texelFetch(chunkPool0, coord, 0).r;
+    if (pool == 1) return texelFetch(chunkPool1, coord, 0).r;
+    if (pool == 2) return texelFetch(chunkPool2, coord, 0).r;
+    return texelFetch(chunkPool3, coord, 0).r;
+}
+
+float getVoxelVal(ivec3 ipos) {
+    int slotIndex = getChunkSlot(chunkOf(ipos));
+    return slotIndex < 0 ? 0.0 : sampleSlot(slotIndex, ipos);
+}
+
+// True if the 8^3 brick containing ipos (inside the chunk in slotIndex) has no solid voxel
+bool isBrickEmpty(int slotIndex, ivec3 ipos) {
+    ivec3 slotPos;
+    int pool = locateSlot(slotIndex, slotPos);
+    ivec3 coord = slotPos * 4 + ((ipos & 31) >> 3);
+    float mask;
+    if (pool == 0) mask = texelFetch(brickMask0, coord, 0).r;
+    else if (pool == 1) mask = texelFetch(brickMask1, coord, 0).r;
+    else if (pool == 2) mask = texelFetch(brickMask2, coord, 0).r;
+    else mask = texelFetch(brickMask3, coord, 0).r;
+    return mask == 0.0;
+}
+
+// Advances DDA state (mapPos, sideDist) to the first voxel past the current aligned
+// cell of cellSize^3 voxels (32 = chunk, 8 = brick), in one jump instead of up to
+// ~3*cellSize single steps. Uses the same per-axis crossing arithmetic as the DDA
+// itself, so the result is exactly where stepping would arrive.
+void skipCell(int cellSize, ivec3 stepDir, vec3 deltaDist, inout ivec3 mapPos, inout vec3 sideDist, inout vec3 normal) {
+    ivec3 cellMin = mapPos & ~(cellSize - 1); // floor to cell (cellSize is a power of two)
+
+    // Ray distance at which we leave the cell through each axis' far wall
+    ivec3 remaining;
+    float tExit = 1e30;
+    int exitAxis = 0;
+    for (int a = 0; a < 3; a++) {
+        remaining[a] = stepDir[a] > 0 ? (cellMin[a] + cellSize - 1 - mapPos[a]) : (mapPos[a] - cellMin[a]);
+        float tAxis = stepDir[a] != 0 ? sideDist[a] + float(remaining[a]) * deltaDist[a] : 1e30;
+        if (tAxis < tExit) { tExit = tAxis; exitAxis = a; }
+    }
+
+    // Apply every wall crossing that happens before tExit
+    for (int a = 0; a < 3; a++) {
+        if (stepDir[a] == 0) continue;
+        int crossings;
+        if (a == exitAxis) {
+            crossings = remaining[a] + 1; // out of the cell
+        } else if (sideDist[a] < tExit) {
+            crossings = min(int(ceil((tExit - sideDist[a]) / deltaDist[a])), remaining[a]);
+        } else {
+            crossings = 0;
+        }
+        mapPos[a] += crossings * stepDir[a];
+        sideDist[a] += float(crossings) * deltaDist[a];
+    }
+
+    normal = vec3(0.0);
+    normal[exitAxis] = float(-stepDir[exitAxis]);
+}
+
+// --- Ocean Waves ---
+// The FFT ocean height (summed over cascades) moves the sea surface by up to 2 voxels. It is
+// applied while tracing (see PASS_TRACE), so the whole infinite ocean waves without writing
+// any voxel data.
+const int WATER_ID = 35;
+const int MAX_WAVE = 2; // seaLevel - 2 .. seaLevel + 2 stays inside one 8^3 brick (y 40-47)
+
+vec4 sampleOcean(sampler2DArray fields, vec2 xz) {
+    return texture(fields, vec3(xz / oceanTileSizes.x, 0.0))
+         + texture(fields, vec3(xz / oceanTileSizes.y, 1.0))
+         + texture(fields, vec3(xz / oceanTileSizes.z, 2.0));
+}
+
+// Slopes for shading, with the smaller cascades boosted: short waves carry little energy, so
+// physically correct normals look glassy from a distance. Geometry is not affected.
+vec4 sampleOceanSlopeForShading(vec2 xz) {
+    return texture(oceanSlope, vec3(xz / oceanTileSizes.x, 0.0))
+         + texture(oceanSlope, vec3(xz / oceanTileSizes.y, 1.0)) * 2.5
+         + texture(oceanSlope, vec3(xz / oceanTileSizes.z, 2.0)) * 5.0;
+}
+
+// --- Shore Interaction ---
+
+const int SAND_ID = 4;
+
+float hash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float valueNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), u.x),
+               mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+// Outside the map counts as open sea
+vec4 sampleShore(vec2 xz) {
+    vec2 uv = (xz - vec2(shoreOrigin)) / float(SHORE_MAP_SIZE);
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return vec4(1000.0, 32.0, 0.0, 0.0);
+    return texture(shoreMap, uv);
+}
+
+const float SURF_WAVENUMBER = 0.35; // Breaker spacing ~18 voxels
+const float SURF_FREQUENCY = 1.6;   // Breakers move inland at ~4.6 voxels/s
+const float SURF_ZONE = 48.0;       // Breakers start this far out
+
+// Breaker strength varies slowly along the coast, so the surf is not uniform
+float surfStrength(vec2 xz) {
+    return 0.55 + 0.45 * valueNoise(xz * 0.03 + vec2(time * 0.05, -time * 0.04));
+}
+
+// Breakers rolling toward the coast: the phase grows with distance from land, so crests move
+// inland and follow every bay and headland. They grow as the water shallows (shoaling) and
+// collapse right at the waterline.
+float surfHeight(float distanceToLand, float strength) {
+    if (distanceToLand <= 0.0 || distanceToLand > SURF_ZONE) return 0.0;
+    float crest = pow(0.5 + 0.5 * sin(distanceToLand * SURF_WAVENUMBER + time * SURF_FREQUENCY), 4.0);
+    float shoaling = smoothstep(SURF_ZONE, 10.0, distanceToLand) * smoothstep(0.0, 3.0, distanceToLand);
+    return 2.2 * crest * shoaling * strength;
+}
+
+// How far up the beach (voxels inland) the current wave has run
+float swashReach(float strength) {
+    return 5.0 * pow(0.5 + 0.5 * sin(time * SURF_FREQUENCY), 4.0) * strength;
+}
+
+// The FFT sea fades in shallow water and near the coast, where the breakers take over
+float openSeaFactor(vec4 shore) {
+    return clamp(shore.y / 10.0, 0.2, 1.0) * smoothstep(0.0, 10.0, shore.x);
+}
+
+float oceanHeight(vec2 xz) {
+    vec4 shore = sampleShore(xz);
+    return sampleOcean(oceanDisplacement, xz).z * openSeaFactor(shore) + surfHeight(shore.x, surfStrength(xz));
+}
+
+int seaWave(ivec2 xz) {
+    return int(clamp(round(oceanHeight(vec2(xz) + 0.5)), -float(MAX_WAVE), float(MAX_WAVE)));
+}
+
+// --- G-buffer Packing ---
+// info bits 0-2: normal index (0..5, 7 = no hit), bits 3-10: voxel ID, bits 11-18: chunk grid factor
+
+const int NO_HIT = 7;
+
+int normalToIndex(vec3 n) {
+    if (n.x > 0.5) return 0;
+    if (n.x < -0.5) return 1;
+    if (n.y > 0.5) return 2;
+    if (n.y < -0.5) return 3;
+    if (n.z > 0.5) return 4;
+    return 5;
+}
+
+vec3 indexToNormal(int i) {
+    vec3 n = vec3(0.0);
+    n[i >> 1] = (i & 1) == 0 ? 1.0 : -1.0;
+    return n;
+}
+
+int packHitInfo(int normalIndex, int voxelID, float gridFactor) {
+    return normalIndex | (voxelID << 3) | (int(clamp(gridFactor, 0.0, 1.0) * 255.0 + 0.5) << 11);
+}
+
+// --- Rays ---
+
 struct Ray {
     vec3 origin;
     vec3 dir;
 };
 
-// --- Helper Functions ---
-
-// Generates a pseudo-random float between 0.0 and 1.0 based on pixel coordinates
-float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
-vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
-    vec3 tMin = (boxMin - rayOrigin) / rayDir;
-    vec3 tMax = (boxMax - rayOrigin) / rayDir;
-    vec3 t1 = min(tMin, tMax);
-    vec3 t2 = max(tMin, tMax);
-    float tNear = max(max(t1.x, t1.y), t1.z);
-    float tFar = min(min(t2.x, t2.y), t2.z);
-    return vec2(tNear, tFar);
+Ray cameraRay(ivec2 pixel, ivec2 dims) {
+    vec2 pxNDC = vec2(pixel) / vec2(dims) * 2.0 - 1.0;
+    vec4 target = inverseProj * vec4(pxNDC, 1.0, 1.0);
+    vec3 rayDirWorld = normalize((inverseView * vec4(normalize(target.xyz / target.w), 0.0)).xyz);
+    return Ray(cameraPos, rayDirWorld);
 }
 
 // Optimized Shadow Marcher
 float getShadow(vec3 worldStart, vec3 lightDir) {
     vec3 rayPos = worldStart * float(dimX);
     ivec3 mapPos = ivec3(floor(rayPos));
-    
+
     vec3 deltaDist = abs(1.0 / lightDir);
     ivec3 stepDir = ivec3(sign(lightDir));
     vec3 sideDist = (sign(lightDir) * (vec3(mapPos) - rayPos) + (sign(lightDir) * 0.5) + 0.5) * deltaDist;
 
+    ivec3 cachedChunk = ivec3(0x7fffffff);
+    int cachedSlot = -1;
+    ivec3 cachedBrick = ivec3(0x7fffffff);
+    bool cachedBrickEmpty = false;
+    vec3 unusedNormal;
+
     for (int i = 0; i < 200; i++) {
-        vec3 texCoord = (vec3(mapPos) + 0.5) / vec3(dimX, dimY, dimZ);
-        if (texture(voxelTex, texCoord).r > 0.0) return 0.3; 
+        // Page table is only re-read when the ray enters a new chunk
+        ivec3 chunkCoord = chunkOf(mapPos);
+        if (any(notEqual(chunkCoord, cachedChunk))) {
+            cachedChunk = chunkCoord;
+            cachedSlot = getChunkSlot(chunkCoord);
+        }
+
+        // Empty chunk: nothing can block the light inside it, jump straight across
+        if (cachedSlot < 0) {
+            skipCell(32, stepDir, deltaDist, mapPos, sideDist, unusedNormal);
+            if (mapPos.y < 0 || mapPos.y >= dimY) break;
+            continue;
+        }
+
+        // Empty 8^3 brick inside a non-empty chunk: same idea at a finer level
+        ivec3 brickCoord = mapPos >> 3;
+        if (any(notEqual(brickCoord, cachedBrick))) {
+            cachedBrick = brickCoord;
+            cachedBrickEmpty = isBrickEmpty(cachedSlot, mapPos);
+        }
+        if (cachedBrickEmpty) {
+            skipCell(8, stepDir, deltaDist, mapPos, sideDist, unusedNormal);
+            if (mapPos.y < 0 || mapPos.y >= dimY) break;
+            continue;
+        }
+
+        // Water does not cast shadows (it is a surface, and would darken lower wave steps)
+        float blocker = sampleSlot(cachedSlot, mapPos);
+        if (blocker > 0.0 && int(blocker * 255.0 + 0.5) != WATER_ID) return 0.3;
 
         if (sideDist.x < sideDist.y && sideDist.x < sideDist.z) {
             sideDist.x += deltaDist.x; mapPos.x += stepDir.x;
@@ -57,47 +379,85 @@ float getShadow(vec3 worldStart, vec3 lightDir) {
             sideDist.z += deltaDist.z; mapPos.z += stepDir.z;
         }
 
-        // Exit if we leave the grid
-        if (mapPos.x < 0 || mapPos.x >= dimX || mapPos.y < 0 || mapPos.y >= dimY || mapPos.z < 0 || mapPos.z >= dimZ) break;
+        // Exit if we leave the vertical bounds of the world
+        if (mapPos.y < 0 || mapPos.y >= dimY) break;
     }
-    return 1.0; 
+    return 1.0;
+}
+
+// --- SOFT SHADOW LOGIC ---
+// 4 jittered rays toward the light. Depends only on the voxel and face, not the pixel.
+float softShadow(ivec3 mapPos, vec3 normal) {
+    // A face turned away from the light is fully shadowed (its rays would only hit
+    // its own block), so skip the rays. Diffuse is zero there anyway.
+    if (dot(normal, lightDir) <= 0.0) return 0.3;
+
+    float shadowAccum = 0.0;
+    int shadowSamples = 4;   // Fixed to 4 for the offsets array
+    float sunSize = 0.060;
+
+    vec3 upGuide = abs(lightDir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 sunRight = normalize(cross(upGuide, lightDir));
+    vec3 sunUp = cross(lightDir, sunRight);
+
+    vec2 offsets[4] = vec2[](
+        vec2(-0.5, -0.5), vec2( 0.5, -0.5),
+        vec2(-0.5,  0.5), vec2( 0.5,  0.5)
+    );
+
+    vec3 shadowStart = (vec3(mapPos) + 0.5 + normal * 0.6) / float(dimX);
+    for (int s = 0; s < shadowSamples; s++) {
+        vec2 jitter = offsets[s];
+        vec3 jitteredLightDir = normalize(lightDir + (sunRight * jitter.x * sunSize) + (sunUp * jitter.y * sunSize));
+        shadowAccum += getShadow(shadowStart, jitteredLightDir);
+    }
+
+    return shadowAccum / float(shadowSamples);
+}
+
+// =====================================================================================
+#if defined(PASS_TRACE)
+
+bool isOnChunkEdge(ivec3 p) {
+    int lx = p.x % 32; if (lx < 0) lx += 32;
+    int ly = p.y % 32; if (ly < 0) ly += 32;
+    int lz = p.z % 32; if (lz < 0) lz += 32;
+    bool ex = (lx == 0 || lx == 31);
+    bool ey = (ly == 0 || ly == 31);
+    bool ez = (lz == 0 || lz == 31);
+    return (ex && ey) || (ey && ez) || (ex && ez);
 }
 
 void main() {
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 dims = imageSize(imgOutput);
+    ivec2 dims = renderSize;
     if (pixel_coords.x >= dims.x || pixel_coords.y >= dims.y) return;
 
-    // 1. Ray Generation
-    vec2 pxNDC = vec2(pixel_coords) / vec2(dims) * 2.0 - 1.0;
-    vec4 target = inverseProj * vec4(pxNDC, 1.0, 1.0);
-    vec3 rayDirWorld = normalize((inverseView * vec4(normalize(target.xyz / target.w), 0.0)).xyz);
-    Ray ray = Ray(cameraPos, rayDirWorld);
+    Ray ray = cameraRay(pixel_coords, dims);
+    ivec4 result = ivec4(0, 0, 0, packHitInfo(NO_HIT, 0, 0.0));
 
-    // 2. Sky & Sun Logic
-    vec3 lightDir = normalize(vec3(0.6, 1.0, 0.4)); 
-    vec3 skyBase = vec3(0.5, 0.8, 1.0);
-    
-    float sunDot = max(dot(ray.dir, lightDir), 0.0);
-    float horizonMask = smoothstep(-0.2, 0.1, ray.dir.y); // Prevents sun glow through ground
-    
-    vec3 sunDisk = vec3(1.0, 0.9, 0.8) * pow(sunDot, 800.0);
-    vec3 sunGlow = vec3(1.0, 0.7, 0.3) * pow(sunDot, 32.0) * 0.5;
-    
-    vec3 finalSky = skyBase + (sunDisk + sunGlow) * horizonMask;
-    vec4 colorResult = vec4(finalSky, 1.0);
+    // Y-Slab Grid Setup (Infinite horizontally, bounded Y in [0, 128] voxels = [0.0, 0.1] world space)
+    float tNear = -1.0;
+    float tFar = 1e9;
 
-    // 3. AABB Grid Setup
-    vec3 boxMax = vec3(1.0, float(dimY)/float(dimX), float(dimZ)/float(dimX));
-    vec2 tBox = intersectAABB(ray.origin, ray.dir, vec3(0.0), boxMax);
-
-    if (tBox.x > tBox.y || tBox.y < 0.0) {
-        imageStore(imgOutput, pixel_coords, colorResult);
+    if (abs(ray.dir.y) > 0.0001) {
+        float t1 = (0.0 - ray.origin.y) / ray.dir.y;
+        float t2 = (0.1 - ray.origin.y) / ray.dir.y;
+        tNear = max(tNear, min(t1, t2));
+        tFar = min(tFar, max(t1, t2));
+    } else if (ray.origin.y < 0.0 || ray.origin.y > 0.1) {
+        // Horizontal ray outside the Y boundary sees only sky
+        imageStore(gBuffer, pixel_coords, result);
         return;
     }
 
-    // 4. DDA Initialization
-    float tStart = max(tBox.x, 0.0);
+    if (tNear > tFar || tFar < 0.0) {
+        imageStore(gBuffer, pixel_coords, result);
+        return;
+    }
+
+    // DDA Initialization
+    float tStart = (ray.origin.y >= 0.0 && ray.origin.y <= 0.1) ? 0.0 : tNear;
     vec3 entryPos = ray.origin + ray.dir * (tStart + 0.0001);
     vec3 rayPos = entryPos * float(dimX);
     ivec3 mapPos = ivec3(floor(rayPos));
@@ -107,114 +467,85 @@ void main() {
     vec3 sideDist = (sign(ray.dir) * (vec3(mapPos) - rayPos) + (sign(ray.dir) * 0.5) + 0.5) * deltaDist;
 
     vec3 normal = vec3(0.0);
-    int maxSteps = 640; 
+    int maxSteps = renderDistanceVoxels + 32; // 640 at the default render distance
+    ivec2 cameraVoxelXZ = ivec2(floor(cameraPos.xz * float(dimX)));
+    float gridFactor = 0.0;
 
-    // 5. DDA Loop
+    // Empty-chunk skipping would hide the wireframe of air chunks, so the
+    // chunk viewer keeps the plain per-voxel march
+    bool allowChunkSkip = chunkViewerEnabled == 0;
+    ivec3 cachedChunk = ivec3(0x7fffffff);
+    int cachedSlot = -1;
+    ivec3 cachedBrick = ivec3(0x7fffffff);
+    bool cachedBrickEmpty = false;
+
+    // DDA Loop
     for (int i = 0; i < maxSteps; i++) {
-        vec3 texCoord = (vec3(mapPos) + 0.5) / vec3(dimX, dimY, dimZ);
-        float voxelValue = texture(voxelTex, texCoord).r;
+        // Break early if we march past the active rendering distance (render distance + 1 chunk, in voxels)
+        ivec2 distXZ = abs(mapPos.xz - cameraVoxelXZ);
+        if (max(distXZ.x, distXZ.y) > renderDistanceVoxels) break;
 
-        if (voxelValue > 0.0) {
-    int voxelID = int(voxelValue * 255.0 + 0.5);
-    bool hitConfirmed = true; // Assume we hit a solid block
-
-    vec3 albedo = vec3(1.0);
-    
-     if(voxelID == 1){
-     if(hash(mapPos.xz) >=0.5){
-        albedo = vec3(0.035, 0.731, 0.000);
-     } 
-     else
-     {
-        albedo = vec3(0.035, 0.576, 0.000);
-     
-     }
-     
-     }// color_1
-else if(voxelID == 2) albedo = vec3(0.090, 0.204, 0.008); // color_2
-else if(voxelID == 3) albedo = vec3(0.078, 0.114, 0.004); // color_3
-else if(voxelID == 4) albedo = vec3(0.031, 0.071, 0.000); // color_4
-else if(voxelID == 5) albedo = vec3(0.157, 0.341, 0.016); // color_5
-else if(voxelID == 6) albedo = vec3(0.137, 0.306, 0.016); // color_6
-else if(voxelID == 7) albedo = vec3(0.106, 0.227, 0.008); // color_7
-else if(voxelID == 8) albedo = vec3(0.043, 0.106, 0.004); // color_8
-else if(voxelID == 9) albedo = vec3(0.086, 0.075, 0.004); // color_9
-else if(voxelID == 10) albedo = vec3(0.125, 0.278, 0.012); // color_10
-else if(voxelID == 11) albedo = vec3(0.075, 0.176, 0.004); // color_11
-else if(voxelID == 12) albedo = vec3(0.204, 0.439, 0.020); // color_12
-else if(voxelID == 13) albedo = vec3(0.259, 0.557, 0.027); // color_13
-else if(voxelID == 14) albedo = vec3(0.180, 0.400, 0.020); // color_14
-else if(voxelID == 15) albedo = vec3(0.153, 0.475, 0.055); // color_15
-else if(voxelID == 16) albedo = vec3(0.165, 0.278, 0.031); // color_16
-else if(voxelID == 17) albedo = vec3(0.125, 0.110, 0.008); // color_17
-else if(voxelID == 18) albedo = vec3(0.216, 0.188, 0.012); // color_18
-else if(voxelID == 19) albedo = vec3(0.220, 0.486, 0.027); // color_19
-else if(voxelID == 20) albedo = vec3(0.235, 0.631, 0.157); // color_20
-else if(voxelID == 21) albedo = vec3(0.086, 0.302, 0.043); // color_21
-else if(voxelID == 22) albedo = vec3(0.145, 0.561, 0.090); // color_22
-else if(voxelID == 23) albedo = vec3(0.180, 0.149, 0.012); // color_23
-else if(voxelID == 24) albedo = vec3(0.114, 0.357, 0.047); // color_24
-else if(voxelID == 25) albedo = vec3(0.216, 0.588, 0.078); // color_25
-else if(voxelID == 26) albedo = vec3(0.145, 0.427, 0.059); // color_26
-else if(voxelID == 27) albedo = vec3(0.188, 0.525, 0.071); // color_27
-else if(voxelID == 28) albedo = vec3(0.196, 0.612, 0.192); // color_28
-else if(voxelID == 29) albedo = vec3(0.161, 0.216, 0.012); // color_29
-else if(voxelID == 30) albedo = vec3(0.133, 0.506, 0.133); // color_30
-else if(voxelID == 31) albedo = vec3(0.149, 0.698, 0.165); // color_31
-else if(voxelID == 32) albedo = vec3(0.224, 0.235, 0.020); // color_32
-else if(voxelID == 33) albedo = vec3(0.000, 0.000, 0.000); // color_33
-    
-    // ONLY do lighting and stop the ray if we actually hit something
-    if (hitConfirmed) {
-        // Diffuse Lighting
-        float diff = max(dot(normal, lightDir), 0.2);
-        
-        // --- SOFT SHADOW LOGIC ---
-        float shadowAccum = 0.0;
-        int shadowSamples = 4;   // Fixed to 4 for the offsets array
-        float sunSize = 0.060;  
-
-        vec3 upGuide = abs(lightDir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-        vec3 sunRight = normalize(cross(upGuide, lightDir));
-        vec3 sunUp = cross(lightDir, sunRight);
-
-        vec2 offsets[4] = vec2[](
-            vec2(-0.5, -0.5), vec2( 0.5, -0.5),
-            vec2(-0.5,  0.5), vec2( 0.5,  0.5)
-        );
-
-        for(int s = 0; s < shadowSamples; s++) {
-            vec2 jitter = offsets[s]; // <-- BUG FIX: Use the offsets array!
-            vec3 jitteredLightDir = normalize(lightDir + (sunRight * jitter.x * sunSize) + (sunUp * jitter.y * sunSize));
-            vec3 shadowStart = (vec3(mapPos) + 0.5 + normal * 0.6) / float(dimX);
-            shadowAccum += getShadow(shadowStart, jitteredLightDir);
+        if (chunkViewerEnabled == 1 && isOnChunkEdge(mapPos)) {
+            float distAttenuation = clamp(1.0 - (float(i) / 300.0), 0.0, 1.0);
+            gridFactor = max(gridFactor, distAttenuation * 0.7);
         }
 
-        float shadow = shadowAccum / float(shadowSamples);
-        // -------------------------        
+        // Page table is only re-read when the ray enters a new chunk
+        ivec3 chunkCoord = chunkOf(mapPos);
+        if (any(notEqual(chunkCoord, cachedChunk))) {
+            cachedChunk = chunkCoord;
+            cachedSlot = getChunkSlot(chunkCoord);
+        }
 
-        // Specular (Blinn-Phong)
-        vec3 viewDir = normalize(cameraPos - (vec3(mapPos) / float(dimX)));
-        vec3 halfwayDir = normalize(lightDir + viewDir);
-        float spec = pow(max(dot(normal, halfwayDir), 0.0), 1.0);
-        vec3 specular = vec3(1.0) * spec * shadow * 0.1;
+        if (allowChunkSkip) {
+            // Empty chunk: every voxel is air, so jump to the next chunk in one step
+            if (cachedSlot < 0) {
+                skipCell(32, stepDir, deltaDist, mapPos, sideDist, normal);
+                if (mapPos.y < 0 || mapPos.y >= dimY) break;
+                continue;
+            }
 
-        // Ambient Occlusion
-        float ao = 1.0;
-        vec3 aoCheckPos = (vec3(mapPos) + normal + 0.5) / vec3(dimX, dimY, dimZ);
-        if (texture(voxelTex, aoCheckPos).r > 0.0) ao = 0.5;
+            // Empty 8^3 brick inside a non-empty chunk: jump to the next brick
+            ivec3 brickCoord = mapPos >> 3;
+            if (any(notEqual(brickCoord, cachedBrick))) {
+                cachedBrick = brickCoord;
+                cachedBrickEmpty = isBrickEmpty(cachedSlot, mapPos);
+            }
+            if (cachedBrickEmpty) {
+                skipCell(8, stepDir, deltaDist, mapPos, sideDist, normal);
+                if (mapPos.y < 0 || mapPos.y >= dimY) break;
+                continue;
+            }
+        }
 
-        vec3 lighting = (albedo * diff * shadow * ao) + specular;
-        
-        // Correct Distance Fog
-        float traveled = tStart + (float(i) / float(dimX));
-        float fogFactor = exp(-1.8 * traveled); 
-        
-        colorResult.rgb = mix(finalSky, lighting, clamp(fogFactor, 0.0, 1.0));
-        break; // Stop the ray!
-    }
-}
-// DDA stepping continues down here...
+        float voxelValue = cachedSlot < 0 ? 0.0 : sampleSlot(cachedSlot, mapPos);
+
+        // Ocean waves: water layers above the wave surface turn to air in troughs, and air
+        // layers up to the surface turn to water on crests (only over open water, checked at
+        // seaLevel). All of seaLevel +- MAX_WAVE shares a brick and chunk with seaLevel, so a
+        // raised crest is never inside a skipped empty cell.
+        if (mapPos.y >= seaLevel - MAX_WAVE + 1 && mapPos.y <= seaLevel + MAX_WAVE) {
+            int surface = seaLevel + seaWave(mapPos.xz);
+            int id = int(voxelValue * 255.0 + 0.5);
+            if (mapPos.y <= seaLevel) {
+                if (id == WATER_ID && mapPos.y > surface) voxelValue = 0.0;
+            } else if (voxelValue == 0.0 && mapPos.y <= surface && cachedSlot >= 0 &&
+                       int(sampleSlot(cachedSlot, ivec3(mapPos.x, seaLevel, mapPos.z)) * 255.0 + 0.5) == WATER_ID) {
+                voxelValue = float(WATER_ID) / 255.0;
+            } else if (id == SAND_ID && cachedSlot >= 0 && sampleSlot(cachedSlot, mapPos + ivec3(0, 1, 0)) == 0.0) {
+                // Swash: a wave that ran up the beach covers the top sand voxel
+                vec2 column = vec2(mapPos.xz) + 0.5;
+                vec4 shore = sampleShore(column);
+                if (shore.x < 0.0 && -shore.x < swashReach(surfStrength(column))) voxelValue = float(WATER_ID) / 255.0;
+            }
+        }
+
+        if (voxelValue > 0.0) {
+            int voxelID = int(voxelValue * 255.0 + 0.5);
+            result = ivec4(mapPos, packHitInfo(normalToIndex(normal), voxelID, gridFactor));
+            imageStore(gBuffer, pixel_coords, result);
+            return;
+        }
 
         // Step
         if (sideDist.x < sideDist.y && sideDist.x < sideDist.z) {
@@ -228,9 +559,486 @@ else if(voxelID == 33) albedo = vec3(0.000, 0.000, 0.000); // color_33
             normal = vec3(0, 0, -stepDir.z);
         }
 
-        // Bounds Check
-        if (mapPos.x < 0 || mapPos.x >= dimX || mapPos.y < 0 || mapPos.y >= dimY || mapPos.z < 0 || mapPos.z >= dimZ) break;
+        // Vertical Bounds Check
+        if (mapPos.y < 0 || mapPos.y >= dimY) break;
     }
 
+    // No hit: keep the grid factor so the chunk viewer can still draw edges in the air
+    result.w = packHitInfo(NO_HIT, 0, gridFactor);
+    imageStore(gBuffer, pixel_coords, result);
+}
+
+// =====================================================================================
+#elif defined(PASS_SHADOW)
+
+// One invocation per 2x2 quad. Picks the first pixel of the quad that hit a face which
+// can see the light, computes its soft shadow once, and records which voxel/face it is for.
+void main() {
+    ivec2 quad = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 quadDims = (renderSize + 1) / 2;
+    if (quad.x >= quadDims.x || quad.y >= quadDims.y) return;
+
+    ivec4 key = ivec4(0, 0, 0, NO_HIT);
+    float shadow = 1.0;
+
+    for (int i = 0; i < 4; i++) {
+        ivec2 p = quad * 2 + ivec2(i & 1, i >> 1);
+        if (p.x >= renderSize.x || p.y >= renderSize.y) continue;
+        ivec4 g = imageLoad(gBuffer, p);
+        int normalIndex = g.w & 7;
+        if (normalIndex == NO_HIT) continue;
+        // Back faces never need rays (see softShadow), so prefer a face that does
+        if (dot(indexToNormal(normalIndex), lightDir) <= 0.0) continue;
+
+        key = ivec4(g.xyz, normalIndex);
+        shadow = softShadow(g.xyz, indexToNormal(normalIndex));
+        break;
+    }
+
+    imageStore(shadowValue, quad, vec4(shadow));
+    imageStore(shadowKey, quad, key);
+}
+
+// =====================================================================================
+#elif defined(PASS_SHADE)
+
+// Generates a pseudo-random float between 0.0 and 1.0 based on pixel coordinates
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec3 getFalseColor(float level) {
+    float t = clamp(level / 15.0, 0.0, 1.0);
+    vec3 c = vec3(0.0);
+    if (t < 0.25) {
+        c = mix(vec3(0.2, 0.0, 0.3), vec3(0.0, 0.0, 1.0), t / 0.25);
+    } else if (t < 0.5) {
+        c = mix(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), (t - 0.25) / 0.25);
+    } else if (t < 0.75) {
+        c = mix(vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0), (t - 0.5) / 0.25);
+    } else {
+        c = mix(vec3(1.0, 1.0, 0.0), vec3(1.0, 0.0, 0.0), (t - 0.75) / 0.25);
+    }
+    return c;
+}
+
+vec3 getAlbedo(int voxelID, ivec3 mapPos) {
+    vec3 albedo = vec3(1.0);
+    if (voxelID == 1) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000); // color_1
+    else if (voxelID == 2) albedo = vec3(0.180, 0.110, 0.050); // Dirt
+    else if (voxelID == 3) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.42, 0.42, 0.40) : vec3(0.36, 0.36, 0.35); // Stone
+    else if (voxelID == 4) albedo = hash(vec2(mapPos.xz)) >= 0.5 ? vec3(0.80, 0.72, 0.48) : vec3(0.74, 0.66, 0.43); // Sand
+    else if (voxelID == 5) albedo = vec3(0.157, 0.341, 0.016); // color_5
+    else if (voxelID == 6) albedo = vec3(0.137, 0.306, 0.016); // color_6
+    else if (voxelID == 7) albedo = vec3(0.106, 0.227, 0.008); // color_7
+    else if (voxelID == 8) albedo = vec3(0.043, 0.106, 0.004); // color_8
+    else if (voxelID == 9) albedo = vec3(0.086, 0.075, 0.004); // color_9
+    else if (voxelID == 10) albedo = vec3(0.125, 0.278, 0.012); // color_10
+    else if (voxelID == 11) albedo = vec3(0.075, 0.176, 0.004); // color_11
+    else if (voxelID == 12) albedo = vec3(0.204, 0.439, 0.020); // color_12
+    else if (voxelID == 13) albedo = vec3(0.259, 0.557, 0.027); // color_13
+    else if (voxelID == 14) albedo = vec3(0.180, 0.400, 0.020); // color_14
+    else if (voxelID == 15) albedo = vec3(0.153, 0.475, 0.055); // color_15
+    else if (voxelID == 16) albedo = vec3(0.165, 0.278, 0.031); // color_16
+    else if (voxelID == 17) albedo = vec3(0.125, 0.110, 0.008); // color_17
+    else if (voxelID == 18) albedo = vec3(0.216, 0.188, 0.012); // color_18
+    else if (voxelID == 19) albedo = vec3(0.220, 0.486, 0.027); // color_19
+    else if (voxelID == 20) albedo = vec3(0.235, 0.631, 0.157); // color_20
+    else if (voxelID == 21) albedo = vec3(0.086, 0.302, 0.043); // color_21
+    else if (voxelID == 22) albedo = vec3(0.145, 0.561, 0.090); // color_22
+    else if (voxelID == 23) albedo = vec3(0.180, 0.149, 0.012); // color_23
+    else if (voxelID == 24) albedo = vec3(0.114, 0.357, 0.047); // color_24
+    else if (voxelID == 25) albedo = vec3(0.216, 0.588, 0.078); // color_25
+    else if (voxelID == 26) albedo = vec3(0.145, 0.427, 0.059); // color_26
+    else if (voxelID == 27) albedo = vec3(0.188, 0.525, 0.071); // color_27
+    else if (voxelID == 28) albedo = vec3(0.196, 0.612, 0.192); // color_28
+    else if (voxelID == 29) albedo = vec3(0.161, 0.216, 0.012); // color_29
+    else if (voxelID == 30) albedo = vec3(0.0, 0.8, 0.6); // Bioluminescent cavern
+    else if (voxelID == 31) albedo = vec3(0.149, 0.698, 0.165); // color_31
+    else if (voxelID == 32) albedo = vec3(0.9, 0.0, 0.9); // Artifact
+    else if (voxelID == 33) albedo = vec3(0.000, 0.000, 0.000); // color_33
+    // Tree palette colors 1-4, moved off the terrain IDs by the .vox loader
+    else if (voxelID == 36) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000);
+    else if (voxelID == 37) albedo = vec3(0.090, 0.204, 0.008);
+    else if (voxelID == 38) albedo = vec3(0.078, 0.114, 0.004);
+    else if (voxelID == 39) albedo = vec3(0.031, 0.071, 0.000);
+    else if (voxelID == 35) albedo = vec3(0.04, 0.22, 0.32); // Water (ocean; waves applied in PASS_TRACE)
+    else if (voxelID == 34) albedo = mix(vec3(0.12, 0.55, 0.05), vec3(0.30, 0.85, 0.12), hash(vec2(mapPos.xz) + float(mapPos.y) * 7.0)); // Animated grass (anim.comp)
+    return albedo;
+}
+
+// Shadow for a hit face: reuses a half-resolution sample from this pixel's own quad or the
+// 3 neighbouring quads when one was computed for the same face plane (same normal, same
+// plane offset, within 2 voxels). Shadows are constant per voxel face, so this only moves
+// shadow edges by at most a render pixel. Falls back to tracing its own rays otherwise.
+float lookupShadow(ivec2 pixel, ivec3 mapPos, int normalIndex, vec3 normal) {
+    if (dot(normal, lightDir) <= 0.0) return 0.3; // Back face, same shortcut as softShadow
+    if (halfResShadows == 0) return softShadow(mapPos, normal);
+
+    ivec2 quadDims = (renderSize + 1) / 2;
+    ivec2 quad = pixel / 2;
+    ivec2 toward = ivec2((pixel.x & 1) == 0 ? -1 : 1, (pixel.y & 1) == 0 ? -1 : 1);
+    ivec2 candidates[4] = ivec2[](quad, quad + ivec2(toward.x, 0), quad + ivec2(0, toward.y), quad + toward);
+
+    int axis = normalIndex >> 1;
+    for (int i = 0; i < 4; i++) {
+        ivec2 q = candidates[i];
+        if (q.x < 0 || q.y < 0 || q.x >= quadDims.x || q.y >= quadDims.y) continue;
+        ivec4 key = imageLoad(shadowKey, q);
+        if (key.w != normalIndex) continue;
+        if (key[axis] != mapPos[axis]) continue; // Different plane (e.g. a step up)
+        ivec3 d = abs(key.xyz - mapPos);
+        if (max(d.x, max(d.y, d.z)) > 2) continue;
+        return imageLoad(shadowValue, q).r;
+    }
+    return softShadow(mapPos, normal);
+}
+
+void main() {
+    ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dims = renderSize;
+    if (pixel_coords.x >= dims.x || pixel_coords.y >= dims.y) return;
+
+    Ray ray = cameraRay(pixel_coords, dims);
+
+    // Sky, Sun & Moon Logic
+    float sunDot = max(dot(ray.dir, sunDir), 0.0);
+    float moonDot = max(dot(ray.dir, moonDir), 0.0);
+    float horizonMask = smoothstep(-0.2, 0.1, ray.dir.y); // Prevents sun/moon glow through ground
+
+    vec3 sunDisk = vec3(1.0, 0.95, 0.85) * pow(sunDot, 800.0);
+    vec3 sunGlow = vec3(1.0, 0.6, 0.25) * pow(sunDot, 32.0) * 0.5;
+
+    vec3 moonDisk = vec3(0.85, 0.9, 1.0) * pow(moonDot, 1200.0);
+    vec3 moonGlow = vec3(0.4, 0.5, 0.65) * pow(moonDot, 32.0) * 0.25;
+
+    vec3 finalSky = skyColor + (sunDisk + sunGlow) * horizonMask + (moonDisk + moonGlow) * horizonMask;
+    vec4 colorResult = vec4(finalSky, 1.0);
+
+    // Unpack what the trace pass hit
+    ivec4 g = imageLoad(gBuffer, pixel_coords);
+    ivec3 mapPos = g.xyz;
+    int normalIndex = g.w & 7;
+    int voxelID = (g.w >> 3) & 255;
+    float gridFactor = float((g.w >> 11) & 255) / 255.0;
+    bool hit = normalIndex != NO_HIT;
+
+    if (hit) {
+        vec3 normal = indexToNormal(normalIndex);
+        vec3 albedo = getAlbedo(voxelID, mapPos);
+        if (voxelID == SAND_ID) {
+            // Wet sand near the waterline is darker
+            float distanceInland = -sampleShore(vec2(mapPos.xz) + 0.5).x;
+            albedo *= 1.0 - 0.4 * smoothstep(8.0, 1.0, distanceInland) * step(0.0, distanceInland);
+        }
+
+        // Diffuse Lighting
+        float diff = max(dot(normal, lightDir), 0.0);
+        float shadow = lookupShadow(pixel_coords, mapPos, normalIndex, normal);
+
+        // Specular (Blinn-Phong)
+        vec3 viewDir = normalize(cameraPos - (vec3(mapPos) / float(dimX)));
+        vec3 halfwayDir = normalize(lightDir + viewDir);
+        float spec = pow(max(dot(normal, halfwayDir), 0.0), 1.0);
+        vec3 specular = lightColor * spec * shadow * 0.1;
+
+        // Ambient Occlusion
+        float ao = 1.0;
+        if (getVoxelVal(mapPos + ivec3(normal)) > 0.0) ao = 0.5;
+
+        vec3 diffuseComponent = albedo * diff * lightColor * shadow;
+        vec3 ambientComponent = albedo * ambient;
+        vec3 lighting = (diffuseComponent + ambientComponent) * ao + specular;
+
+        // --- FLARES LIGHTING ---
+        vec3 flareLighting = vec3(0.0);
+        vec3 hitWorldPos = vec3(mapPos) / float(dimX);
+        for (int f = 0; f < numFlares; f++) {
+            float flareDist = distance(flares[f].pos, hitWorldPos);
+            if (flareDist < 0.05) {
+                vec3 fDir = normalize(flares[f].pos - hitWorldPos);
+                float fShadow = getShadow(hitWorldPos + normal * 0.001, fDir);
+                float fAtten = clamp(1.0 - (flareDist / 0.05), 0.0, 1.0);
+                fAtten = fAtten * fAtten; // Quadratic falloff
+                float fDiff = max(dot(normal, fDir), 0.0);
+                flareLighting += flares[f].color * albedo * fDiff * fAtten * fShadow * flares[f].intensity * 3.0;
+            }
+        }
+        lighting += flareLighting;
+
+        // --- WATER: rippling surface, sky reflection and glints ---
+        if (voxelID == 35) {
+            // Exact hit point on the face (in voxels), so ripples are smooth inside a voxel
+            vec3 originVox = cameraPos * float(dimX);
+            int axis = normalIndex >> 1;
+            float plane = float(mapPos[axis]) + (normal[axis] > 0.0 ? 1.0 : 0.0);
+            vec2 p = (originVox + ray.dir * ((plane - originVox[axis]) / ray.dir[axis])).xz;
+
+            // Surface normal from the FFT slopes (top faces; side faces of wave steps keep
+            // their voxel normal), and foam where the choppy displacement folds the surface
+            // (Jacobian of the horizontal displacement below ~0.6)
+            vec3 n = normal;
+            float foam = 0.0;
+            if (normalIndex == 2) {
+                vec4 slope = sampleOcean(oceanSlope, p);
+                vec4 displacement = sampleOcean(oceanDisplacement, p);
+                vec4 shore = sampleShore(p);
+                float openSea = openSeaFactor(shore);
+                float strength = surfStrength(p);
+
+                // Breaker slope along the inland direction (the distance to land falls inland)
+                float surfSlope = (surfHeight(shore.x + 0.5, strength) - surfHeight(shore.x - 0.5, strength));
+                vec2 shadingSlope = sampleOceanSlopeForShading(p).xy * openSea - shore.zw * surfSlope;
+                n = normalize(vec3(-shadingSlope.x, 1.0, -shadingSlope.y));
+                float jxx = 1.0 + oceanChoppiness * slope.z;
+                float jzz = 1.0 + oceanChoppiness * slope.w;
+                float jxz = oceanChoppiness * displacement.w;
+                float jacobian = jxx * jzz - jxz * jxz;
+                foam = clamp((0.85 - jacobian) * 2.5, 0.0, 1.0) * openSea;
+                foam = max(foam, smoothstep(1.3, 2.2, displacement.z * openSea) * 0.6); // Whitecaps on the highest crests
+
+                // Surf: breaking crests, a churning line at the waterline, and the swash itself
+                foam = max(foam, smoothstep(14.0, 3.0, shore.x) * clamp(surfHeight(shore.x, strength), 0.0, 1.0));
+                float churn = valueNoise(p * 0.5 + vec2(time * 0.8, -time * 0.6));
+                foam = max(foam, smoothstep(3.0, 0.5, shore.x) * (0.45 + 0.45 * churn));
+                if (shore.x < 0.0) foam = max(foam, 0.75);
+            }
+
+            // More reflection at grazing angles (Fresnel), with a glint of the sun or moon
+            float fresnel = 0.15 + 0.85 * pow(1.0 - max(dot(n, -ray.dir), 0.0), 4.0);
+            vec3 reflected = reflect(ray.dir, n);
+            vec3 reflection = skyColor + lightColor * pow(max(dot(reflected, lightDir), 0.0), 200.0) * 3.0 * shadow;
+
+            // Body color, brighter on wave crests (light through thin water)
+            float crest = clamp(oceanHeight(p) * 0.5 + 0.5, 0.0, 1.0);
+            vec3 body = albedo * (0.8 + 0.5 * crest) * (ambient + max(dot(n, lightDir), 0.0) * lightColor * shadow * 0.8);
+
+            vec3 water = mix(body, reflection, fresnel);
+            vec3 foamColor = vec3(0.85, 0.9, 0.92) * (ambient + lightColor * shadow * 0.8);
+            lighting = mix(water, foamColor, foam) + flareLighting;
+        }
+
+        // --- BIOLUMINESCENT & ARTIFACT GLOW ---
+        if (voxelID == 30) {
+            lighting = mix(lighting, vec3(0.0, 1.0, 0.8), 0.75); // Cyan emission
+        } else if (voxelID == 32) {
+            lighting = mix(lighting, vec3(1.0, 0.0, 1.0), 0.85); // Magenta emission
+        }
+
+        if (lightVisualizerEnabled == 1) {
+            float intensity = clamp((diff * shadow * 0.8 + ambient * ao), 0.0, 1.0);
+            float level = floor(intensity * 15.0);
+            colorResult.rgb = getFalseColor(level);
+        } else {
+            colorResult.rgb = lighting;
+        }
+    }
+
+    // Blend wireframe chunk edges if enabled
+    if (chunkViewerEnabled == 1) {
+        colorResult.rgb = mix(colorResult.rgb, vec3(0.0, 1.0, 0.1), gridFactor);
+    }
+
+    // --- Draw overlays (Held Clump, Laser Beam, Spawn Beacon) ---
+    float hitDist = hit ? distance(cameraPos, vec3(mapPos) / float(dimX)) : 1e9;
+
+    // --- Render Held Clump as glowing sphere ---
+    if (heldClumpActive == 1) {
+        vec3 oc = ray.origin - heldClumpPos;
+        float sphereRadius = heldClumpRadius / float(dimX);
+        float a = dot(ray.dir, ray.dir);
+        float b = 2.0 * dot(oc, ray.dir);
+        float c = dot(oc, oc) - sphereRadius * sphereRadius;
+        float disc = b * b - 4.0 * a * c;
+        if (disc > 0.0) {
+            float t = (-b - sqrt(disc)) / (2.0 * a);
+            float sphereHitDist = t;
+            if (t > 0.0 && sphereHitDist < hitDist) {
+                vec3 hitP = ray.origin + t * ray.dir;
+                vec3 sphereNormal = normalize(hitP - heldClumpPos);
+                float diff = max(dot(sphereNormal, lightDir), 0.0);
+                vec3 clumpColor;
+                if (heldClumpIsArtifact == 1) {
+                    clumpColor = vec3(0.8, 0.1, 1.0); // Magenta artifact glow
+                } else {
+                    clumpColor = vec3(0.5, 0.45, 0.35); // Rocky debris
+                }
+                // Pulsing glow effect
+                float pulse = 0.8 + 0.2 * sin(time * 4.0);
+                colorResult.rgb = clumpColor * (diff * 0.6 + 0.4) * pulse;
+                hitDist = sphereHitDist; // Update hitDist so laser renders behind
+            }
+        }
+    }
+
+    // Volumetric Laser Beam Glow
+    if (laserBeamActive == 1) {
+        vec3 u = ray.dir;
+        vec3 v = laserBeamEnd - laserBeamStart;
+        vec3 w = ray.origin - laserBeamStart;
+        float a = dot(u, u);
+        float b = dot(u, v);
+        float c = dot(v, v);
+        float d = dot(u, w);
+        float e = dot(v, w);
+        float denom = a * c - b * b;
+        float t = 0.0;
+        if (abs(denom) > 0.0001) {
+            t = clamp((e - b * d) / denom, 0.0, 1.0);
+        }
+        float s = max((t * b - d) / a, 0.0);
+
+        if (s < hitDist) {
+            vec3 pRay = ray.origin + s * ray.dir;
+            vec3 pSeg = laserBeamStart + t * (laserBeamEnd - laserBeamStart);
+            float dist = length(pRay - pSeg);
+            if (dist < 0.003) {
+                float glow = clamp(1.0 - (dist / 0.003), 0.0, 1.0);
+                colorResult.rgb = mix(colorResult.rgb, laserBeamColor, glow * glow * 0.9);
+            }
+        }
+    }
+
+    // Green Spawn Beacon Column
+    {
+        vec3 beaconStart = vec3(beaconPos.x, 0.0, beaconPos.z);
+        vec3 beaconEnd = vec3(beaconPos.x, 0.15, beaconPos.z);
+        vec3 u = ray.dir;
+        vec3 v = beaconEnd - beaconStart;
+        vec3 w = ray.origin - beaconStart;
+        float a = dot(u, u);
+        float b = dot(u, v);
+        float c = dot(v, v);
+        float d = dot(u, w);
+        float e = dot(v, w);
+        float denom = a * c - b * b;
+        float t = 0.0;
+        if (abs(denom) > 0.0001) {
+            t = clamp((e - b * d) / denom, 0.0, 1.0);
+        }
+        float s = max((t * b - d) / a, 0.0);
+
+        if (s < hitDist) {
+            vec3 pRay = ray.origin + s * ray.dir;
+            vec3 pSeg = beaconStart + t * (beaconEnd - beaconStart);
+            float dist = length(pRay - pSeg);
+            float beaconRadius = 0.008; // ~10 voxels wide glowing column
+            if (dist < beaconRadius) {
+                float glow = clamp(1.0 - (dist / beaconRadius), 0.0, 1.0);
+                // Fade out when the camera is at the beacon (e.g. at spawn), so it does not tint the whole view
+                float cameraDist = length(cameraPos.xz - beaconPos.xz);
+                glow *= smoothstep(beaconRadius, beaconRadius * 3.0, cameraDist);
+                colorResult.rgb = mix(colorResult.rgb, vec3(0.1, 1.0, 0.4), glow * glow * 0.8);
+            }
+        }
+    }
+
+    // The crosshair and hotbar are drawn by ImGui at full window resolution (see Main.cpp)
     imageStore(imgOutput, pixel_coords, colorResult);
 }
+
+// =====================================================================================
+#elif defined(PASS_SHORE_SEED)
+
+// Classifies each column at sea level: land seeds the "nearest land" channel, water seeds the
+// "nearest water" channel and records how deep it is
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba32i, binding = 5) uniform writeonly iimage2D seeds; // xy = nearest land, zw = nearest water
+layout(r32f, binding = 6) uniform writeonly image2D depthMap;
+
+const int NO_SEED = -1000000;
+const int MAX_DEPTH = 24;
+
+void main() {
+    ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 column = shoreOrigin + texel;
+    bool water = int(getVoxelVal(ivec3(column.x, seaLevel, column.y)) * 255.0 + 0.5) == WATER_ID;
+
+    float depth = 0.0;
+    if (water) {
+        int y = seaLevel - 1;
+        while (y > seaLevel - MAX_DEPTH && int(getVoxelVal(ivec3(column.x, y, column.y)) * 255.0 + 0.5) == WATER_ID) y--;
+        depth = float(seaLevel - y);
+    }
+
+    imageStore(seeds, texel, water ? ivec4(NO_SEED, NO_SEED, texel) : ivec4(texel, NO_SEED, NO_SEED));
+    imageStore(depthMap, texel, vec4(depth));
+}
+
+// =====================================================================================
+#elif defined(PASS_SHORE_JFA)
+
+// One jump flooding step: keep the nearest land and nearest water seed among the 3x3
+// neighbours jumpStep texels away
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba32i, binding = 5) uniform readonly iimage2D seedsIn;
+layout(rgba32i, binding = 7) uniform writeonly iimage2D seedsOut;
+uniform int jumpStep;
+
+const int NO_SEED = -1000000;
+
+void main() {
+    ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 bestLand = ivec2(NO_SEED), bestWater = ivec2(NO_SEED);
+    float landDist = 1e20, waterDist = 1e20;
+
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            ivec2 q = texel + ivec2(dx, dy) * jumpStep;
+            if (q.x < 0 || q.y < 0 || q.x >= SHORE_MAP_SIZE || q.y >= SHORE_MAP_SIZE) continue;
+            ivec4 candidate = imageLoad(seedsIn, q);
+            if (candidate.x != NO_SEED) {
+                vec2 d = vec2(candidate.xy - texel);
+                float dd = dot(d, d);
+                if (dd < landDist) { landDist = dd; bestLand = candidate.xy; }
+            }
+            if (candidate.z != NO_SEED) {
+                vec2 d = vec2(candidate.zw - texel);
+                float dd = dot(d, d);
+                if (dd < waterDist) { waterDist = dd; bestWater = candidate.zw; }
+            }
+        }
+    }
+    imageStore(seedsOut, texel, ivec4(bestLand, bestWater));
+}
+
+// =====================================================================================
+#elif defined(PASS_SHORE_FINAL)
+
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba32i, binding = 5) uniform readonly iimage2D seeds;
+layout(r32f, binding = 6) uniform readonly image2D depthMap;
+layout(rgba16f, binding = 7) uniform writeonly image2D shoreOut;
+
+const int NO_SEED = -1000000;
+
+void main() {
+    ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
+    ivec4 nearest = imageLoad(seeds, texel);
+    float depth = imageLoad(depthMap, texel).r;
+    bool water = nearest.z == texel.x && nearest.w == texel.y; // Its own nearest water seed
+
+    float signedDistance;
+    vec2 inland = vec2(0.0);
+    if (water) {
+        if (nearest.x == NO_SEED) {
+            signedDistance = 1000.0; // No land in the map
+        } else {
+            vec2 toLand = vec2(nearest.xy - texel);
+            signedDistance = length(toLand);
+            inland = toLand / max(signedDistance, 1e-4);
+        }
+    } else {
+        if (nearest.z == NO_SEED) {
+            signedDistance = -1000.0;
+        } else {
+            vec2 fromWater = vec2(texel - nearest.zw);
+            float d = length(fromWater);
+            signedDistance = -d;
+            inland = fromWater / max(d, 1e-4);
+        }
+    }
+    imageStore(shoreOut, texel, vec4(signedDistance, depth, inland));
+}
+
+#endif

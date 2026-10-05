@@ -27,38 +27,38 @@
     <ClCompile Include="rayCast.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="voxelUpdate.cpp">
+    <ClCompile Include="Ocean.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Shore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="default.vert">
-      <Filter>Source Files\shaders</Filter>
-    </None>
-    <None Include="default.frag">
-      <Filter>Source Files\shaders</Filter>
-    </None>
     <None Include="default.comp">
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="anim.comp">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="ocean.comp">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="linmath.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FastNoiseLite.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="rayCast.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="chunk.h">
+    <ClInclude Include="Ocean.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="voxelUpdate.h">
+    <ClInclude Include="Shore.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="chunk.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="animation.hpp">

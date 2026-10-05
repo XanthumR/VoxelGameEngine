@@ -1,9 +1,11 @@
 #include "rayCast.h"
+#include "chunk.h"
 
+#include <cmath>
 
-RayHit raycast(glm::vec3 origin, glm::vec3 dir, float maxDist, int VOXEL_WIDTH, int VOXEL_HEIGHT, int VOXEL_DEPTH, std::vector<GLubyte>& voxelData) {
-    // Transform origin to grid space (0.0 to dimX)
-    glm::vec3 rayPos = origin * (float)VOXEL_WIDTH;
+RayHit raycast(glm::vec3 origin, glm::vec3 dir, float maxDist) {
+    // Transform origin to voxel space
+    glm::vec3 rayPos = origin * VOXELS_PER_UNIT;
     glm::ivec3 mapPos = glm::floor(rayPos);
 
     glm::vec3 deltaDist = glm::abs(1.0f / dir);
@@ -12,18 +14,19 @@ RayHit raycast(glm::vec3 origin, glm::vec3 dir, float maxDist, int VOXEL_WIDTH, 
 
     glm::ivec3 lastNormal(0);
 
-    for (int i = 0; i < 200; i++) { // Max reach distance
-        // Check bounds
-        if (mapPos.x < 0 || mapPos.x >= VOXEL_WIDTH ||
-            mapPos.y < 0 || mapPos.y >= VOXEL_HEIGHT ||
-            mapPos.z < 0 || mapPos.z >= VOXEL_DEPTH) break;
+    // A DDA visits at most ~3 cells per voxel of travel
+    float maxVoxDist = maxDist * VOXELS_PER_UNIT;
+    int maxSteps = (int)std::ceil(maxVoxDist * 3.0f) + 1;
+
+    for (int i = 0; i < maxSteps; i++) {
+        // Check vertical bounds
+        if (mapPos.y < 0 || mapPos.y >= WORLD_HEIGHT) break;
 
         // Check distance
-        if (glm::length(glm::vec3(mapPos) - rayPos) > maxDist * VOXEL_WIDTH) break;
+        if (glm::length(glm::vec3(mapPos) - rayPos) > maxVoxDist + 1.0f) break;
 
-        // Sample our CPU data
-        size_t idx = ((size_t)mapPos.z * VOXEL_WIDTH * VOXEL_HEIGHT) + ((size_t)mapPos.y * VOXEL_WIDTH) + mapPos.x;
-        if (voxelData[idx] > 0) {
+        // Sample our CPU chunk map
+        if (isSolidBlock(getVoxelFromChunks(mapPos.x, mapPos.y, mapPos.z))) {
             return { true, mapPos, lastNormal };
         }
 
