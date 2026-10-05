@@ -552,3 +552,11 @@ These are pure functions over the terrain noise, `IslandRegistry`, `OccupancyGri
 - **Chimney smoke:** voxel puffs rise from smoke emitters in the models (palette index 100), drift with the wind, grow and thin out. They appear while a building is in use.
 - **Drawing:** people, smoke puffs and boats are all `Figure`s, drawn by `FigureRenderer` into the GPU chunk pools; erasing puts the sea back below sea level.
 - **Shore map:** figures count as water, so a passing boat does not leave surf behind.
+
+### Production (step 5, done)
+
+- **Workforce:** `ProductionSystem` counts the jobs of the connected producers per island and tier against the residents of that tier. When there are fewer residents than jobs, every producer of that tier runs at the same reduced share. Workers do not take Farmer jobs, so upgrading every house leaves the Farmer producers without workers.
+- **Location factors:** trees, pasture and coast are recomputed whenever buildings, roads or trees change.
+- **Cycles:** progress grows by productivity (workforce share x location factor) while the inputs are there and the output buffer (4) has room; a cycle uses one of each input and makes one output. Lumberjacks fell the nearest tree each cycle.
+- **Status** (`ProducerStatus`): working, no road, no workers, bad location, waiting for input, output full. It is shown in the tooltip and with grey and orange markers. Fishing boats sail and producers smoke only while working.
+- **Next, step 6:** carts take the output to the warehouse and bring the inputs; until then, outputs stop at 4 and inputs only come from the buffer.

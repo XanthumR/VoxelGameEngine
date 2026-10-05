@@ -13,8 +13,10 @@ class TerrainGenerator;
 
 // The fishing boats of the fisheries. Purely visual: each fishery whose model has a boat berth
 // (palette index 101 in its .vox) has a boat that lies at the end of its dock, sails out to sea
-// along the dock's direction, fishes a while, and comes back, once per TRIP_SECONDS. The route is
-// cut short where the sea gets shallow, so a boat never sails onto land.
+// along the dock's direction, fishes a while, and comes back: one trip per fish, at the pace the
+// fishery works (TRIP_SECONDS is its cycle at full productivity). When the fishery stops, the boat
+// finishes its trip and stays moored. The route is cut short where the sea gets shallow, so a boat
+// never sails onto land.
 class FishingBoats {
 public:
     static constexpr int MAX_BOATS = 64;

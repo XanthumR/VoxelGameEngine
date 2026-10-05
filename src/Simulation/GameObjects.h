@@ -49,6 +49,27 @@ struct ResidenceComponent {
     std::array<int16_t, MAX_NEEDS> needSupply = {}; // Per mille, in the tier's need order
 };
 
+// Why a producer is or is not making anything
+enum class ProducerStatus : uint8_t {
+    Working,
+    NoRoad,       // Not connected to a warehouse
+    NoWorkforce,  // No residents of the tier it needs on the island
+    BadLocation,  // Its location rule gives nothing (no trees, no pasture)
+    MissingInput, // An input buffer is empty
+    OutputFull,   // The output buffer is full (waiting for a cart)
+};
+
+// A producer (BuildingRole::Producer): its cycle, buffers and how fast it runs (ProductionSystem)
+struct ProductionComponent {
+    int32_t progress = 0;                // Productivity per mille, summed per tick; a cycle is cycleTicks * 1000
+    std::array<uint8_t, 2> inputs = {};  // Goods waiting to be used, in the chain's input order
+    uint8_t output = 0;                  // Goods made, waiting to be carried to the warehouse
+    int16_t locationFactor = 1000;       // Per mille, from the chain's location rule
+    int16_t productivity = 0;            // Per mille: workforce share x location factor
+    ProducerStatus status = ProducerStatus::NoRoad;
+    uint32_t cycles = 0;                 // Goods made so far
+};
+
 // Owns every game object. Components live in flat arrays indexed by slot, all allocated up front,
 // so creating and destroying objects never allocates and never moves components.
 class GameObjectRegistry {
@@ -72,6 +93,8 @@ public:
     const LogisticsComponent& Logistics(GameObjectId id) const { return m_Logistics[SlotOf(id)]; }
     ResidenceComponent& Residence(GameObjectId id) { return m_Residences[SlotOf(id)]; }
     const ResidenceComponent& Residence(GameObjectId id) const { return m_Residences[SlotOf(id)]; }
+    ProductionComponent& Production(GameObjectId id) { return m_Production[SlotOf(id)]; }
+    const ProductionComponent& Production(GameObjectId id) const { return m_Production[SlotOf(id)]; }
 
     // Iteration: slots below SlotCount() may hold an object; IdAtSlot is INVALID for empty ones
     uint32_t SlotCount() const { return m_UsedSlots; }
@@ -85,6 +108,7 @@ private:
     std::vector<VoxelAnchorComponent> m_Anchors;
     std::vector<LogisticsComponent> m_Logistics;
     std::vector<ResidenceComponent> m_Residences;
+    std::vector<ProductionComponent> m_Production;
     std::vector<uint16_t> m_Generations; // Current generation per slot; never 0
     std::vector<uint8_t> m_Alive;
     std::vector<uint32_t> m_FreeSlots;   // Destroyed slots, reused before new ones

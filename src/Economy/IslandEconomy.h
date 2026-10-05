@@ -20,6 +20,9 @@ struct IslandStorage {
     // Population, filled in by PopulationSystem once per second
     std::array<int, TIER_COUNT> population = {};         // Residents per tier
     std::array<int, TIER_COUNT> suppliedResidents = {};  // Of those, in houses that a marketplace serves
+    // Workforce, filled in by ProductionSystem every tick
+    std::array<int, TIER_COUNT> jobs = {};               // Workers the connected producers need, per tier
+    std::array<int, TIER_COUNT> workforce = {};          // Per mille of those jobs the residents fill (1000 = all)
     std::array<std::array<int16_t, MAX_NEEDS>, TIER_COUNT> supply = {}; // Per tier and need: smoothed per mille
     // Goods owed per tier and need, in 1/60000 of a good (consumption is per minute, cycles per second)
     std::array<std::array<int32_t, MAX_NEEDS>, TIER_COUNT> owed = {};

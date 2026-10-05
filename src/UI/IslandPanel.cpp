@@ -45,8 +45,12 @@ void DrawIslandPanel(IslandId island, IslandEconomyManager& economy) {
     // Population, tier by tier, with the supply of each need
     for (int tier = 0; tier < TIER_COUNT; tier++) {
         const PopulationTier& definition = POPULATION_TIERS[tier];
-        if (tier > 0 && storage->population[tier] == 0) continue; // Upper tiers once someone lives there
+        if (tier > 0 && storage->population[tier] == 0 && storage->jobs[tier] == 0) continue; // Upper tiers once they matter
         ImGui::Text("%s: %d", definition.name, storage->population[tier]);
+        if (storage->jobs[tier] > 0) {
+            ImVec4 color = storage->workforce[tier] >= 1000 ? ImVec4(0.5f, 1.0f, 0.55f, 1.0f) : ImVec4(1.0f, 0.45f, 0.4f, 1.0f);
+            ImGui::TextColored(color, "  Jobs: %d (%d%% filled)", storage->jobs[tier], storage->workforce[tier] / 10);
+        }
         for (int n = 0; n < definition.needCount; n++) {
             const Need& need = definition.needs[n];
             if (need.kind != NeedKind::Good) continue;

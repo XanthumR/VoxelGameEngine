@@ -9,6 +9,9 @@ void Simulation::FixedUpdate(float tickSeconds) {
     m_Population.Update(m_Objects, m_Economy, m_TickCount);
     // Felled trees grow back
     m_Trees.Update(m_TickCount, m_Occupancy, m_Roads);
+    // Producers: workforce, location, cycles. Their location factors follow buildings, roads and trees.
+    uint32_t worldRevision = m_BuildingsRevision * 2654435761u + m_Roads.Revision() * 40503u + m_Trees.Revision();
+    m_Production.Update(m_Objects, m_Economy, m_Islands, m_Occupancy, m_Roads, m_Trees, worldRevision, m_TickCount);
 
     m_TickCount++;
     m_SimulationSeconds += tickSeconds;

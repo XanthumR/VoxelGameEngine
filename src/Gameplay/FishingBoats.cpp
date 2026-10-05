@@ -55,7 +55,15 @@ void FishingBoats::Update(float deltaTime, const GameObjectRegistry& objects, co
             m_Boats[i] = m_Boats.back();
             m_Boats.pop_back();
         } else {
-            m_Boats[i].time = std::fmod(m_Boats[i].time + deltaTime, TRIP_SECONDS);
+            // At the fishery's pace while it works; home at full speed and then moored when it does not
+            Boat& boat = m_Boats[i];
+            const ProductionComponent& production = objects.Production(boat.fishery);
+            bool working = production.status == ProducerStatus::Working;
+            float pace = working ? production.productivity / 1000.0f : 1.0f;
+            if (working || boat.time > 0.0f) {
+                float time = boat.time + deltaTime * pace;
+                boat.time = (!working && time >= TRIP_SECONDS) ? 0.0f : std::fmod(time, TRIP_SECONDS);
+            }
             i++;
         }
     }

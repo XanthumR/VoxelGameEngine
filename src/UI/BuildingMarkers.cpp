@@ -19,6 +19,7 @@ void DrawBuildingMarkers(const ICamera& camera, const GameObjectRegistry& object
     ImDrawList* drawList = ImGui::GetBackgroundDrawList(); // Behind the UI windows
     ImU32 red = ImGui::ColorConvertFloat4ToU32(ImVec4(0.85f, 0.12f, 0.10f, 0.95f));
     ImU32 amber = ImGui::ColorConvertFloat4ToU32(ImVec4(0.95f, 0.62f, 0.10f, 0.95f));
+    ImU32 grey = ImGui::ColorConvertFloat4ToU32(ImVec4(0.45f, 0.45f, 0.48f, 0.95f));
     ImU32 white = ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
     ImU32 outline = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 0.0f, 0.0f, 0.6f));
 
@@ -32,7 +33,11 @@ void DrawBuildingMarkers(const ICamera& camera, const GameObjectRegistry& object
         // Red: no road to a warehouse. Amber: a house no marketplace serves.
         bool noRoad = !logistics.connected;
         bool noMarket = type.role == BuildingRole::Residence && !logistics.inMarketRange;
-        if (!noRoad && !noMarket) continue;
+        // Producers: grey when nobody can work there (no workers, nothing to work with), orange when an input is missing
+        ProducerStatus status = type.role == BuildingRole::Producer ? objects.Production(id).status : ProducerStatus::Working;
+        bool idle = status == ProducerStatus::NoWorkforce || status == ProducerStatus::BadLocation;
+        bool starved = status == ProducerStatus::MissingInput;
+        if (!noRoad && !noMarket && !idle && !starved) continue;
 
         // Above the middle of the roof
         const VoxelAnchorComponent& anchor = objects.Anchor(id);
@@ -44,8 +49,9 @@ void DrawBuildingMarkers(const ICamera& camera, const GameObjectRegistry& object
         if (!WorldToScreen(camera, world, windowSize, screen)) continue;
         ImVec2 center(screen.x, screen.y);
         drawList->AddCircleFilled(center, BADGE_RADIUS + 1.5f, outline);
-        drawList->AddCircleFilled(center, BADGE_RADIUS, noRoad ? red : amber);
-        if (noRoad) {
+        ImU32 color = noRoad ? red : idle ? grey : amber;
+        drawList->AddCircleFilled(center, BADGE_RADIUS, color);
+        if (noRoad || idle || starved) {
             // "!" drawn with shapes so it does not depend on the font size
             drawList->AddRectFilled(ImVec2(center.x - 1.5f, center.y - 7.0f), ImVec2(center.x + 1.5f, center.y + 2.0f), white);
             drawList->AddRectFilled(ImVec2(center.x - 1.5f, center.y + 4.0f), ImVec2(center.x + 1.5f, center.y + 7.0f), white);

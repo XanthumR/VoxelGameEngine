@@ -2,6 +2,7 @@
 
 #include "Economy/IslandEconomy.h"
 #include "Economy/PopulationSystem.h"
+#include "Economy/Production.h"
 #include "Simulation/GameObjects.h"
 #include "Simulation/IslandRegistry.h"
 #include "Simulation/Logistics.h"
@@ -39,6 +40,8 @@ public:
     const LogisticsSystem& Logistics() const { return m_Logistics; }
     PopulationSystem& Population() { return m_Population; }
     TreeRegistry& Trees() { return m_Trees; }
+    ProductionSystem& Production() { return m_Production; }
+    const ProductionSystem& Production() const { return m_Production; }
     const PopulationSystem& Population() const { return m_Population; }
 
     // Everything placement checks against, for this world
@@ -57,6 +60,7 @@ private:
     LogisticsSystem m_Logistics;
     PopulationSystem m_Population;
     TreeRegistry m_Trees;
+    ProductionSystem m_Production;
 
     uint64_t m_TickCount = 0;
     double m_SimulationSeconds = 0.0;

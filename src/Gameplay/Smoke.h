@@ -11,8 +11,8 @@
 class BuildingModelLibrary;
 
 // Smoke from chimneys. Purely visual (not part of the deterministic simulation): every building
-// whose model has smoke emitters (palette index 100 in its .vox) puffs while it is in use, houses
-// with residents and producers. A puff rises, drifts with the wind, grows and thins out, then
+// whose model has smoke emitters (palette index 100 in its .vox) puffs while it is in use: houses
+// with residents, producers while they work. A puff rises, drifts with the wind, grows and thins out, then
 // disappears; it is drawn as a Figure::PUFF.
 class SmokeSystem {
 public:

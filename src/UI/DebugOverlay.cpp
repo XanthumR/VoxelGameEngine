@@ -103,6 +103,7 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     for (size_t i = 0; i < c.simulation.Economy().IslandSlotCount(); i++) {
         for (int residents : c.simulation.Economy().IslandAt(i).population) population += residents;
     }
+    ImGui::Text("Producers working: %u / %u", c.simulation.Production().Working(), c.simulation.Production().Producers());
     ImGui::Text("Population: %d | Walkers: %zu | Upgrades: %u | Downgrades: %u", population, c.walkers,
         c.simulation.Population().Upgrades(), c.simulation.Population().Downgrades());
     const BuildTool& build = c.buildTool;

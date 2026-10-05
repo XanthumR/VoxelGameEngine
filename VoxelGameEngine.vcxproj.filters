@@ -72,6 +72,9 @@
     <ClCompile Include="src\Economy\PopulationSystem.cpp">
       <Filter>src\Economy</Filter>
     </ClCompile>
+    <ClCompile Include="src\Economy\Production.cpp">
+      <Filter>src\Economy</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\BuildTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
@@ -305,6 +308,9 @@
       <Filter>src\Economy</Filter>
     </ClInclude>
     <ClInclude Include="src\Economy\PopulationSystem.h">
+      <Filter>src\Economy</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Economy\Production.h">
       <Filter>src\Economy</Filter>
     </ClInclude>
     <ClInclude Include="src\Economy\ProductionChains.h">

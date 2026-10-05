@@ -140,6 +140,7 @@
     <ClCompile Include="src\Economy\IslandEconomy.cpp" />
     <ClCompile Include="src\Economy\PopulationNeeds.cpp" />
     <ClCompile Include="src\Economy\PopulationSystem.cpp" />
+    <ClCompile Include="src\Economy\Production.cpp" />
     <ClCompile Include="src\Gameplay\BuildTool.cpp" />
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp" />
     <ClCompile Include="src\Gameplay\FishingBoats.cpp" />
@@ -221,6 +222,7 @@
     <ClInclude Include="src\Economy\IslandEconomy.h" />
     <ClInclude Include="src\Economy\PopulationNeeds.h" />
     <ClInclude Include="src\Economy\PopulationSystem.h" />
+    <ClInclude Include="src\Economy\Production.h" />
     <ClInclude Include="src\Economy\ProductionChains.h" />
     <ClInclude Include="src\Gameplay\BuildTool.h" />
     <ClInclude Include="src\Gameplay\Camera.h" />

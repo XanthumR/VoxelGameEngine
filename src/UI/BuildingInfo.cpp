@@ -68,13 +68,41 @@ void MarketInfo(GameObjectId id, const GameObjectRegistry& objects) {
     ImGui::Text("Serves %d houses, %d residents", houses, residents);
 }
 
-// What the producer makes, from what, with whom
-void ProducerInfo(GameObjectId id, const GameObjectRegistry& objects) {
+const char* StatusText(ProducerStatus status) {
+    switch (status) {
+    case ProducerStatus::Working: return "Working";
+    case ProducerStatus::NoRoad: return "No road to a warehouse";
+    case ProducerStatus::NoWorkforce: return "No workers";
+    case ProducerStatus::BadLocation: return "Nothing to work with here";
+    case ProducerStatus::MissingInput: return "Waiting for input";
+    case ProducerStatus::OutputFull: return "Storage full: waiting for a cart";
+    }
+    return "?";
+}
+
+// What the producer makes, how well it is doing, and why not
+void ProducerInfo(GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
     const ProductionChain& chain = PRODUCTION_CHAINS[BUILDING_TYPES[objects.Building(id).type].chain];
+    const ProductionComponent& production = objects.Production(id);
     if (chain.inputCount == 0) ImGui::Text("Makes %s", ItemName(chain.output));
     else ImGui::Text("Makes %s from %s", ItemName(chain.output), ItemName(chain.inputs[0]));
-    ImGui::Text("Cycle %d s, %d %s workers", chain.cycleTicks / 10, chain.workforce, POPULATION_TIERS[chain.workforceTier].name);
-    if (!objects.Logistics(id).connected) ImGui::TextColored(BAD_COLOR, "No road to a warehouse");
+
+    ImVec4 color = production.status == ProducerStatus::Working ? GOOD_COLOR
+                 : (production.status == ProducerStatus::OutputFull || production.status == ProducerStatus::MissingInput) ? WARNING_COLOR : BAD_COLOR;
+    ImGui::TextColored(color, "%s", StatusText(production.status));
+
+    // Productivity: workforce share x location factor
+    const IslandStorage* storage = economy.Find(objects.Building(id).island);
+    int workforce = storage ? storage->workforce[chain.workforceTier] : 0;
+    ImGui::Text("Productivity %d%% (workers %d%%, location %d%%)", production.productivity / 10, workforce / 10, production.locationFactor / 10);
+    ImGui::Text("%d %s workers needed, cycle %d s", chain.workforce, POPULATION_TIERS[chain.workforceTier].name, chain.cycleTicks / 10);
+
+    float cycle = (float)chain.cycleTicks * 1000.0f;
+    ImGui::ProgressBar(production.progress / cycle, ImVec2(220.0f, 0.0f), "");
+    for (int i = 0; i < chain.inputCount; i++) {
+        ImGui::Text("In:  %-12s %d / %d", ItemName(chain.inputs[i]), production.inputs[i], PRODUCER_BUFFER);
+    }
+    ImGui::Text("Out: %-12s %d / %d   (made %u)", ItemName(chain.output), production.output, PRODUCER_BUFFER, production.cycles);
 }
 
 void WarehouseInfo(GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
@@ -99,7 +127,7 @@ void DrawBuildingInfo(GameObjectId building, const GameObjectRegistry& objects, 
     case BuildingRole::Residence: HouseInfo(building, objects, economy); break;
     case BuildingRole::Market: MarketInfo(building, objects); break;
     case BuildingRole::Storage: WarehouseInfo(building, objects, economy); break;
-    case BuildingRole::Producer: ProducerInfo(building, objects); break;
+    case BuildingRole::Producer: ProducerInfo(building, objects, economy); break;
     }
     ImGui::EndTooltip();
 }
