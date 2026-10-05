@@ -6,6 +6,7 @@
 #include "Rendering/ShaderLoader.h"
 #include "Rendering/ShoreMap.h"
 #include "Rendering/SkyLighting.h"
+#include "Rendering/TileOverlay.h"
 #include "World/WorldConstants.h"
 
 #include <GLFW/glfw3.h>
@@ -44,6 +45,8 @@ void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     previewState = loc("previewState");
     previewMin = loc("previewMin");
     previewMax = loc("previewMax");
+    overlayOrigin = loc("overlayOrigin");
+    overlayGroundY = loc("overlayGroundY");
 }
 
 bool VoxelRenderer::LoadPass(Pass& pass, const char* path) {
@@ -92,6 +95,11 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     glActiveTexture(GL_TEXTURE11);
     glBindTexture(GL_TEXTURE_2D_ARRAY, ocean.SlopeTexture());
 
+    // Tile highlights on unit 13
+    glActiveTexture(GL_TEXTURE13);
+    glBindTexture(GL_TEXTURE_2D, frame.overlay ? frame.overlay->Texture() : 0);
+    glm::ivec2 overlayOrigin = frame.overlay ? frame.overlay->Origin() : glm::ivec2(0);
+
     m_Targets.BindImages();
 
     SkyLighting sky = SkyLighting::At(frame.time);
@@ -137,6 +145,9 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glUniform1i(u.previewState, frame.preview.state);
         glUniform3iv(u.previewMin, 1, &frame.preview.min[0]);
         glUniform3iv(u.previewMax, 1, &frame.preview.max[0]);
+        glUniform2i(u.overlayOrigin, overlayOrigin.x, overlayOrigin.y);
+        // Buildings and roads stand on SEA_LEVEL + ISLAND_HEIGHT; no overlay draws below the world
+        glUniform1i(u.overlayGroundY, frame.overlay ? SEA_LEVEL + ISLAND_HEIGHT : -1000);
     };
 
     GLuint fullGroupsX = (m_Targets.Width() + 7) / 8, fullGroupsY = (m_Targets.Height() + 7) / 8;

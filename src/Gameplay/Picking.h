@@ -19,5 +19,9 @@ struct PickResult {
 // projection as the renderer (60 degree vertical field of view) and its pixel-to-ray math.
 glm::vec3 ScreenToWorldDirection(const ICamera& camera, glm::vec2 cursor, glm::ivec2 windowSize);
 
+// The window pixel a world point (world units) projects to; false when it is behind the camera.
+// The inverse of ScreenToWorldDirection.
+bool WorldToScreen(const ICamera& camera, glm::vec3 worldPosition, glm::ivec2 windowSize, glm::vec2& screen);
+
 // Casts that ray into the CPU world (chunks near the camera only)
 PickResult PickUnderCursor(const ICamera& camera, glm::vec2 cursor, glm::ivec2 windowSize, const VoxelWorld& world);

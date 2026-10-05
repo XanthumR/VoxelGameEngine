@@ -23,6 +23,24 @@ uniform int previewState; // 0 = none, 1 = valid (green), 2 = invalid (red), 3 =
 uniform ivec3 previewMin; // Voxels, inclusive
 uniform ivec3 previewMax; // Voxels, exclusive
 
+// Per build tile ground highlights (TileOverlay in src/Rendering/TileOverlay.h)
+layout(binding = 13) uniform usampler2D tileOverlay;
+uniform ivec2 overlayOrigin; // Tile of texel (0, 0)
+uniform int overlayGroundY;  // Highlights tint the top faces of the voxel layer just below this
+const int TILE_OVERLAY_SIZE = 256;
+const int OVERLAY_TILE_SIZE = 4; // Columns per tile (TILE_SIZE)
+
+// Palette of TileOverlay::Color: rgb and blend strength
+vec4 tileOverlayColor(uint index) {
+    if (index == 1u) return vec4(0.20, 0.50, 1.00, 0.60); // Road in range
+    if (index == 2u) return vec4(0.55, 0.55, 0.55, 0.45); // Road out of range
+    if (index == 3u) return vec4(0.20, 1.00, 0.30, 0.55); // Preview: add
+    if (index == 4u) return vec4(1.00, 0.25, 0.20, 0.55); // Preview: invalid
+    if (index == 5u) return vec4(1.00, 0.55, 0.10, 0.55); // Preview: remove
+    if (index == 6u) return vec4(0.20, 0.75, 1.00, 0.70); // Warehouse reach
+    return vec4(0.0);
+}
+
 // Generates a pseudo-random float between 0.0 and 1.0 based on pixel coordinates
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
@@ -43,7 +61,7 @@ vec3 getFalseColor(float level) {
     return c;
 }
 
-// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 building materials)
+// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 building materials, 44 road)
 vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     vec3 albedo = vec3(1.0);
     if (voxelID == 1) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000); // Grass
@@ -88,6 +106,7 @@ vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     else if (voxelID == 40) albedo = vec3(0.30, 0.18, 0.08); // Wood
     else if (voxelID == 41) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 5.0) >= 0.5 ? vec3(0.62, 0.45, 0.26) : vec3(0.56, 0.40, 0.22); // Planks
     else if (voxelID == 42) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 11.0) >= 0.5 ? vec3(0.55, 0.16, 0.10) : vec3(0.48, 0.13, 0.08); // Roof tiles
+    else if (voxelID == 44) albedo = mix(vec3(0.36, 0.27, 0.17), vec3(0.44, 0.33, 0.21), hash(vec2(mapPos.xz) * 0.73)); // Dirt road
     else if (voxelID == 43) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.70, 0.66, 0.58) : vec3(0.62, 0.58, 0.51); // Masonry
     else if (voxelID == 34) albedo = mix(vec3(0.12, 0.55, 0.05), vec3(0.30, 0.85, 0.12), hash(vec2(mapPos.xz) + float(mapPos.y) * 7.0)); // Grass tuft
     return albedo;
@@ -239,6 +258,18 @@ void main() {
             colorResult.rgb = getFalseColor(level);
         } else {
             colorResult.rgb = lighting;
+        }
+    }
+
+    // Tile overlay on the ground's top faces
+    if (hit && normalIndex == 2 && mapPos.y == overlayGroundY - 1) {
+        ivec2 tile = (mapPos.xz >> 2) - overlayOrigin; // Arithmetic shift: floor division by OVERLAY_TILE_SIZE
+        if (all(greaterThanEqual(tile, ivec2(0))) && all(lessThan(tile, ivec2(TILE_OVERLAY_SIZE)))) {
+            vec4 overlay = tileOverlayColor(texelFetch(tileOverlay, tile, 0).r);
+            // Thin darker tile borders make single tiles readable
+            ivec2 inTile = mapPos.xz & (OVERLAY_TILE_SIZE - 1);
+            bool border = inTile.x == 0 || inTile.y == 0;
+            colorResult.rgb = mix(colorResult.rgb, overlay.rgb * (border ? 0.7 : 1.0), overlay.a);
         }
     }
 

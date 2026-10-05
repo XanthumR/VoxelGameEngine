@@ -28,6 +28,9 @@
     <Filter Include="src\Core">
       <UniqueIdentifier>{e4fe4682-6de8-5ac2-bd17-7596e011a28a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\Economy">
+      <UniqueIdentifier>{c9071a7c-588c-556b-8b61-7b6b014242f2}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\Gameplay">
       <UniqueIdentifier>{7f1373df-057d-55df-a097-8cdaf2211d03}</UniqueIdentifier>
     </Filter>
@@ -57,6 +60,9 @@
     <ClCompile Include="src\Core\Screenshot.cpp">
       <Filter>src\Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Economy\IslandEconomy.cpp">
+      <Filter>src\Economy</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\BuildTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
@@ -67,6 +73,9 @@
       <Filter>src\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="src\Gameplay\Picking.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Gameplay\RoadTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="src\Gameplay\StrategyCamera.cpp">
@@ -93,6 +102,9 @@
     <ClCompile Include="src\Rendering\SkyLighting.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rendering\TileOverlay.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
@@ -108,10 +120,16 @@
     <ClCompile Include="src\Simulation\IslandRegistry.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
+    <ClCompile Include="src\Simulation\Logistics.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
     <ClCompile Include="src\Simulation\OccupancyGrid.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation\Placement.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation\RoadNetwork.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation\Simulation.cpp">
@@ -120,10 +138,16 @@
     <ClCompile Include="src\UI\BuildMenu.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
+    <ClCompile Include="src\UI\BuildingMarkers.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
     <ClCompile Include="src\UI\DebugOverlay.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
     <ClCompile Include="src\UI\Hud.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI\IslandPanel.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
     <ClCompile Include="src\World\ChunkStreamer.cpp">
@@ -232,6 +256,9 @@
     <ClInclude Include="src\Core\Screenshot.h">
       <Filter>src\Core</Filter>
     </ClInclude>
+    <ClInclude Include="src\Economy\IslandEconomy.h">
+      <Filter>src\Economy</Filter>
+    </ClInclude>
     <ClInclude Include="src\Gameplay\BuildTool.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
@@ -245,6 +272,9 @@
       <Filter>src\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="src\Gameplay\Picking.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Gameplay\RoadTool.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="src\Gameplay\StrategyCamera.h">
@@ -277,6 +307,9 @@
     <ClInclude Include="src\Rendering\SkyLighting.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\TileOverlay.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\VoxelRenderer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -295,10 +328,19 @@
     <ClInclude Include="src\Simulation\IslandRegistry.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
+    <ClInclude Include="src\Simulation\ItemType.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\Logistics.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
     <ClInclude Include="src\Simulation\OccupancyGrid.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\Placement.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\RoadNetwork.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\Simulation.h">
@@ -310,10 +352,16 @@
     <ClInclude Include="src\UI\BuildMenu.h">
       <Filter>src\UI</Filter>
     </ClInclude>
+    <ClInclude Include="src\UI\BuildingMarkers.h">
+      <Filter>src\UI</Filter>
+    </ClInclude>
     <ClInclude Include="src\UI\DebugOverlay.h">
       <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\UI\Hud.h">
+      <Filter>src\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI\IslandPanel.h">
       <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\World\BlockTypes.h">

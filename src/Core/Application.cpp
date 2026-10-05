@@ -1,7 +1,10 @@
 #include "Core/Application.h"
 
 #include "Core/Screenshot.h"
+#include "Simulation/BuildingTypes.h"
 #include "UI/BuildMenu.h"
+#include "UI/BuildingMarkers.h"
+#include "UI/IslandPanel.h"
 #include "UI/Hud.h"
 #include "World/BlockTypes.h"
 
@@ -33,7 +36,8 @@ Application::Application(const LaunchOptions& options)
       m_Terrain(m_Trees),
       m_EditTool(m_World, m_Editor),
       m_Simulation(m_Terrain),
-      m_BuildTool(m_World, m_Editor, m_Simulation) {
+      m_RoadTool(m_World, m_Editor, m_Simulation),
+      m_BuildTool(m_World, m_Editor, m_Simulation, m_RoadTool) {
     m_Settings.renderScale = options.renderScale;
 }
 
@@ -123,6 +127,8 @@ bool Application::Init() {
     m_ImGuiReady = true;
 
     m_Overlay.Init();
+    m_TileOverlay.Init();
+    m_ReachScratch.reserve(8192);
 
     // The tree model must be loaded before the workers start generating
     if (!m_Trees.Load(TREE_MODEL_PATH)) {
@@ -176,7 +182,14 @@ bool Application::KeyPressed(int key, bool& wasPressed) {
 }
 
 void Application::HandleKeys(float deltaTime) {
-    if (glfwGetKey(m_Window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(m_Window, true);
+    // Escape drops the build selection first; with nothing selected it quits
+    if (KeyPressed(GLFW_KEY_ESCAPE, m_EscapeWasPressed)) {
+        if (m_CameraMode == CameraMode::Strategy && m_BuildTool.SelectedType() != BuildTool::NO_TYPE) {
+            m_BuildTool.SelectType(BuildTool::NO_TYPE);
+        } else {
+            glfwSetWindowShouldClose(m_Window, true);
+        }
+    }
 
     // F1 switches between the strategy camera and the free-fly debug camera
     if (KeyPressed(GLFW_KEY_F1, m_F1WasPressed)) {
@@ -224,6 +237,54 @@ void Application::UpdatePicking() {
         m_Hover = PickUnderCursor(m_FreeFlyCamera, glm::vec2(width * 0.5f, height * 0.5f), glm::ivec2(width, height), m_World);
     }
     if (m_Hover.hit) m_HoverIsland = m_Simulation.Islands().IslandIdAt(m_Hover.voxel.x, m_Hover.voxel.z);
+    if (m_HoverIsland != NO_ISLAND) m_PanelIsland = m_HoverIsland;
+}
+
+// Rebuilds the per-tile ground highlights when anything they show changed: road range colors
+// while building (or hovering a warehouse), a warehouse's reach, and the road tool's path
+void Application::UpdateTileOverlay() {
+    glm::ivec3 focus = glm::ivec3(glm::floor(m_StrategyCamera.FocusPoint() * VOXELS_PER_UNIT));
+    bool moved = m_TileOverlay.Recenter(glm::ivec2(ColumnToTile(focus.x), ColumnToTile(focus.z)));
+
+    const GameObjectRegistry& objects = m_Simulation.Objects();
+    RoadNetwork& roads = m_Simulation.Roads();
+    TileOverlayKey key;
+    key.roadRevision = roads.Revision();
+    key.logisticsRevision = m_Simulation.Logistics().Revision();
+    key.roadPreviewRevision = m_RoadTool.PreviewRevision();
+    key.selection = m_BuildTool.SelectedType();
+    GameObjectId hovered = m_BuildTool.HoveredBuilding();
+    if (objects.IsAlive(hovered) && objects.Building(hovered).type == BUILDING_WAREHOUSE) key.highlightedWarehouse = hovered;
+    key.warehousePreview = key.selection == BUILDING_WAREHOUSE && m_BuildTool.HasPlacementPreview();
+    if (key.warehousePreview) {
+        key.previewMinTile = m_BuildTool.PreviewMinTile();
+        key.previewTiles = m_BuildTool.PreviewTiles();
+    }
+    if (!moved && key == m_TileOverlayKey) return;
+    m_TileOverlayKey = key;
+
+    m_TileOverlay.Clear();
+    if (key.selection != BuildTool::NO_TYPE || key.highlightedWarehouse != INVALID_GAME_OBJECT) {
+        roads.ForEach([&](glm::ivec2 tile, const RoadTile& road) {
+            uint8_t color = road.distance <= WAREHOUSE_ROAD_RANGE ? TileOverlay::ROAD_IN_RANGE : TileOverlay::ROAD_OUT_OF_RANGE;
+            if (key.highlightedWarehouse != INVALID_GAME_OBJECT && road.warehouse == key.highlightedWarehouse) color = TileOverlay::WAREHOUSE_REACH;
+            m_TileOverlay.Set(tile, color);
+        });
+    }
+    if (key.warehousePreview) {
+        m_Simulation.Logistics().PreviewReach(roads, key.previewMinTile, key.previewTiles, m_ReachScratch);
+        for (const glm::ivec2& tile : m_ReachScratch) m_TileOverlay.Set(tile, TileOverlay::WAREHOUSE_REACH);
+    }
+    if (key.selection == BuildTool::ROAD) {
+        const std::vector<glm::ivec2>& path = m_RoadTool.PathTiles();
+        const std::vector<uint8_t>& valid = m_RoadTool.PathValid();
+        for (size_t i = 0; i < path.size(); i++) {
+            if (m_RoadTool.Removing() && !valid[i]) continue; // Removing: only the road tiles matter
+            uint8_t color = !valid[i] ? TileOverlay::PREVIEW_INVALID : (m_RoadTool.Removing() ? TileOverlay::PREVIEW_REMOVE : TileOverlay::PREVIEW_ADD);
+            m_TileOverlay.Set(path[i], color);
+        }
+    }
+    m_TileOverlay.Upload();
 }
 
 void Application::RunFrame(double frameStartTime, double frameSeconds, float deltaTime) {
@@ -252,6 +313,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_CameraMode == CameraMode::Strategy) {
         ImGuiIO& io = ImGui::GetIO();
         m_BuildTool.Update(m_Window, m_Hover, !io.WantCaptureMouse, !io.WantCaptureKeyboard);
+        UpdateTileOverlay();
     }
 
     // --- Game simulation: fixed steps, independent of the frame rate ---
@@ -264,7 +326,13 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover,
         m_HoverIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool };
     m_Overlay.Draw(overlay);
-    if (m_CameraMode == CameraMode::Strategy) DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
+    if (m_CameraMode == CameraMode::Strategy) {
+        DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
+        DrawIslandPanel(m_PanelIsland, m_Simulation.Economy());
+        int width, height;
+        glfwGetWindowSize(m_Window, &width, &height);
+        DrawBuildingMarkers(m_StrategyCamera, m_Simulation.Objects(), glm::ivec2(width, height));
+    }
 
     if (minimized) {
         // Nothing to draw into; keep the UI frame balanced and wait for events
@@ -291,7 +359,10 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     frame.renderDistance = m_Streamer.RenderDistance();
     frame.windowWidth = m_WindowWidth;
     frame.windowHeight = m_WindowHeight;
-    if (m_CameraMode == CameraMode::Strategy) frame.preview = m_BuildTool.Preview();
+    if (m_CameraMode == CameraMode::Strategy) {
+        frame.preview = m_BuildTool.Preview();
+        frame.overlay = &m_TileOverlay;
+    }
     m_Renderer.Render(frame, m_Settings, m_Cache, m_Ocean, m_Shore);
 
     if (m_CameraMode == CameraMode::FreeFly) DrawHud(m_EditTool.CrosshairColor(m_FreeFlyCamera), m_EditTool.SelectedBlock());

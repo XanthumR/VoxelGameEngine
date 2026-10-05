@@ -20,6 +20,8 @@ constexpr uint8_t WOOD = 40;        // Posts, door
 constexpr uint8_t PLANK = 41;       // Timber walls
 constexpr uint8_t ROOF = 42;        // Roof tiles
 constexpr uint8_t STONE_WALL = 43;  // Masonry walls
+// Roads replace the grass layer (see RoadTool); 45 is kept for a cobbled road
+constexpr uint8_t ROAD_DIRT = 44;
 } // namespace Block
 
 // Grass tufts and water are drawn, but the player, raycasts and projectiles pass through them

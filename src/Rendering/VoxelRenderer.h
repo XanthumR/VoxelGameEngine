@@ -9,6 +9,7 @@
 class GpuChunkCache;
 class OceanSimulation;
 class ShoreMap;
+class TileOverlay;
 struct RenderSettings;
 
 // Everything the renderer needs to know about the current frame
@@ -21,6 +22,7 @@ struct FrameParams {
     int renderDistance;    // Chunks
     int windowWidth, windowHeight;
     BuildPreview preview;  // Highlighted box (building placement or selection)
+    const TileOverlay* overlay = nullptr; // Per-tile ground highlights; none when null
 };
 
 // Draws the voxel world with three compute passes (shaders/render/):
@@ -49,6 +51,7 @@ private:
         GLint dimX, dimY, dimZ, cameraPos, inverseView, inverseProj, time;
         GLint sunDir, moonDir, lightDir, lightColor, skyColor, ambient;
         GLint previewState, previewMin, previewMax;
+        GLint overlayOrigin, overlayGroundY;
 
         void Locate(GLuint program);
     };

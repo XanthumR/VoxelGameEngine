@@ -2,6 +2,7 @@
 #include "Simulation/IslandRegistry.h"
 #include "Simulation/OccupancyGrid.h"
 #include "Simulation/Placement.h"
+#include "Simulation/RoadNetwork.h"
 #include "TestWorld.h"
 #include "World/BlockTypes.h"
 
@@ -12,20 +13,27 @@
 
 namespace {
 
+// Fresh islands, occupancy and roads on the shared generated world
+struct PlacementFixture {
+    IslandRegistry islands{ TestWorld::Get().terrain };
+    OccupancyGrid occupancy;
+    RoadNetwork roads;
+    PlacementContext context{ TestWorld::Get().world, islands, occupancy, roads };
+};
+
 glm::ivec2 SpawnTile() {
     glm::ivec2 spawn = TestWorld::Get().spawnColumn;
     return glm::ivec2(ColumnToTile(spawn.x), ColumnToTile(spawn.y));
 }
 
-// Nearest tile (searching outwards from spawn) where the building fits on an empty grid
-bool FindValidTile(uint16_t type, IslandRegistry& islands, const OccupancyGrid& occupancy, glm::ivec2& tile) {
-    TestWorld& test = TestWorld::Get();
+// Nearest tile (searching outwards from spawn) where the building fits
+bool FindValidTile(const PlacementContext& context, uint16_t type, glm::ivec2& tile) {
     for (int ring = 0; ring < 20; ring++) {
         for (int dz = -ring; dz <= ring; dz++) {
             for (int dx = -ring; dx <= ring; dx++) {
                 if (std::max(std::abs(dx), std::abs(dz)) != ring) continue;
                 glm::ivec2 candidate = SpawnTile() + glm::ivec2(dx, dz);
-                if (ValidatePlacement(type, 0, candidate, test.world, islands, occupancy).error == PlacementError::None) {
+                if (ValidatePlacement(context, type, 0, candidate).error == PlacementError::None) {
                     tile = candidate;
                     return true;
                 }
@@ -38,35 +46,42 @@ bool FindValidTile(uint16_t type, IslandRegistry& islands, const OccupancyGrid& 
 } // namespace
 
 TEST(PlacementTest, FlatIslandGroundIsValid) {
-    TestWorld& test = TestWorld::Get();
-    IslandRegistry islands(test.terrain);
-    OccupancyGrid occupancy;
+    PlacementFixture f;
     glm::ivec2 tile;
-    ASSERT_TRUE(FindValidTile(BUILDING_WAREHOUSE, islands, occupancy, tile));
+    ASSERT_TRUE(FindValidTile(f.context, BUILDING_WAREHOUSE, tile));
 
-    PlacementCheck check = ValidatePlacement(BUILDING_WAREHOUSE, 0, tile, test.world, islands, occupancy);
+    PlacementCheck check = ValidatePlacement(f.context, BUILDING_WAREHOUSE, 0, tile);
     EXPECT_EQ(check.error, PlacementError::None);
-    EXPECT_EQ(check.island, islands.IslandIdAt(test.spawnColumn.x, test.spawnColumn.y));
+    glm::ivec2 spawn = TestWorld::Get().spawnColumn;
+    EXPECT_EQ(check.island, f.islands.IslandIdAt(spawn.x, spawn.y));
 }
 
 TEST(PlacementTest, OccupiedTilesAreRejected) {
-    TestWorld& test = TestWorld::Get();
-    IslandRegistry islands(test.terrain);
-    OccupancyGrid occupancy;
+    PlacementFixture f;
     glm::ivec2 tile;
-    ASSERT_TRUE(FindValidTile(BUILDING_WAREHOUSE, islands, occupancy, tile));
+    ASSERT_TRUE(FindValidTile(f.context, BUILDING_WAREHOUSE, tile));
 
-    occupancy.Occupy(tile, FootprintTiles(BUILDING_TYPES[BUILDING_WAREHOUSE], 0), 1);
-    EXPECT_EQ(ValidatePlacement(BUILDING_WAREHOUSE, 0, tile, test.world, islands, occupancy).error, PlacementError::Occupied);
+    f.occupancy.Occupy(tile, FootprintTiles(BUILDING_TYPES[BUILDING_WAREHOUSE], 0), 1);
+    EXPECT_EQ(ValidatePlacement(f.context, BUILDING_WAREHOUSE, 0, tile).error, PlacementError::Occupied);
     // A house overlapping one corner tile
-    EXPECT_EQ(ValidatePlacement(BUILDING_FARMER_HOUSE, 0, tile + glm::ivec2(3, 3), test.world, islands, occupancy).error,
-        PlacementError::Occupied);
+    EXPECT_EQ(ValidatePlacement(f.context, BUILDING_FARMER_HOUSE, 0, tile + glm::ivec2(3, 3)).error, PlacementError::Occupied);
+}
+
+TEST(PlacementTest, RoadUnderTheFootprintIsRejected) {
+    PlacementFixture f;
+    glm::ivec2 tile;
+    ASSERT_TRUE(FindValidTile(f.context, BUILDING_FARMER_HOUSE, tile));
+    f.roads.Add(tile + glm::ivec2(2, 1));
+    EXPECT_EQ(ValidatePlacement(f.context, BUILDING_FARMER_HOUSE, 0, tile).error, PlacementError::Road);
+    // Right next to the footprint is fine
+    f.roads.Remove(tile + glm::ivec2(2, 1));
+    f.roads.Add(tile + glm::ivec2(3, 0));
+    EXPECT_EQ(ValidatePlacement(f.context, BUILDING_FARMER_HOUSE, 0, tile).error, PlacementError::None);
 }
 
 TEST(PlacementTest, WaterIsRejected) {
-    TestWorld& test = TestWorld::Get();
-    IslandRegistry islands(test.terrain);
-    OccupancyGrid occupancy;
+    PlacementFixture f;
+    const VoxelWorld& world = TestWorld::Get().world;
     // A loaded tile whose first column is open water
     int reach = TestWorld::RADIUS_CHUNKS * 32 - 32;
     bool found = false;
@@ -74,9 +89,10 @@ TEST(PlacementTest, WaterIsRejected) {
         for (int dx = -reach; dx < reach && !found; dx += TILE_SIZE) {
             glm::ivec2 tile = SpawnTile() + glm::ivec2(dx, dz) / TILE_SIZE;
             glm::ivec2 column = tile * TILE_SIZE;
-            if (test.world.GetVoxel(column.x, SEA_LEVEL, column.y) != Block::WATER) continue;
-            if (test.world.GetVoxel(column.x, SEA_LEVEL + 1, column.y) != Block::AIR) continue;
-            EXPECT_EQ(ValidatePlacement(BUILDING_FARMER_HOUSE, 0, tile, test.world, islands, occupancy).error, PlacementError::Water);
+            if (world.GetVoxel(column.x, SEA_LEVEL, column.y) != Block::WATER) continue;
+            if (world.GetVoxel(column.x, SEA_LEVEL + 1, column.y) != Block::AIR) continue;
+            EXPECT_EQ(ValidatePlacement(f.context, BUILDING_FARMER_HOUSE, 0, tile).error, PlacementError::Water);
+            EXPECT_EQ(ValidateRoadTile(f.context, tile).error, PlacementError::Water);
             found = true;
         }
     }
@@ -84,31 +100,40 @@ TEST(PlacementTest, WaterIsRejected) {
 }
 
 TEST(PlacementTest, SomethingSolidInTheVolumeBlocksIt) {
-    TestWorld& test = TestWorld::Get();
-    IslandRegistry islands(test.terrain);
-    OccupancyGrid occupancy;
+    PlacementFixture f;
+    VoxelWorld& world = TestWorld::Get().world;
     glm::ivec2 tile;
-    ASSERT_TRUE(FindValidTile(BUILDING_FARMER_HOUSE, islands, occupancy, tile));
+    ASSERT_TRUE(FindValidTile(f.context, BUILDING_FARMER_HOUSE, tile));
 
     glm::ivec3 rock(tile.x * TILE_SIZE + 5, BUILD_GROUND_Y + 2, tile.y * TILE_SIZE + 5);
-    ASSERT_TRUE(test.world.SetVoxel(rock.x, rock.y, rock.z, Block::STONE));
-    EXPECT_EQ(ValidatePlacement(BUILDING_FARMER_HOUSE, 0, tile, test.world, islands, occupancy).error, PlacementError::Blocked);
-    test.world.SetVoxel(rock.x, rock.y, rock.z, Block::AIR); // The world is shared by other tests
-    EXPECT_EQ(ValidatePlacement(BUILDING_FARMER_HOUSE, 0, tile, test.world, islands, occupancy).error, PlacementError::None);
+    ASSERT_TRUE(world.SetVoxel(rock.x, rock.y, rock.z, Block::STONE));
+    EXPECT_EQ(ValidatePlacement(f.context, BUILDING_FARMER_HOUSE, 0, tile).error, PlacementError::Blocked);
+    world.SetVoxel(rock.x, rock.y, rock.z, Block::AIR); // The world is shared by other tests
+    EXPECT_EQ(ValidatePlacement(f.context, BUILDING_FARMER_HOUSE, 0, tile).error, PlacementError::None);
 }
 
 TEST(PlacementTest, UnloadedWorldIsRejected) {
-    TestWorld& test = TestWorld::Get();
-    IslandRegistry islands(test.terrain);
-    OccupancyGrid occupancy;
+    PlacementFixture f;
     glm::ivec2 farAway = SpawnTile() + glm::ivec2(1000, 0);
-    EXPECT_EQ(ValidatePlacement(BUILDING_FARMER_HOUSE, 0, farAway, test.world, islands, occupancy).error, PlacementError::NotLoaded);
+    EXPECT_EQ(ValidatePlacement(f.context, BUILDING_FARMER_HOUSE, 0, farAway).error, PlacementError::NotLoaded);
+    EXPECT_EQ(ValidateRoadTile(f.context, farAway).error, PlacementError::NotLoaded);
 }
 
 TEST(PlacementTest, UnknownTypeIsRejected) {
-    TestWorld& test = TestWorld::Get();
-    IslandRegistry islands(test.terrain);
-    OccupancyGrid occupancy;
-    EXPECT_NE(ValidatePlacement((uint16_t)BUILDING_TYPES.size(), 0, SpawnTile(), test.world, islands, occupancy).error,
-        PlacementError::None);
+    PlacementFixture f;
+    EXPECT_NE(ValidatePlacement(f.context, (uint16_t)BUILDING_TYPES.size(), 0, SpawnTile()).error, PlacementError::None);
+}
+
+TEST(PlacementTest, RoadTileRules) {
+    PlacementFixture f;
+    glm::ivec2 tile;
+    ASSERT_TRUE(FindValidTile(f.context, BUILDING_FARMER_HOUSE, tile));
+    EXPECT_EQ(ValidateRoadTile(f.context, tile).error, PlacementError::None);
+
+    f.roads.Add(tile);
+    EXPECT_EQ(ValidateRoadTile(f.context, tile).error, PlacementError::Road); // Already road
+    f.roads.Remove(tile);
+
+    f.occupancy.Occupy(tile, glm::ivec2(1), 7);
+    EXPECT_EQ(ValidateRoadTile(f.context, tile).error, PlacementError::Occupied); // A building stands there
 }

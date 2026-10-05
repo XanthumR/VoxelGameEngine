@@ -75,12 +75,15 @@
   </ItemDefinitionGroup>
   <!-- The game's pure-logic sources (no OpenGL, no window) -->
   <ItemGroup>
+    <ClCompile Include="..\src\Economy\IslandEconomy.cpp" />
     <ClCompile Include="..\src\Simulation\BuildingLook.cpp" />
     <ClCompile Include="..\src\Simulation\GameClock.cpp" />
     <ClCompile Include="..\src\Simulation\GameObjects.cpp" />
     <ClCompile Include="..\src\Simulation\IslandRegistry.cpp" />
+    <ClCompile Include="..\src\Simulation\Logistics.cpp" />
     <ClCompile Include="..\src\Simulation\OccupancyGrid.cpp" />
     <ClCompile Include="..\src\Simulation\Placement.cpp" />
+    <ClCompile Include="..\src\Simulation\RoadNetwork.cpp" />
     <ClCompile Include="..\src\Simulation\Simulation.cpp" />
     <ClCompile Include="..\src\World\TerrainGenerator.cpp" />
     <ClCompile Include="..\src\World\VoxModel.cpp" />
@@ -91,9 +94,12 @@
     <ClCompile Include="BuildingLookTests.cpp" />
     <ClCompile Include="GameClockTests.cpp" />
     <ClCompile Include="GameObjectTests.cpp" />
+    <ClCompile Include="IslandEconomyTests.cpp" />
     <ClCompile Include="IslandRegistryTests.cpp" />
+    <ClCompile Include="LogisticsTests.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="PlacementTests.cpp" />
+    <ClCompile Include="RoadNetworkTests.cpp" />
     <ClCompile Include="TestWorld.cpp" />
   </ItemGroup>
   <ItemGroup>

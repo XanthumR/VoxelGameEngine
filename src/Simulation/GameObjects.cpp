@@ -3,7 +3,7 @@
 static_assert(GameObjectRegistry::MAX_OBJECTS <= 0x10000, "Slot must fit in the low 16 bits of an ID");
 
 GameObjectRegistry::GameObjectRegistry()
-    : m_Buildings(MAX_OBJECTS), m_Anchors(MAX_OBJECTS), m_Generations(MAX_OBJECTS, 1), m_Alive(MAX_OBJECTS, 0) {
+    : m_Buildings(MAX_OBJECTS), m_Anchors(MAX_OBJECTS), m_Logistics(MAX_OBJECTS), m_Generations(MAX_OBJECTS, 1), m_Alive(MAX_OBJECTS, 0) {
     m_FreeSlots.reserve(MAX_OBJECTS);
 }
 
@@ -21,6 +21,7 @@ GameObjectId GameObjectRegistry::Create() {
     m_Alive[slot] = 1;
     m_Buildings[slot] = BuildingComponent();
     m_Anchors[slot] = VoxelAnchorComponent();
+    m_Logistics[slot] = LogisticsComponent();
     m_AliveCount++;
     return MakeId(slot, m_Generations[slot]);
 }

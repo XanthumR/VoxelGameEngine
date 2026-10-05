@@ -25,6 +25,14 @@ struct VoxelAnchorComponent {
     glm::ivec2 footprint = glm::ivec2(1); // Columns along x and z
 };
 
+// Whether a building is linked by road to a warehouse (computed by LogisticsSystem every time
+// roads or buildings change)
+struct LogisticsComponent {
+    GameObjectId warehouse = INVALID_GAME_OBJECT; // The warehouse it is connected to
+    uint16_t roadDistance = 0xFFFF;               // Road tiles to that warehouse
+    bool connected = false;
+};
+
 // Owns every game object. Components live in flat arrays indexed by slot, all allocated up front,
 // so creating and destroying objects never allocates and never moves components.
 class GameObjectRegistry {
@@ -44,6 +52,8 @@ public:
     const BuildingComponent& Building(GameObjectId id) const { return m_Buildings[SlotOf(id)]; }
     VoxelAnchorComponent& Anchor(GameObjectId id) { return m_Anchors[SlotOf(id)]; }
     const VoxelAnchorComponent& Anchor(GameObjectId id) const { return m_Anchors[SlotOf(id)]; }
+    LogisticsComponent& Logistics(GameObjectId id) { return m_Logistics[SlotOf(id)]; }
+    const LogisticsComponent& Logistics(GameObjectId id) const { return m_Logistics[SlotOf(id)]; }
 
     // Iteration: slots below SlotCount() may hold an object; IdAtSlot is INVALID for empty ones
     uint32_t SlotCount() const { return m_UsedSlots; }
@@ -55,6 +65,7 @@ private:
 
     std::vector<BuildingComponent> m_Buildings;
     std::vector<VoxelAnchorComponent> m_Anchors;
+    std::vector<LogisticsComponent> m_Logistics;
     std::vector<uint16_t> m_Generations; // Current generation per slot; never 0
     std::vector<uint8_t> m_Alive;
     std::vector<uint32_t> m_FreeSlots;   // Destroyed slots, reused before new ones
