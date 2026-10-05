@@ -10,7 +10,7 @@ struct GLFWwindow;
 struct RenderSettings;
 class ChunkStreamer;
 class GpuChunkCache;
-class PlayerTools;
+class DebugEditTool;
 class RenderTargets;
 class VoxelWorld;
 
@@ -19,7 +19,7 @@ struct OverlayContext {
     GLFWwindow* window;
     float deltaTime;
     float framerate;
-    PlayerTools& tools;
+    DebugEditTool& editTool;
     ChunkStreamer& streamer;
     const GpuChunkCache& cache;
     const VoxelWorld& world;
@@ -29,8 +29,7 @@ struct OverlayContext {
     int grassAnimationRadius;
 };
 
-// The F3 debug window: mission status, engine metrics, a top-down radar minimap and the editor
-// and render controls
+// The F3 debug window: engine metrics, a top-down minimap and the editor and render controls
 class DebugOverlay {
 public:
     static constexpr int MINIMAP_SIZE = 64; // Voxels per side

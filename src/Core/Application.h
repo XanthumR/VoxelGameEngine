@@ -2,7 +2,7 @@
 
 #include "Core/LaunchOptions.h"
 #include "Gameplay/Player.h"
-#include "Gameplay/PlayerTools.h"
+#include "Gameplay/DebugEditTool.h"
 #include "Rendering/GpuChunkCache.h"
 #include "Rendering/GrassAnimator.h"
 #include "Rendering/OceanSimulation.h"
@@ -55,11 +55,10 @@ private:
     ChunkStreamer m_Streamer;
     WorldEditor m_Editor;
     TerrainGenerator m_Terrain; // Main-thread copy: spawn search, grass placement
-    glm::ivec3 m_SpawnVoxel = glm::ivec3(640, 0, 640);
 
     // Player
     Player m_Player;
-    PlayerTools m_Tools;
+    DebugEditTool m_EditTool;
 
     // Rendering
     RenderSettings m_Settings;
@@ -70,7 +69,7 @@ private:
     DebugOverlay m_Overlay;
 
     // Edge state for the hotkeys
-    bool m_TabWasPressed = false, m_F3WasPressed = false, m_PWasPressed = false;
+    bool m_TabWasPressed = false, m_F3WasPressed = false;
     bool m_CWasPressed = false, m_LWasPressed = false;
     bool m_PageUpWasPressed = false, m_PageDownWasPressed = false;
 };

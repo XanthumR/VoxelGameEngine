@@ -3,7 +3,6 @@
 
 uniform int renderDistanceVoxels; // Horizontal ray cutoff, set from the render distance slider
 uniform int seaLevel;             // Ocean surface height (top water voxel when calm)
-uniform vec3 beaconPos;           // Spawn beacon base, world units
 uniform int chunkViewerEnabled;
 uniform int lightVisualizerEnabled;
 uniform int halfResShadows;       // 1 = use the shadow pass results, 0 = every pixel traces its own
@@ -25,27 +24,6 @@ uniform vec3 lightDir;
 uniform vec3 lightColor;
 uniform vec3 skyColor;
 uniform float ambient;
-
-// Player tools: dissolver / tether beam
-uniform int laserBeamActive;
-uniform vec3 laserBeamStart;
-uniform vec3 laserBeamEnd;
-uniform vec3 laserBeamColor;
-
-// Player tools: flares
-struct Flare {
-    vec3 pos;
-    vec3 color;
-    float intensity;
-};
-uniform int numFlares;
-uniform Flare flares[8];
-
-// Player tools: clump held by the gravity tether
-uniform int heldClumpActive;
-uniform vec3 heldClumpPos;
-uniform float heldClumpRadius;
-uniform int heldClumpIsArtifact;
 
 const int SAND_ID = 4;
 const int WATER_ID = 35;

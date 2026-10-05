@@ -65,7 +65,6 @@ private:
     struct Result {
         int cx, cy, cz;
         std::vector<uint8_t> data; // Empty when the chunk is all air
-        std::vector<uint16_t> artifactIdx;
         uint8_t brickMask[BRICK_MASK_SIZE] = {};
         bool cancelled = false; // Player moved away before the worker got to it
     };

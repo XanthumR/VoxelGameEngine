@@ -1,6 +1,6 @@
 #include "UI/DebugOverlay.h"
 
-#include "Gameplay/PlayerTools.h"
+#include "Gameplay/DebugEditTool.h"
 #include "Rendering/GpuChunkCache.h"
 #include "Rendering/RenderSettings.h"
 #include "Rendering/RenderTargets.h"
@@ -40,7 +40,6 @@ void DebugOverlay::UpdateMinimap(const VoxelWorld& world, glm::vec3 playerPositi
             else if (block == Block::STONE) { r = 128; g = 128; b = 128; }
             else if (block == Block::SAND) { r = 218; g = 165; b = 32; }
             else if (block == Block::CAVERN_GLOW) { r = 0; g = 255; b = 200; }
-            else if (block == Block::ARTIFACT) { r = 255; g = 0; b = 255; }
             else if (block == Block::WATER) { r = 30; g = 110; b = 200; }
 
             if (mx >= 30 && mx <= 33 && mz >= 30 && mz <= 33) {
@@ -65,18 +64,7 @@ void DebugOverlay::Draw(const OverlayContext& c) {
 
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(400, 560), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Project Strata: Vertical Slice", &m_Visible);
-
-    ImGui::Text("--- MISSION OBJECTIVES ---");
-    ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.4f, 1.0f), "Artifacts Retrieved: %d", c.tools.ArtifactsRetrieved());
-    if (c.tools.ClosestArtifactDistance() >= 0.0f) {
-        ImGui::Text("Scanner: %.1f m [Signal Strong]", c.tools.ClosestArtifactDistance());
-    } else {
-        ImGui::Text("Scanner: No Signal...");
-    }
-    ImGui::Text("Carrying Artifact: %s", c.tools.CarryingArtifact() ? "YES (Deliver to green beacon at spawn)" : "NO");
-
-    ImGui::Separator();
+    ImGui::Begin("Voxel Anno: Debug", &m_Visible);
 
     const double minimapBytes = MINIMAP_SIZE * MINIMAP_SIZE * 4.0;
     double vramMB = (c.cache.PoolBytes() + c.cache.PageTableBytes() + minimapBytes + c.targets.MemoryBytes()) / (1024.0 * 1024.0);
@@ -94,7 +82,7 @@ void DebugOverlay::Draw(const OverlayContext& c) {
 
     ImGui::Separator();
 
-    ImGui::Text("--- RADAR SCANNER ---");
+    ImGui::Text("--- MINIMAP ---");
     ImGui::Image((ImTextureID)(intptr_t)m_MinimapTexture, ImVec2(128, 128));
 
     ImGui::Separator();
@@ -106,7 +94,7 @@ void DebugOverlay::Draw(const OverlayContext& c) {
         ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "Press [TAB] to capture cursor.");
     }
 
-    ImGui::Checkbox("Paint Mode [P] (Right Click places)", &c.tools.PaintMode());
+    ImGui::Text("Left click digs, right click places the selected block.");
     ImGui::Checkbox("Chunk Viewer [C]", &c.settings.chunkViewer);
     ImGui::Checkbox("Light Visualizer [L]", &c.settings.lightVisualizer);
 
@@ -125,7 +113,7 @@ void DebugOverlay::Draw(const OverlayContext& c) {
 
     ImGui::Text("Selected Voxel Material:");
     const char* materials[] = { "Grass", "Dirt", "Stone", "Sand", "Plant" };
-    int& selected = c.tools.SelectedBlock();
+    int& selected = c.editTool.SelectedBlock();
     for (int i = 0; i < 5; i++) {
         if (ImGui::RadioButton(materials[i], selected == (i + 1))) selected = i + 1;
         if (i < 4) ImGui::SameLine();

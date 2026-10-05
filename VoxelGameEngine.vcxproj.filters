@@ -54,10 +54,10 @@
     <ClCompile Include="src\Core\Screenshot.cpp">
       <Filter>src\Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\Gameplay\Player.cpp">
+    <ClCompile Include="src\Gameplay\DebugEditTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
-    <ClCompile Include="src\Gameplay\PlayerTools.cpp">
+    <ClCompile Include="src\Gameplay\Player.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\GpuChunkCache.cpp">
@@ -196,10 +196,10 @@
     <ClInclude Include="src\Core\Screenshot.h">
       <Filter>src\Core</Filter>
     </ClInclude>
-    <ClInclude Include="src\Gameplay\Player.h">
+    <ClInclude Include="src\Gameplay\DebugEditTool.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
-    <ClInclude Include="src\Gameplay\PlayerTools.h">
+    <ClInclude Include="src\Gameplay\Player.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\GpuChunkCache.h">
@@ -215,9 +215,6 @@
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\RenderTargets.h">
-      <Filter>src\Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Rendering\SceneVisuals.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\ShaderLoader.h">

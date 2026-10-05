@@ -58,9 +58,8 @@ bool TerrainGenerator::IsSandy(int wx, int wz, int terrainHeight) {
     return terrainHeight <= SEA_LEVEL + 6 && IslandMask(wx, wz) < 0.3f;
 }
 
-void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t>& data, std::vector<uint16_t>& artifactIdx) {
+void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t>& data) {
     data.assign(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE, 0);
-    artifactIdx.clear();
     int startX = cx * CHUNK_SIZE;
     int startY = cy * CHUNK_SIZE;
     int startZ = cz * CHUNK_SIZE;
@@ -109,15 +108,7 @@ void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t
                     }
                 }
 
-                // Artifacts in the stone of the Crust biome
-                if (biome == CRUST && blockID == Block::STONE && wy > 15 && wy < 45) {
-                    float artifactSample = m_Noise.GetNoise((float)wx * 5.0f, (float)wy * 5.0f, (float)wz * 5.0f);
-                    if (artifactSample > 0.96f) blockID = Block::ARTIFACT;
-                }
-
-                size_t idx = LocalIndex(x, y, z);
-                data[idx] = blockID;
-                if (blockID == Block::ARTIFACT) artifactIdx.push_back((uint16_t)idx);
+                data[LocalIndex(x, y, z)] = blockID;
             }
         }
     }

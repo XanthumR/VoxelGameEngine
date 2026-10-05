@@ -137,8 +137,8 @@
     <ClCompile Include="src\Core\Application.cpp" />
     <ClCompile Include="src\Core\LaunchOptions.cpp" />
     <ClCompile Include="src\Core\Screenshot.cpp" />
+    <ClCompile Include="src\Gameplay\DebugEditTool.cpp" />
     <ClCompile Include="src\Gameplay\Player.cpp" />
-    <ClCompile Include="src\Gameplay\PlayerTools.cpp" />
     <ClCompile Include="src\Rendering\GpuChunkCache.cpp" />
     <ClCompile Include="src\Rendering\GrassAnimator.cpp" />
     <ClCompile Include="src\Rendering\OceanSimulation.cpp" />
@@ -187,14 +187,13 @@
     <ClInclude Include="src\Core\LaunchOptions.h" />
     <ClInclude Include="src\Core\SafeQueue.h" />
     <ClInclude Include="src\Core\Screenshot.h" />
+    <ClInclude Include="src\Gameplay\DebugEditTool.h" />
     <ClInclude Include="src\Gameplay\Player.h" />
-    <ClInclude Include="src\Gameplay\PlayerTools.h" />
     <ClInclude Include="src\Rendering\GpuChunkCache.h" />
     <ClInclude Include="src\Rendering\GrassAnimator.h" />
     <ClInclude Include="src\Rendering\OceanSimulation.h" />
     <ClInclude Include="src\Rendering\RenderSettings.h" />
     <ClInclude Include="src\Rendering\RenderTargets.h" />
-    <ClInclude Include="src\Rendering\SceneVisuals.h" />
     <ClInclude Include="src\Rendering\ShaderLoader.h" />
     <ClInclude Include="src\Rendering\ShoreMap.h" />
     <ClInclude Include="src\Rendering\SkyLighting.h" />

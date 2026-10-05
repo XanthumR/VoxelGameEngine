@@ -10,15 +10,15 @@
 
 struct VoxModel;
 
-// Procedural world: flat islands in an ocean, with beaches, caves, artifacts, trees and
+// Procedural world: flat islands in an ocean, with beaches, caves, trees and
 // (optionally) grass tufts. Pure function of the coordinates, so any thread can generate any
 // chunk and neighbouring chunks always agree. Each worker thread owns its own instance.
 class TerrainGenerator {
 public:
     explicit TerrainGenerator(const VoxModel& trees);
 
-    // Fills data with CHUNK_SIZE^3 block IDs and lists the artifacts it placed
-    void GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t>& data, std::vector<uint16_t>& artifactIdx);
+    // Fills data with CHUNK_SIZE^3 block IDs
+    void GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t>& data);
 
     // Height of the first air voxel above the ground (or sea floor) of a column
     int TerrainHeightAt(int wx, int wz);
@@ -41,7 +41,7 @@ private:
     void StampGrass(int startX, int startY, int startZ, std::vector<uint8_t>& data);
 
     const VoxModel& m_Trees;
-    FastNoiseLite m_Noise;       // Ground height, tree placement, artifacts
+    FastNoiseLite m_Noise;       // Ground height, tree placement
     FastNoiseLite m_BiomeNoise;
     FastNoiseLite m_CaveNoise;
     FastNoiseLite m_IslandNoise; // Land vs ocean

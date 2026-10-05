@@ -12,7 +12,6 @@ constexpr uint8_t STONE = 3;
 constexpr uint8_t SAND = 4;
 constexpr uint8_t PLANT = 5;        // Hotbar block (also a tree palette color)
 constexpr uint8_t CAVERN_GLOW = 30; // Bioluminescent cavern wall
-constexpr uint8_t ARTIFACT = 32;    // Collectible, delivered to the spawn beacon
 constexpr uint8_t GRASS_TUFT = 34;  // Generated grass, animated by shaders/grass/grass_animate.comp
 constexpr uint8_t WATER = 35;       // Ocean up to SEA_LEVEL; waves are applied while ray tracing
 // The other IDs from 5 to 39 are tree model palette colors (see VoxModel).

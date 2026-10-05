@@ -51,7 +51,7 @@ bool VoxModel::Load(const std::string& path) {
 
                 // The palette index is kept as the block ID so it matches the colors in shade.comp.
                 // Slots that collide with gameplay blocks: 1-4 are terrain (grass, dirt, stone,
-                // sand), so they move to 36-39 (same colors); 30 and 32 (cavern glow, artifact)
+                // sand), so they move to 36-39 (same colors); 30 and 32 (cavern glow, and a retired gameplay block)
                 // are swapped for similar leaf colors.
                 int blockType = v[3];
                 if (blockType >= 1 && blockType <= 4) blockType += 35;

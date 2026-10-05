@@ -30,7 +30,7 @@ Application::Application(const LaunchOptions& options)
       m_Streamer(m_World, m_Cache, m_Trees),
       m_Editor(m_World, m_Streamer),
       m_Terrain(m_Trees),
-      m_Tools(m_World, m_Editor) {
+      m_EditTool(m_World, m_Editor) {
     m_Settings.renderScale = options.renderScale;
 }
 
@@ -103,18 +103,15 @@ bool Application::Init() {
 // Streams the world around the spawn island, waiting only for the spawn column itself
 void Application::Spawn() {
     glm::ivec2 spawnColumn = m_Terrain.FindSpawnColumn(SPAWN_SEARCH_START);
-    m_SpawnVoxel = glm::ivec3(spawnColumn.x, 0, spawnColumn.y);
-    m_Tools.SetBeaconColumn(spawnColumn);
-
-    glm::ivec3 spawnChunk(m_SpawnVoxel.x >> 5, 0, m_SpawnVoxel.z >> 5);
+    glm::ivec3 spawnChunk(spawnColumn.x >> 5, 0, spawnColumn.y >> 5);
     m_Streamer.SetPlayerChunk(spawnChunk);
     m_Streamer.UpdateWindows(); // Requests are nearest-first, so the spawn column arrives first
     m_Streamer.WaitForColumn(spawnChunk.x, spawnChunk.z);
 
     // Camera 3 voxels above the highest solid block
     int spawnY = WORLD_HEIGHT - 1;
-    while (spawnY > 0 && !IsSolidBlock(m_World.GetVoxel(m_SpawnVoxel.x, spawnY, m_SpawnVoxel.z))) spawnY--;
-    m_Player.SetPosition(glm::vec3((float)m_SpawnVoxel.x, (float)(spawnY + 3), (float)m_SpawnVoxel.z) / VOXELS_PER_UNIT);
+    while (spawnY > 0 && !IsSolidBlock(m_World.GetVoxel(spawnColumn.x, spawnY, spawnColumn.y))) spawnY--;
+    m_Player.SetPosition(glm::vec3((float)spawnColumn.x, (float)(spawnY + 3), (float)spawnColumn.y) / VOXELS_PER_UNIT);
 }
 
 int Application::Run() {
@@ -149,12 +146,10 @@ void Application::HandleKeys(float deltaTime) {
     }
 
     if (KeyPressed(GLFW_KEY_F3, m_F3WasPressed)) m_Overlay.Visible() = !m_Overlay.Visible();
-    if (KeyPressed(GLFW_KEY_P, m_PWasPressed)) m_Tools.PaintMode() = !m_Tools.PaintMode();
     if (KeyPressed(GLFW_KEY_C, m_CWasPressed)) m_Settings.chunkViewer = !m_Settings.chunkViewer;
     if (KeyPressed(GLFW_KEY_L, m_LWasPressed)) m_Settings.lightVisualizer = !m_Settings.lightVisualizer;
 
-    m_Tools.HandleFlareKey(m_Window, m_Player);
-    m_Tools.HandleBlockSelectKeys(m_Window);
+    m_EditTool.HandleBlockSelectKeys(m_Window);
 
     // Render distance, one chunk per press
     if (KeyPressed(GLFW_KEY_PAGE_UP, m_PageUpWasPressed)) m_Streamer.SetRenderDistance(m_Streamer.RenderDistance() + 1);
@@ -182,13 +177,11 @@ void Application::RunFrame(double frameStartTime, float deltaTime) {
 
     // --- Input and gameplay ---
     HandleKeys(deltaTime);
-    m_Tools.UpdateProjectiles(deltaTime);
-    m_Tools.UpdateScanner(deltaTime, m_Player);
     m_Overlay.UpdateMinimap(m_World, m_Player.Position());
-    m_Tools.HandleMouse(m_Window, deltaTime, m_Player);
+    m_EditTool.HandleMouse(m_Window, m_Player);
 
     // --- UI ---
-    OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_Tools, m_Streamer, m_Cache, m_World,
+    OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
         m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS };
     m_Overlay.Draw(overlay);
 
@@ -213,13 +206,11 @@ void Application::RunFrame(double frameStartTime, float deltaTime) {
     frame.cameraUp = m_Player.Up();
     frame.time = animationTime;
     frame.renderDistance = m_Streamer.RenderDistance();
-    frame.beaconVoxel = m_SpawnVoxel;
-    frame.visuals = m_Tools.Visuals();
     frame.windowWidth = m_WindowWidth;
     frame.windowHeight = m_WindowHeight;
     m_Renderer.Render(frame, m_Settings, m_Cache, m_Ocean, m_Shore);
 
-    DrawHud(m_Tools.CrosshairColor(m_Player), m_Tools.SelectedBlock());
+    DrawHud(m_EditTool.CrosshairColor(m_Player), m_EditTool.SelectedBlock());
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

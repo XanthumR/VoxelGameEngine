@@ -1,7 +1,7 @@
 #version 440 core
 // Render pass 3 of 3 (VoxelRenderer): per-pixel lighting from the G-buffer (block colors, sun
-// and soft shadows, flares, water, glows), the sky, and in-world overlays (tether clump, tool
-// beam, spawn beacon). Writes the final image that is blitted to the window.
+// and soft shadows, water, glows) and the sky. Writes the final image that is blitted to the
+// window.
 // The crosshair and hotbar are drawn separately by ImGui (src/UI/Hud.cpp).
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
@@ -72,7 +72,6 @@ vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     else if (voxelID == 29) albedo = vec3(0.161, 0.216, 0.012); // color_29
     else if (voxelID == 30) albedo = vec3(0.0, 0.8, 0.6); // Bioluminescent cavern
     else if (voxelID == 31) albedo = vec3(0.149, 0.698, 0.165); // color_31
-    else if (voxelID == 32) albedo = vec3(0.9, 0.0, 0.9); // Artifact
     else if (voxelID == 33) albedo = vec3(0.000, 0.000, 0.000); // color_33
     // Tree palette colors 1-4, moved off the terrain IDs by the .vox loader
     else if (voxelID == 36) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000);
@@ -167,22 +166,6 @@ void main() {
         vec3 ambientComponent = albedo * ambient;
         vec3 lighting = (diffuseComponent + ambientComponent) * ao + specular;
 
-        // --- FLARES LIGHTING ---
-        vec3 flareLighting = vec3(0.0);
-        vec3 hitWorldPos = vec3(mapPos) / float(dimX);
-        for (int f = 0; f < numFlares; f++) {
-            float flareDist = distance(flares[f].pos, hitWorldPos);
-            if (flareDist < 0.05) {
-                vec3 fDir = normalize(flares[f].pos - hitWorldPos);
-                float fShadow = getShadow(hitWorldPos + normal * 0.001, fDir);
-                float fAtten = clamp(1.0 - (flareDist / 0.05), 0.0, 1.0);
-                fAtten = fAtten * fAtten; // Quadratic falloff
-                float fDiff = max(dot(normal, fDir), 0.0);
-                flareLighting += flares[f].color * albedo * fDiff * fAtten * fShadow * flares[f].intensity * 3.0;
-            }
-        }
-        lighting += flareLighting;
-
         // --- WATER: rippling surface, sky reflection and glints ---
         if (voxelID == WATER_ID) {
             // Exact hit point on the face (in voxels), so ripples are smooth inside a voxel
@@ -232,14 +215,12 @@ void main() {
 
             vec3 water = mix(body, reflection, fresnel);
             vec3 foamColor = vec3(0.85, 0.9, 0.92) * (ambient + lightColor * shadow * 0.8);
-            lighting = mix(water, foamColor, foam) + flareLighting;
+            lighting = mix(water, foamColor, foam);
         }
 
-        // --- BIOLUMINESCENT & ARTIFACT GLOW ---
+        // --- BIOLUMINESCENT CAVE GLOW ---
         if (voxelID == 30) {
             lighting = mix(lighting, vec3(0.0, 1.0, 0.8), 0.75); // Cyan emission
-        } else if (voxelID == 32) {
-            lighting = mix(lighting, vec3(1.0, 0.0, 1.0), 0.85); // Magenta emission
         }
 
         if (lightVisualizerEnabled == 1) {
@@ -254,100 +235,6 @@ void main() {
     // Blend wireframe chunk edges if enabled
     if (chunkViewerEnabled == 1) {
         colorResult.rgb = mix(colorResult.rgb, vec3(0.0, 1.0, 0.1), gridFactor);
-    }
-
-    // --- Draw overlays (Held Clump, Laser Beam, Spawn Beacon) ---
-    float hitDist = hit ? distance(cameraPos, vec3(mapPos) / float(dimX)) : 1e9;
-
-    // --- Render Held Clump as glowing sphere ---
-    if (heldClumpActive == 1) {
-        vec3 oc = ray.origin - heldClumpPos;
-        float sphereRadius = heldClumpRadius / float(dimX);
-        float a = dot(ray.dir, ray.dir);
-        float b = 2.0 * dot(oc, ray.dir);
-        float c = dot(oc, oc) - sphereRadius * sphereRadius;
-        float disc = b * b - 4.0 * a * c;
-        if (disc > 0.0) {
-            float t = (-b - sqrt(disc)) / (2.0 * a);
-            float sphereHitDist = t;
-            if (t > 0.0 && sphereHitDist < hitDist) {
-                vec3 hitP = ray.origin + t * ray.dir;
-                vec3 sphereNormal = normalize(hitP - heldClumpPos);
-                float diff = max(dot(sphereNormal, lightDir), 0.0);
-                vec3 clumpColor;
-                if (heldClumpIsArtifact == 1) {
-                    clumpColor = vec3(0.8, 0.1, 1.0); // Magenta artifact glow
-                } else {
-                    clumpColor = vec3(0.5, 0.45, 0.35); // Rocky debris
-                }
-                // Pulsing glow effect
-                float pulse = 0.8 + 0.2 * sin(time * 4.0);
-                colorResult.rgb = clumpColor * (diff * 0.6 + 0.4) * pulse;
-                hitDist = sphereHitDist; // Update hitDist so laser renders behind
-            }
-        }
-    }
-
-    // Volumetric Laser Beam Glow
-    if (laserBeamActive == 1) {
-        vec3 u = ray.dir;
-        vec3 v = laserBeamEnd - laserBeamStart;
-        vec3 w = ray.origin - laserBeamStart;
-        float a = dot(u, u);
-        float b = dot(u, v);
-        float c = dot(v, v);
-        float d = dot(u, w);
-        float e = dot(v, w);
-        float denom = a * c - b * b;
-        float t = 0.0;
-        if (abs(denom) > 0.0001) {
-            t = clamp((e - b * d) / denom, 0.0, 1.0);
-        }
-        float s = max((t * b - d) / a, 0.0);
-
-        if (s < hitDist) {
-            vec3 pRay = ray.origin + s * ray.dir;
-            vec3 pSeg = laserBeamStart + t * (laserBeamEnd - laserBeamStart);
-            float dist = length(pRay - pSeg);
-            if (dist < 0.003) {
-                float glow = clamp(1.0 - (dist / 0.003), 0.0, 1.0);
-                colorResult.rgb = mix(colorResult.rgb, laserBeamColor, glow * glow * 0.9);
-            }
-        }
-    }
-
-    // Green Spawn Beacon Column
-    {
-        vec3 beaconStart = vec3(beaconPos.x, 0.0, beaconPos.z);
-        vec3 beaconEnd = vec3(beaconPos.x, 0.15, beaconPos.z);
-        vec3 u = ray.dir;
-        vec3 v = beaconEnd - beaconStart;
-        vec3 w = ray.origin - beaconStart;
-        float a = dot(u, u);
-        float b = dot(u, v);
-        float c = dot(v, v);
-        float d = dot(u, w);
-        float e = dot(v, w);
-        float denom = a * c - b * b;
-        float t = 0.0;
-        if (abs(denom) > 0.0001) {
-            t = clamp((e - b * d) / denom, 0.0, 1.0);
-        }
-        float s = max((t * b - d) / a, 0.0);
-
-        if (s < hitDist) {
-            vec3 pRay = ray.origin + s * ray.dir;
-            vec3 pSeg = beaconStart + t * (beaconEnd - beaconStart);
-            float dist = length(pRay - pSeg);
-            float beaconRadius = 0.008; // ~10 voxels wide glowing column
-            if (dist < beaconRadius) {
-                float glow = clamp(1.0 - (dist / beaconRadius), 0.0, 1.0);
-                // Fade out when the camera is at the beacon (e.g. at spawn), so it does not tint the whole view
-                float cameraDist = length(cameraPos.xz - beaconPos.xz);
-                glow *= smoothstep(beaconRadius, beaconRadius * 3.0, cameraDist);
-                colorResult.rgb = mix(colorResult.rgb, vec3(0.1, 1.0, 0.4), glow * glow * 0.8);
-            }
-        }
     }
 
     imageStore(imgOutput, pixel_coords, colorResult);

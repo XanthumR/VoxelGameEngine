@@ -54,7 +54,7 @@ void ChunkStreamer::WorkerLoop() {
         if (dist > m_CancelRadius.load()) {
             result.cancelled = true;
         } else {
-            generator.GenerateChunk(request.cx, request.cy, request.cz, result.data, result.artifactIdx);
+            generator.GenerateChunk(request.cx, request.cy, request.cz, result.data);
             // Done here so the main thread only has to upload
             if (!GpuChunkCache::ComputeBrickMask(result.data, result.brickMask)) std::vector<uint8_t>().swap(result.data);
         }
@@ -112,7 +112,6 @@ void ChunkStreamer::Integrate(Result& result) {
     if (!cpuChunk && dist <= CPU_RADIUS) {
         Chunk* chunk = m_World.GetOrCreateChunk(result.cx, result.cy, result.cz);
         chunk->data = std::move(result.data);
-        chunk->artifactIdx = std::move(result.artifactIdx);
     }
 }
 

@@ -12,7 +12,6 @@
 struct Chunk {
     glm::ivec3 position;               // Chunk coordinates (voxel position / CHUNK_SIZE)
     std::vector<uint8_t> data;         // CHUNK_SIZE^3 block IDs, or empty when the chunk is all air
-    std::vector<uint16_t> artifactIdx; // Local indices that held an artifact at generation time
     bool isModified = false;           // Edited by the player: kept forever, never regenerated
 };
 

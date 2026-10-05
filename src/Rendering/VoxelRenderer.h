@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Rendering/RenderTargets.h"
-#include "Rendering/SceneVisuals.h"
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -18,8 +17,6 @@ struct FrameParams {
     glm::vec3 cameraUp;
     float time;            // Drives the day-night cycle and all animation
     int renderDistance;    // Chunks
-    glm::ivec3 beaconVoxel; // Spawn beacon column
-    SceneVisuals visuals;
     int windowWidth, windowHeight;
 };
 
@@ -44,11 +41,8 @@ public:
 private:
     // Uniform locations of one pass (the three passes share one set of uniforms; unused ones are -1)
     struct PassUniforms {
-        GLint pageTable, poolBase, chunkViewerEnabled, lightVisualizerEnabled;
-        GLint laserBeamActive, laserBeamStart, laserBeamEnd, laserBeamColor;
-        GLint numFlares, flarePos[SceneVisuals::MAX_FLARES], flareColor[SceneVisuals::MAX_FLARES], flareIntensity[SceneVisuals::MAX_FLARES];
-        GLint halfResShadows, renderSize, heldClumpActive, heldClumpPos, heldClumpRadius, heldClumpIsArtifact;
-        GLint seaLevel, beaconPos, oceanTileSizes, oceanChoppiness, shoreOrigin, renderDistanceVoxels;
+        GLint pageTable, poolBase, chunkViewerEnabled, lightVisualizerEnabled, halfResShadows, renderSize;
+        GLint seaLevel, oceanTileSizes, oceanChoppiness, shoreOrigin, renderDistanceVoxels;
         GLint dimX, dimY, dimZ, cameraPos, inverseView, inverseProj, time;
         GLint sunDir, moonDir, lightDir, lightColor, skyColor, ambient;
 

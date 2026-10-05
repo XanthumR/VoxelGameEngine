@@ -1,4 +1,4 @@
-// Shadow rays toward the sun/moon (and flares)
+// Shadow rays toward the sun or moon
 
 #include "include/scene.glsl"
 #include "include/voxel_data.glsl"

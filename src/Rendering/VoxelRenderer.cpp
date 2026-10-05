@@ -14,7 +14,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <string>
 
 void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     auto loc = [program](const char* name) { return glGetUniformLocation(program, name); };
@@ -22,29 +21,13 @@ void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     poolBase = loc("poolBase");
     chunkViewerEnabled = loc("chunkViewerEnabled");
     lightVisualizerEnabled = loc("lightVisualizerEnabled");
-    laserBeamActive = loc("laserBeamActive");
-    laserBeamStart = loc("laserBeamStart");
-    laserBeamEnd = loc("laserBeamEnd");
-    laserBeamColor = loc("laserBeamColor");
-    numFlares = loc("numFlares");
-    for (int i = 0; i < SceneVisuals::MAX_FLARES; i++) {
-        std::string base = "flares[" + std::to_string(i) + "].";
-        flarePos[i] = loc((base + "pos").c_str());
-        flareColor[i] = loc((base + "color").c_str());
-        flareIntensity[i] = loc((base + "intensity").c_str());
-    }
     halfResShadows = loc("halfResShadows");
     renderSize = loc("renderSize");
-    heldClumpActive = loc("heldClumpActive");
-    heldClumpPos = loc("heldClumpPos");
-    heldClumpRadius = loc("heldClumpRadius");
-    heldClumpIsArtifact = loc("heldClumpIsArtifact");
     renderDistanceVoxels = loc("renderDistanceVoxels");
     seaLevel = loc("seaLevel");
     oceanTileSizes = loc("oceanTileSizes");
     oceanChoppiness = loc("oceanChoppiness");
     shoreOrigin = loc("shoreOrigin");
-    beaconPos = loc("beaconPos");
     dimX = loc("dimX");
     dimY = loc("dimY");
     dimZ = loc("dimZ");
@@ -111,7 +94,6 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     SkyLighting sky = SkyLighting::At(frame.time);
     glm::mat4 inverseView = glm::inverse(view);
     glm::mat4 inverseProjection = glm::inverse(projection);
-    const SceneVisuals& visuals = frame.visuals;
 
     // Uniforms are per program, so each pass gets the same set
     auto uploadUniforms = [&](const PassUniforms& u) {
@@ -122,24 +104,6 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glUniform1i(u.chunkViewerEnabled, settings.chunkViewer ? 1 : 0);
         glUniform1i(u.lightVisualizerEnabled, settings.lightVisualizer ? 1 : 0);
 
-        // Player tools: beam, flares, held clump
-        glUniform1i(u.laserBeamActive, visuals.beam.active ? 1 : 0);
-        glUniform3fv(u.laserBeamStart, 1, &visuals.beam.start[0]);
-        glUniform3fv(u.laserBeamEnd, 1, &visuals.beam.end[0]);
-        glUniform3fv(u.laserBeamColor, 1, &visuals.beam.color[0]);
-
-        glUniform1i(u.numFlares, visuals.flareCount);
-        for (int i = 0; i < visuals.flareCount; i++) {
-            glUniform3fv(u.flarePos[i], 1, &visuals.flares[i].position[0]);
-            glUniform3fv(u.flareColor[i], 1, &visuals.flares[i].color[0]);
-            glUniform1f(u.flareIntensity[i], visuals.flares[i].intensity);
-        }
-
-        glUniform1i(u.heldClumpActive, visuals.clump.active ? 1 : 0);
-        glUniform3fv(u.heldClumpPos, 1, &visuals.clump.position[0]);
-        glUniform1f(u.heldClumpRadius, visuals.clump.radius);
-        glUniform1i(u.heldClumpIsArtifact, visuals.clump.isArtifact ? 1 : 0);
-
         // Rays stop one chunk past the upload radius (18 chunks -> 608 voxels)
         glUniform1i(u.renderDistanceVoxels, (frame.renderDistance + 1) * CHUNK_SIZE);
         glUniform1i(u.seaLevel, SEA_LEVEL);
@@ -148,8 +112,6 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glUniform1f(u.oceanChoppiness, ocean.Choppiness());
         glm::ivec2 shoreOrigin = shore.Origin();
         glUniform2i(u.shoreOrigin, shoreOrigin.x, shoreOrigin.y);
-        glm::vec3 beacon = glm::vec3(frame.beaconVoxel.x, 0, frame.beaconVoxel.z) / VOXELS_PER_UNIT;
-        glUniform3fv(u.beaconPos, 1, &beacon[0]);
 
         // dimX is the world->voxel scale in the shader; dimY the vertical extent
         glUniform1i(u.dimX, (int)VOXELS_PER_UNIT);
