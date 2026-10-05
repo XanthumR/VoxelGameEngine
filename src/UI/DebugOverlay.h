@@ -3,6 +3,8 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
+#include "Gameplay/Picking.h"
+
 #include <cstdint>
 #include <vector>
 
@@ -27,6 +29,8 @@ struct OverlayContext {
     const RenderTargets& targets;
     size_t animatedGrassTufts;
     int grassAnimationRadius;
+    const char* cameraMode;
+    PickResult hover;
 };
 
 // The F3 debug window: engine metrics, a top-down minimap and the editor and render controls

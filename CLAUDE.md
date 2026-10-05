@@ -30,8 +30,8 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 * `src/main.cpp` – entry point; builds `Application` from the launch options.
 * `src/Core/` – `Application` (window, OpenGL/ImGui setup, spawn, the frame loop in order, hotkeys), `LaunchOptions`, `Screenshot`, `SafeQueue`.
 * `src/World/` – CPU-side world: `WorldConstants`, `BlockTypes` (block IDs), `Chunk`, `VoxelWorld` (CPU chunk store), `TerrainGenerator` (islands, ocean, caves, trees, spawn search), `ChunkStreamer` (worker threads + streaming windows), `WorldEditor` (dig/place), `Raycast`, `VoxModel` (.vox loader), `GrassTufts`.
-* `src/Rendering/` – GPU side: `GpuChunkCache` (pool textures, page table, brick masks), `VoxelRenderer` (trace/shadow/shade passes), `RenderTargets`, `RenderSettings`, `SkyLighting` (day-night), `OceanSimulation` (FFT waves), `ShoreMap` (coast distance field), `GrassAnimator`, `ShaderLoader` (supports `#include`), `SceneVisuals` (tool effects passed to the renderer).
-* `src/Gameplay/` – `Player` (camera, flight, collision), `PlayerTools` (dissolver, tether, placement, flares, artifact scanner).
+* `src/Rendering/` – GPU side: `GpuChunkCache` (pool textures, page table, brick masks), `VoxelRenderer` (trace/shadow/shade passes), `RenderTargets`, `RenderSettings`, `SkyLighting` (day-night), `OceanSimulation` (FFT waves), `ShoreMap` (coast distance field), `GrassAnimator`, `ShaderLoader` (supports `#include`).
+* `src/Gameplay/` – `Camera` (`ICamera` interface), `StrategyCamera` (default Anno-style orbit camera), `FreeFlyCamera` (debug drone with collision, F1), `Picking` (cursor ray to hovered voxel), `DebugEditTool` (dig/place in free-fly).
 * `src/UI/` – `DebugOverlay` (F3 window + minimap), `Hud` (crosshair + hotbar).
 * `src/ThirdParty/` – `FastNoiseLite.h`, `glad.c`.
 * `shaders/include/` shared GLSL (voxel lookup, scene uniforms, water, lighting, G-buffer); `shaders/render/` the three render passes; `shaders/water/` ocean FFT and shore map passes; `shaders/grass/` grass animation.

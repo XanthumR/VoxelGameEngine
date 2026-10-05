@@ -1,6 +1,6 @@
 #include "Gameplay/DebugEditTool.h"
 
-#include "Gameplay/Player.h"
+#include "Gameplay/FreeFlyCamera.h"
 #include "World/BlockTypes.h"
 #include "World/Raycast.h"
 #include "World/VoxelWorld.h"
@@ -17,7 +17,7 @@ void DebugEditTool::HandleBlockSelectKeys(GLFWwindow* window) {
     }
 }
 
-void DebugEditTool::HandleMouse(GLFWwindow* window, const Player& player) {
+void DebugEditTool::HandleMouse(GLFWwindow* window, const FreeFlyCamera& player) {
     if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) return;
 
     // Dig (held: keeps digging every frame)
@@ -38,7 +38,7 @@ void DebugEditTool::HandleMouse(GLFWwindow* window, const Player& player) {
     m_RightWasPressed = rightPressed;
 }
 
-glm::vec3 DebugEditTool::CrosshairColor(const Player& player) const {
+glm::vec3 DebugEditTool::CrosshairColor(const FreeFlyCamera& player) const {
     RayHit hit = Raycast(m_World, player.Position(), player.Front(), REACH_DISTANCE);
     return hit.hit ? glm::vec3(0.1f, 1.0f, 0.3f) : glm::vec3(1.0f);
 }

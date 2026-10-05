@@ -3,11 +3,11 @@
 #include <glm/glm.hpp>
 
 struct GLFWwindow;
-class Player;
+class FreeFlyCamera;
 class VoxelWorld;
 class WorldEditor;
 
-// Debug terrain editing from the free-fly camera: left click digs a small sphere where the
+// Debug terrain editing from the free-fly camera (F1): left click digs a small sphere where the
 // crosshair points, right click places the selected block against the face, 1-5 select a block.
 // Active only while the mouse is captured.
 class DebugEditTool {
@@ -18,10 +18,10 @@ public:
     DebugEditTool(VoxelWorld& world, WorldEditor& editor);
 
     void HandleBlockSelectKeys(GLFWwindow* window);
-    void HandleMouse(GLFWwindow* window, const Player& player);
+    void HandleMouse(GLFWwindow* window, const FreeFlyCamera& player);
 
     // Green when pointing at a block within reach, white otherwise
-    glm::vec3 CrosshairColor(const Player& player) const;
+    glm::vec3 CrosshairColor(const FreeFlyCamera& player) const;
 
     int& SelectedBlock() { return m_SelectedBlock; } // 1 = Grass, 2 = Dirt, 3 = Stone, 4 = Sand, 5 = Plant
 

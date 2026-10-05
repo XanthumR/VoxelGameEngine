@@ -1,4 +1,4 @@
-#include "Gameplay/Player.h"
+#include "Gameplay/FreeFlyCamera.h"
 
 #include "World/BlockTypes.h"
 #include "World/VoxelWorld.h"
@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-void Player::UpdateFront() {
+void FreeFlyCamera::UpdateFront() {
     glm::vec3 front;
     front.x = cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
     front.y = sin(glm::radians(m_Pitch));
@@ -16,7 +16,7 @@ void Player::UpdateFront() {
     m_Front = glm::normalize(front);
 }
 
-void Player::OnMouseMove(double x, double y, bool cursorCaptured) {
+void FreeFlyCamera::OnMouseMove(double x, double y, bool cursorCaptured) {
     if (!cursorCaptured) {
         m_FirstMouse = true;
         return;
@@ -40,15 +40,19 @@ void Player::OnMouseMove(double x, double y, bool cursorCaptured) {
     UpdateFront();
 }
 
-void Player::LockView(glm::vec3 voxelPosition, float yaw, float pitch) {
-    m_Position = voxelPosition / VOXELS_PER_UNIT;
-    m_Velocity = glm::vec3(0.0f);
+void FreeFlyCamera::SetLook(float yaw, float pitch) {
     m_Yaw = yaw;
     m_Pitch = pitch;
     UpdateFront();
 }
 
-bool Player::OverlapsVoxel(glm::ivec3 voxel) const {
+void FreeFlyCamera::LockView(glm::vec3 voxelPosition, float yaw, float pitch) {
+    m_Position = voxelPosition / VOXELS_PER_UNIT;
+    m_Velocity = glm::vec3(0.0f);
+    SetLook(yaw, pitch);
+}
+
+bool FreeFlyCamera::OverlapsVoxel(glm::ivec3 voxel) const {
     glm::vec3 minP = m_Position - glm::vec3(RADIUS);
     glm::vec3 maxP = m_Position + glm::vec3(RADIUS);
     glm::vec3 vMin = glm::vec3(voxel) / VOXELS_PER_UNIT;
@@ -56,7 +60,7 @@ bool Player::OverlapsVoxel(glm::ivec3 voxel) const {
     return glm::all(glm::lessThan(minP, vMax)) && glm::all(glm::greaterThan(maxP, vMin));
 }
 
-bool Player::IsColliding(glm::vec3 position, const VoxelWorld& world) const {
+bool FreeFlyCamera::IsColliding(glm::vec3 position, const VoxelWorld& world) const {
     // The world is unbounded horizontally; only keep the player inside the vertical slab
     if (position.y < 0.0f || position.y > (float)WORLD_HEIGHT / VOXELS_PER_UNIT) return true;
 
@@ -74,7 +78,7 @@ bool Player::IsColliding(glm::vec3 position, const VoxelWorld& world) const {
 }
 
 // Pushes the player out of any voxel it overlaps, along the axis of least penetration
-void Player::ResolveCollisions(const VoxelWorld& world) {
+void FreeFlyCamera::ResolveCollisions(const VoxelWorld& world) {
     glm::vec3& pos = m_Position;
     glm::vec3& velocity = m_Velocity;
     const float r = RADIUS;
@@ -136,7 +140,7 @@ void Player::ResolveCollisions(const VoxelWorld& world) {
     }
 }
 
-void Player::UpdateMovement(GLFWwindow* window, float deltaTime, const VoxelWorld& world) {
+void FreeFlyCamera::UpdateMovement(GLFWwindow* window, float deltaTime, const VoxelWorld& world) {
     glm::vec3 accelDir = glm::vec3(0.0f);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) accelDir += m_Front;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) accelDir -= m_Front;

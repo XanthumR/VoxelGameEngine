@@ -78,7 +78,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     glm::ivec3 poolBase = cache.PoolBaseSlots();
 
     // Coastline data for the waves (needs the voxel data bound above)
-    glm::ivec2 playerColumn = glm::ivec2(glm::floor(glm::vec2(frame.cameraPos.x, frame.cameraPos.z) * VOXELS_PER_UNIT));
+    glm::ivec2 playerColumn = glm::ivec2(glm::floor(glm::vec2(frame.focusPoint.x, frame.focusPoint.z) * VOXELS_PER_UNIT));
     shore.Update(playerColumn, glfwGetTime(), poolBase, SEA_LEVEL);
     glActiveTexture(GL_TEXTURE12);
     glBindTexture(GL_TEXTURE_2D, shore.Texture());

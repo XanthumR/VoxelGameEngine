@@ -15,6 +15,7 @@ struct FrameParams {
     glm::vec3 cameraPos;   // World units
     glm::vec3 cameraFront;
     glm::vec3 cameraUp;
+    glm::vec3 focusPoint;  // Where the world streams around (the shore map follows it)
     float time;            // Drives the day-night cycle and all animation
     int renderDistance;    // Chunks
     int windowWidth, windowHeight;

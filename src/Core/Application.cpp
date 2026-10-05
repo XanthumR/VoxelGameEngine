@@ -40,7 +40,35 @@ Application::~Application() {
 
 void Application::OnMouseMove(GLFWwindow* window, double x, double y) {
     Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-    app->m_Player.OnMouseMove(x, y, glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED);
+    bool captured = glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED;
+    app->m_FreeFlyCamera.OnMouseMove(x, y, app->m_CameraMode == CameraMode::FreeFly && captured);
+}
+
+void Application::OnScroll(GLFWwindow* window, double /*xOffset*/, double yOffset) {
+    Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    // ImGui chains this callback; ignore the wheel while it scrolls a UI window
+    bool uiWantsMouse = app->m_ImGuiReady && ImGui::GetIO().WantCaptureMouse;
+    if (app->m_CameraMode == CameraMode::Strategy && !uiWantsMouse) app->m_StrategyCamera.OnScroll(yOffset);
+}
+
+ICamera& Application::ActiveCamera() {
+    if (m_CameraMode == CameraMode::FreeFly) return m_FreeFlyCamera;
+    return m_StrategyCamera;
+}
+
+// The new camera starts where the old one was looking
+void Application::SetCameraMode(CameraMode mode) {
+    if (mode == CameraMode::FreeFly && m_CameraMode == CameraMode::Strategy) {
+        m_FreeFlyCamera.SetPosition(m_StrategyCamera.Position());
+        m_FreeFlyCamera.SetLook(m_StrategyCamera.Yaw(), -m_StrategyCamera.Pitch());
+    } else if (mode == CameraMode::Strategy && m_CameraMode == CameraMode::FreeFly) {
+        glm::vec3 position = m_FreeFlyCamera.Position();
+        m_StrategyCamera.SetYaw(m_FreeFlyCamera.Yaw());
+        m_StrategyCamera.SetTarget(glm::vec3(position.x, (float)(SEA_LEVEL + ISLAND_HEIGHT) / VOXELS_PER_UNIT, position.z));
+    }
+    m_CameraMode = mode;
+    // Free-fly captures the mouse for looking around; the strategy camera needs the cursor
+    glfwSetInputMode(m_Window, GLFW_CURSOR, mode == CameraMode::FreeFly ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 }
 
 bool Application::Init() {
@@ -62,8 +90,9 @@ bool Application::Init() {
     glfwMakeContextCurrent(m_Window);
     glfwSwapInterval(1);
     glfwSetWindowUserPointer(m_Window, this);
+    // Installed before ImGui, which chains them
     glfwSetCursorPosCallback(m_Window, OnMouseMove);
-    glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetScrollCallback(m_Window, OnScroll);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -108,10 +137,15 @@ void Application::Spawn() {
     m_Streamer.UpdateWindows(); // Requests are nearest-first, so the spawn column arrives first
     m_Streamer.WaitForColumn(spawnChunk.x, spawnChunk.z);
 
-    // Camera 3 voxels above the highest solid block
+    // Free-fly camera 3 voxels above the highest solid block; the strategy camera looks at the
+    // spawn point on the ground
     int spawnY = WORLD_HEIGHT - 1;
     while (spawnY > 0 && !IsSolidBlock(m_World.GetVoxel(spawnColumn.x, spawnY, spawnColumn.y))) spawnY--;
-    m_Player.SetPosition(glm::vec3((float)spawnColumn.x, (float)(spawnY + 3), (float)spawnColumn.y) / VOXELS_PER_UNIT);
+    m_FreeFlyCamera.SetPosition(glm::vec3((float)spawnColumn.x, (float)(spawnY + 3), (float)spawnColumn.y) / VOXELS_PER_UNIT);
+    m_StrategyCamera.SetTarget(glm::vec3((float)spawnColumn.x, (float)(SEA_LEVEL + ISLAND_HEIGHT), (float)spawnColumn.y) / VOXELS_PER_UNIT);
+
+    // A locked camera (regression screenshots) uses the free-fly camera
+    SetCameraMode(m_Options.lockCamera ? CameraMode::FreeFly : CameraMode::Strategy);
 }
 
 int Application::Run() {
@@ -139,8 +173,13 @@ bool Application::KeyPressed(int key, bool& wasPressed) {
 void Application::HandleKeys(float deltaTime) {
     if (glfwGetKey(m_Window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(m_Window, true);
 
-    // Tab frees the mouse for the UI, or captures it again
-    if (KeyPressed(GLFW_KEY_TAB, m_TabWasPressed)) {
+    // F1 switches between the strategy camera and the free-fly debug camera
+    if (KeyPressed(GLFW_KEY_F1, m_F1WasPressed)) {
+        SetCameraMode(m_CameraMode == CameraMode::Strategy ? CameraMode::FreeFly : CameraMode::Strategy);
+    }
+
+    // Free-fly: Tab frees the mouse for the UI, or captures it again
+    if (KeyPressed(GLFW_KEY_TAB, m_TabWasPressed) && m_CameraMode == CameraMode::FreeFly) {
         bool captured = glfwGetInputMode(m_Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED;
         glfwSetInputMode(m_Window, GLFW_CURSOR, captured ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
     }
@@ -149,13 +188,35 @@ void Application::HandleKeys(float deltaTime) {
     if (KeyPressed(GLFW_KEY_C, m_CWasPressed)) m_Settings.chunkViewer = !m_Settings.chunkViewer;
     if (KeyPressed(GLFW_KEY_L, m_LWasPressed)) m_Settings.lightVisualizer = !m_Settings.lightVisualizer;
 
-    m_EditTool.HandleBlockSelectKeys(m_Window);
+    if (m_CameraMode == CameraMode::FreeFly) m_EditTool.HandleBlockSelectKeys(m_Window);
 
     // Render distance, one chunk per press
     if (KeyPressed(GLFW_KEY_PAGE_UP, m_PageUpWasPressed)) m_Streamer.SetRenderDistance(m_Streamer.RenderDistance() + 1);
     if (KeyPressed(GLFW_KEY_PAGE_DOWN, m_PageDownWasPressed)) m_Streamer.SetRenderDistance(m_Streamer.RenderDistance() - 1);
 
-    m_Player.UpdateMovement(m_Window, deltaTime, m_World);
+    ImGuiIO& io = ImGui::GetIO();
+    if (m_CameraMode == CameraMode::FreeFly) {
+        m_FreeFlyCamera.UpdateMovement(m_Window, deltaTime, m_World);
+    } else {
+        m_StrategyCamera.Update(m_Window, deltaTime, !io.WantCaptureMouse, !io.WantCaptureKeyboard);
+    }
+}
+
+// Strategy camera: the voxel under the mouse cursor. Free-fly: the voxel under the crosshair.
+void Application::UpdatePicking() {
+    m_Hover = PickResult();
+    if (m_CameraMode == CameraMode::Strategy) {
+        if (ImGui::GetIO().WantCaptureMouse) return; // Pointing at a UI window
+        double cursorX, cursorY;
+        glfwGetCursorPos(m_Window, &cursorX, &cursorY);
+        int width, height;
+        glfwGetWindowSize(m_Window, &width, &height); // Cursor coordinates are window coordinates
+        m_Hover = PickUnderCursor(m_StrategyCamera, glm::vec2((float)cursorX, (float)cursorY), glm::ivec2(width, height), m_World);
+    } else {
+        int width, height;
+        glfwGetWindowSize(m_Window, &width, &height);
+        m_Hover = PickUnderCursor(m_FreeFlyCamera, glm::vec2(width * 0.5f, height * 0.5f), glm::ivec2(width, height), m_World);
+    }
 }
 
 void Application::RunFrame(double frameStartTime, float deltaTime) {
@@ -169,7 +230,8 @@ void Application::RunFrame(double frameStartTime, float deltaTime) {
     ImGui::NewFrame();
 
     // --- World streaming ---
-    bool movedChunk = m_Streamer.SetPlayerChunk(m_Player.ChunkCoord());
+    glm::ivec3 focusChunk = glm::ivec3(glm::floor(ActiveCamera().FocusPoint() * VOXELS_PER_UNIT / (float)CHUNK_SIZE));
+    bool movedChunk = m_Streamer.SetPlayerChunk(focusChunk);
     m_Streamer.IntegrateResults(frameStartTime, STREAMING_BUDGET_SECONDS);
     if (movedChunk) m_Streamer.UpdateWindows();
     if (movedChunk || m_Editor.ConsumeTerrainChanged()) m_Grass.MarkDirty();
@@ -177,12 +239,14 @@ void Application::RunFrame(double frameStartTime, float deltaTime) {
 
     // --- Input and gameplay ---
     HandleKeys(deltaTime);
-    m_Overlay.UpdateMinimap(m_World, m_Player.Position());
-    m_EditTool.HandleMouse(m_Window, m_Player);
+    m_Overlay.UpdateMinimap(m_World, ActiveCamera().FocusPoint());
+    if (m_CameraMode == CameraMode::FreeFly) m_EditTool.HandleMouse(m_Window, m_FreeFlyCamera);
+    UpdatePicking();
 
     // --- UI ---
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
-        m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS };
+        m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS,
+        m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover };
     m_Overlay.Draw(overlay);
 
     if (minimized) {
@@ -192,7 +256,7 @@ void Application::RunFrame(double frameStartTime, float deltaTime) {
         return;
     }
 
-    if (m_Options.lockCamera) m_Player.LockView(m_Options.cameraVoxel, m_Options.cameraYaw, m_Options.cameraPitch);
+    if (m_Options.lockCamera) m_FreeFlyCamera.LockView(m_Options.cameraVoxel, m_Options.cameraYaw, m_Options.cameraPitch);
 
     // --- GPU simulation: ocean waves, grass ---
     float animationTime = m_Options.fixedTime >= 0.0f ? m_Options.fixedTime : (float)glfwGetTime();
@@ -200,17 +264,19 @@ void Application::RunFrame(double frameStartTime, float deltaTime) {
     m_Grass.Animate(animationTime, m_Cache);
 
     // --- Render ---
+    const ICamera& camera = ActiveCamera();
     FrameParams frame;
-    frame.cameraPos = m_Player.Position();
-    frame.cameraFront = m_Player.Front();
-    frame.cameraUp = m_Player.Up();
+    frame.cameraPos = camera.Position();
+    frame.cameraFront = camera.Front();
+    frame.cameraUp = camera.Up();
+    frame.focusPoint = camera.FocusPoint();
     frame.time = animationTime;
     frame.renderDistance = m_Streamer.RenderDistance();
     frame.windowWidth = m_WindowWidth;
     frame.windowHeight = m_WindowHeight;
     m_Renderer.Render(frame, m_Settings, m_Cache, m_Ocean, m_Shore);
 
-    DrawHud(m_EditTool.CrosshairColor(m_Player), m_EditTool.SelectedBlock());
+    if (m_CameraMode == CameraMode::FreeFly) DrawHud(m_EditTool.CrosshairColor(m_FreeFlyCamera), m_EditTool.SelectedBlock());
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

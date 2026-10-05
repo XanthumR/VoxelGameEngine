@@ -138,7 +138,9 @@
     <ClCompile Include="src\Core\LaunchOptions.cpp" />
     <ClCompile Include="src\Core\Screenshot.cpp" />
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp" />
-    <ClCompile Include="src\Gameplay\Player.cpp" />
+    <ClCompile Include="src\Gameplay\FreeFlyCamera.cpp" />
+    <ClCompile Include="src\Gameplay\Picking.cpp" />
+    <ClCompile Include="src\Gameplay\StrategyCamera.cpp" />
     <ClCompile Include="src\Rendering\GpuChunkCache.cpp" />
     <ClCompile Include="src\Rendering\GrassAnimator.cpp" />
     <ClCompile Include="src\Rendering\OceanSimulation.cpp" />
@@ -187,8 +189,11 @@
     <ClInclude Include="src\Core\LaunchOptions.h" />
     <ClInclude Include="src\Core\SafeQueue.h" />
     <ClInclude Include="src\Core\Screenshot.h" />
+    <ClInclude Include="src\Gameplay\Camera.h" />
     <ClInclude Include="src\Gameplay\DebugEditTool.h" />
-    <ClInclude Include="src\Gameplay\Player.h" />
+    <ClInclude Include="src\Gameplay\FreeFlyCamera.h" />
+    <ClInclude Include="src\Gameplay\Picking.h" />
+    <ClInclude Include="src\Gameplay\StrategyCamera.h" />
     <ClInclude Include="src\Rendering\GpuChunkCache.h" />
     <ClInclude Include="src\Rendering\GrassAnimator.h" />
     <ClInclude Include="src\Rendering\OceanSimulation.h" />

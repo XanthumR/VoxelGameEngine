@@ -78,7 +78,14 @@ void DebugOverlay::Draw(const OverlayContext& c) {
         c.cache.PoolCount() == 1 ? "" : "s", c.cache.IsExhausted() ? " [VRAM FULL]" : "");
     ImGui::Text("CPU Chunks: %zu", c.world.ChunkCount());
     ImGui::Text("Animated Grass Tufts: %zu (within %d chunks)", c.animatedGrassTufts, c.grassAnimationRadius);
-    ImGui::Text("Player Chunk: (%d, %d, %d)", playerChunk.x, playerChunk.y, playerChunk.z);
+    ImGui::Text("Focus Chunk: (%d, %d, %d)", playerChunk.x, playerChunk.y, playerChunk.z);
+    ImGui::Text("Camera: %s", c.cameraMode);
+    if (c.hover.hit) {
+        ImGui::Text("Hovered: voxel (%d, %d, %d), block %d%s", c.hover.voxel.x, c.hover.voxel.y, c.hover.voxel.z,
+            c.hover.block, c.hover.block == Block::WATER ? " (water)" : "");
+    } else {
+        ImGui::Text("Hovered: nothing");
+    }
 
     ImGui::Separator();
 
@@ -88,13 +95,11 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     ImGui::Separator();
 
     ImGui::Text("--- CONTROLS & EDITOR ---");
+    ImGui::Text("Strategy: WASD/edge pan, Q/E rotate, wheel zoom, middle-drag pan");
     if (glfwGetInputMode(c.window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
-        ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Press [TAB] to free mouse for UI.");
-    } else {
-        ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "Press [TAB] to capture cursor.");
+        ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Free-fly: [TAB] frees the mouse for the UI.");
     }
-
-    ImGui::Text("Left click digs, right click places the selected block.");
+    ImGui::Text("Free-fly: left click digs, right click places.");
     ImGui::Checkbox("Chunk Viewer [C]", &c.settings.chunkViewer);
     ImGui::Checkbox("Light Visualizer [L]", &c.settings.lightVisualizer);
 

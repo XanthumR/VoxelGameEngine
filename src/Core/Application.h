@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Core/LaunchOptions.h"
-#include "Gameplay/Player.h"
 #include "Gameplay/DebugEditTool.h"
+#include "Gameplay/FreeFlyCamera.h"
+#include "Gameplay/Picking.h"
+#include "Gameplay/StrategyCamera.h"
 #include "Rendering/GpuChunkCache.h"
 #include "Rendering/GrassAnimator.h"
 #include "Rendering/OceanSimulation.h"
@@ -28,13 +30,19 @@ public:
     int Run(); // Returns the process exit code
 
 private:
+    enum class CameraMode { Strategy, FreeFly };
+
     bool Init();
     void Spawn();
     void RunFrame(double frameStartTime, float deltaTime);
     void HandleKeys(float deltaTime);
+    void UpdatePicking();
+    void SetCameraMode(CameraMode mode);
+    ICamera& ActiveCamera();
     void Shutdown();
 
     static void OnMouseMove(GLFWwindow* window, double x, double y);
+    static void OnScroll(GLFWwindow* window, double xOffset, double yOffset);
 
     // Edge-triggered key press: true only on the frame the key goes down
     bool KeyPressed(int key, bool& wasPressed);
@@ -46,7 +54,7 @@ private:
     LaunchOptions m_Options;
     GLFWwindow* m_Window = nullptr;
     bool m_ImGuiReady = false;
-    int m_WindowWidth = 0, m_WindowHeight = 0;
+    int m_WindowWidth = 0, m_WindowHeight = 0; // Framebuffer pixels
 
     // World (declaration order matters: later members reference earlier ones)
     VoxModel m_Trees;
@@ -56,9 +64,12 @@ private:
     WorldEditor m_Editor;
     TerrainGenerator m_Terrain; // Main-thread copy: spawn search, grass placement
 
-    // Player
-    Player m_Player;
+    // Cameras and input
+    StrategyCamera m_StrategyCamera;
+    FreeFlyCamera m_FreeFlyCamera;
+    CameraMode m_CameraMode = CameraMode::Strategy;
     DebugEditTool m_EditTool;
+    PickResult m_Hover; // What the cursor (or the free-fly crosshair) points at
 
     // Rendering
     RenderSettings m_Settings;
@@ -69,7 +80,7 @@ private:
     DebugOverlay m_Overlay;
 
     // Edge state for the hotkeys
-    bool m_TabWasPressed = false, m_F3WasPressed = false;
+    bool m_TabWasPressed = false, m_F1WasPressed = false, m_F3WasPressed = false;
     bool m_CWasPressed = false, m_LWasPressed = false;
     bool m_PageUpWasPressed = false, m_PageDownWasPressed = false;
 };

@@ -57,7 +57,13 @@
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
-    <ClCompile Include="src\Gameplay\Player.cpp">
+    <ClCompile Include="src\Gameplay\FreeFlyCamera.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Gameplay\Picking.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Gameplay\StrategyCamera.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\GpuChunkCache.cpp">
@@ -196,10 +202,19 @@
     <ClInclude Include="src\Core\Screenshot.h">
       <Filter>src\Core</Filter>
     </ClInclude>
+    <ClInclude Include="src\Gameplay\Camera.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
     <ClInclude Include="src\Gameplay\DebugEditTool.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
-    <ClInclude Include="src\Gameplay\Player.h">
+    <ClInclude Include="src\Gameplay\FreeFlyCamera.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Gameplay\Picking.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Gameplay\StrategyCamera.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\GpuChunkCache.h">
