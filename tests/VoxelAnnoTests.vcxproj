@@ -88,8 +88,10 @@
     <ClCompile Include="..\src\Simulation\Logistics.cpp" />
     <ClCompile Include="..\src\Simulation\OccupancyGrid.cpp" />
     <ClCompile Include="..\src\Simulation\Placement.cpp" />
+    <ClCompile Include="..\src\Simulation\ProducerLocation.cpp" />
     <ClCompile Include="..\src\Simulation\RoadNetwork.cpp" />
     <ClCompile Include="..\src\Simulation\Simulation.cpp" />
+    <ClCompile Include="..\src\Simulation\TreeRegistry.cpp" />
     <ClCompile Include="..\src\World\BuildingModel.cpp" />
     <ClCompile Include="..\src\World\TerrainGenerator.cpp" />
     <ClCompile Include="..\src\World\VoxModel.cpp" />
@@ -107,6 +109,7 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="PlacementTests.cpp" />
     <ClCompile Include="PopulationTests.cpp" />
+    <ClCompile Include="ProducerLocationTests.cpp" />
     <ClCompile Include="RoadNetworkTests.cpp" />
     <ClCompile Include="TestWorld.cpp" />
     <ClCompile Include="WalkerTests.cpp" />

@@ -40,6 +40,7 @@ void ChunkStreamer::Stop() {
 
 void ChunkStreamer::WorkerLoop() {
     TerrainGenerator generator(m_Trees);
+    generator.SetFelledTrees(m_Felled);
 
     while (m_Running) {
         Request request;
@@ -48,6 +49,7 @@ void ChunkStreamer::WorkerLoop() {
 
         Result result;
         result.cx = request.cx; result.cy = request.cy; result.cz = request.cz;
+        result.regenerate = request.regenerate;
 
         // Skip requests the player has already flown away from
         int dist = std::max(std::abs(request.cx - m_WorkerPlayerCx.load()), std::abs(request.cz - m_WorkerPlayerCz.load()));
@@ -84,8 +86,21 @@ bool ChunkStreamer::SetPlayerChunk(glm::ivec3 chunk) {
     return movedColumn;
 }
 
+void ChunkStreamer::RegenerateChunk(int cx, int cy, int cz) {
+    uint64_t key = ChunkKey(cx, cy, cz);
+    if (m_World.FindChunk(cx, cy, cz) || !m_Cache.IsResident(key)) return; // CPU copy, or nothing to replace
+    m_Requests.Push({ cx, cy, cz, true });
+}
+
 void ChunkStreamer::Integrate(Result& result) {
     uint64_t key = ChunkKey(result.cx, result.cy, result.cz);
+    if (result.regenerate) {
+        // Replaces the GPU copy, unless the chunk got CPU data meanwhile (that copy wins)
+        if (!result.cancelled && !m_World.FindChunk(result.cx, result.cy, result.cz) && m_Cache.IsResident(key)) {
+            m_Cache.MakeResident(key, glm::ivec3(result.cx, result.cy, result.cz), result.data, result.brickMask);
+        }
+        return;
+    }
     m_InFlight.erase(key);
 
     if (result.cancelled) {

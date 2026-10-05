@@ -25,6 +25,7 @@ public:
         WAREHOUSE_REACH = 6,   // Bright blue: the selected or previewed warehouse's roads
         MARKET_IN_RANGE = 7,   // Soft amber: roads a marketplace reaches
         MARKET_REACH = 8,      // Bright amber: the selected or previewed marketplace's roads
+        LOCATION_COUNTED = 9,  // Light green: pasture or trees that count for the previewed producer
     };
 
     void Init(int tileSize); // tileSize: world columns per tile

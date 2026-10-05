@@ -5,6 +5,7 @@
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/GameObjects.h"
 #include "Simulation/Placement.h"
+#include "Simulation/ProducerLocation.h"
 
 #include <glm/glm.hpp>
 
@@ -55,6 +56,12 @@ public:
     bool PreviewInMarketRange() const { return m_PreviewInMarket; } // ... and a marketplace's reach
     GameObjectId HoveredBuilding() const { return m_HoveredBuilding; }
 
+    // Producers: how the previewed spot does on the chain's location rule, and the tiles that count
+    bool HasLocationPreview() const { return m_HasLocation; }
+    const LocationReport& PreviewLocation() const { return m_Location; }
+    const std::vector<glm::ivec2>& PreviewLocationTiles() const { return m_LocationTiles; }
+    uint32_t LocationRevision() const { return m_LocationRevision; } // Changes when the above do
+
     GameObjectId Place(uint16_t type, uint8_t rotation, glm::ivec2 minTile); // INVALID if not placeable
     void Demolish(GameObjectId id);
 
@@ -79,6 +86,20 @@ private:
     glm::ivec2 m_PreviewTiles = glm::ivec2(0);
     bool m_PreviewConnected = false;
     bool m_PreviewInMarket = false;
+
+    // Location preview, recomputed only when its inputs change
+    struct LocationKey {
+        int type = -1;
+        uint8_t rotation = 0;
+        glm::ivec2 minTile = glm::ivec2(0);
+        uint32_t trees = 0, roads = 0, buildings = 0;
+        bool operator==(const LocationKey&) const = default;
+    };
+    bool m_HasLocation = false;
+    LocationKey m_LocationKey;
+    LocationReport m_Location;
+    std::vector<glm::ivec2> m_LocationTiles;
+    uint32_t m_LocationRevision = 0;
     std::vector<uint8_t> m_LookBuffer; // Reused for every placement
 
     bool m_LeftWasPressed = false, m_RightWasPressed = false, m_RWasPressed = false;

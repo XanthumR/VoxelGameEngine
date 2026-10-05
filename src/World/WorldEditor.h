@@ -6,6 +6,7 @@
 #include <vector>
 
 class ChunkStreamer;
+struct VoxModel;
 class VoxelWorld;
 
 // Player edits to the world: writes the CPU voxels, then re-uploads each touched chunk once
@@ -21,6 +22,11 @@ public:
     // Voxels in unloaded chunks are skipped.
     void WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const std::vector<uint8_t>& ids);
     void FillBox(glm::ivec3 minCorner, glm::ivec3 size, uint8_t id);
+
+    // Removes a model's voxels at base (only voxels that still hold the model's block there), or
+    // stamps it back (only into air). The model's bottom layer sits in the ground: erasing puts
+    // groundId back there, and stamping may replace groundId. For felled and regrown trees.
+    void StampModel(glm::ivec3 base, const VoxModel& model, bool erase, uint8_t groundId);
 
     // True once after any edit (the animated grass list needs rebuilding)
     bool ConsumeTerrainChanged();

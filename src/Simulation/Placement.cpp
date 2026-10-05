@@ -1,6 +1,8 @@
 #include "Simulation/Placement.h"
 
+#include "Economy/ProductionChains.h"
 #include "Simulation/BuildingLook.h"
+#include "Simulation/ProducerLocation.h"
 #include "Simulation/OccupancyGrid.h"
 #include "Simulation/RoadNetwork.h"
 #include "World/BlockTypes.h"
@@ -16,6 +18,7 @@ const char* PlacementErrorText(PlacementError error) {
     case PlacementError::Occupied: return "occupied";
     case PlacementError::Road: return "road in the way";
     case PlacementError::TwoIslands: return "spans two islands";
+    case PlacementError::NeedsCoast: return "must be at the coast";
     }
     return "?";
 }
@@ -81,7 +84,17 @@ PlacementCheck ValidatePlacement(const PlacementContext& context, uint16_t type,
             }
         }
     }
-    return CheckGround(context, minTile * TILE_SIZE, tiles * TILE_SIZE, BuildingHeight(building));
+    check = CheckGround(context, minTile * TILE_SIZE, tiles * TILE_SIZE, BuildingHeight(building));
+    if (check.error != PlacementError::None) return check;
+
+    // Location rules that forbid a spot (the others only change productivity)
+    if (building.role == BuildingRole::Producer) {
+        const ProductionChain& chain = PRODUCTION_CHAINS[building.chain];
+        if (chain.rule == LocationRule::Coast && !HasCoast(context.islands.Terrain(), minTile, tiles, chain.radius)) {
+            check.error = PlacementError::NeedsCoast;
+        }
+    }
+    return check;
 }
 
 PlacementCheck ValidateRoadTile(const PlacementContext& context, glm::ivec2 tile) {

@@ -1,6 +1,7 @@
 #include "UI/BuildMenu.h"
 
 #include "Gameplay/BuildTool.h"
+#include "Economy/ProductionChains.h"
 #include "Simulation/BuildingTypes.h"
 
 #include "imgui.h"
@@ -75,6 +76,13 @@ void DrawBuildMenu(BuildTool& tool, uint32_t buildingCount) {
             ImGui::TextDisabled("Point at an island");
         } else if (error != PlacementError::None) {
             ImGui::TextColored(ERROR_COLOR, "%s", PlacementErrorText(error));
+        } else if (tool.HasLocationPreview() && tool.PreviewLocation().needed > 0) {
+            // Producers with a trees or pasture rule: productivity from the surroundings
+            const LocationReport& location = tool.PreviewLocation();
+            const char* what = PRODUCTION_CHAINS[BUILDING_TYPES[selected].chain].rule == LocationRule::Trees ? "trees" : "pasture";
+            ImVec4 color = location.factor >= 1000 ? OK_COLOR : (location.factor >= 500 ? WARNING_COLOR : ERROR_COLOR);
+            ImGui::TextColored(color, "Productivity %d%% (%d/%d %s)%s", location.factor / 10, location.count, location.needed, what,
+                tool.PreviewConnected() ? "" : ", no road to a warehouse");
         } else if (role != BuildingRole::Storage && !tool.PreviewConnected()) {
             ImGui::TextColored(WARNING_COLOR, "OK, but no road to a warehouse here");
         } else if (role == BuildingRole::Residence && !tool.PreviewInMarketRange()) {

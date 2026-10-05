@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-3 are done; a scale-up of the world (bigger grid, detailed buildings and people, bigger islands) comes before Milestone 4.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-3 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 4 is in progress.
 
 ## Roadmap
 
@@ -9,7 +9,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 1 (done) | Foundation & first building | Strategy camera, the island under the cursor is identified, place and demolish a building on a grid with a green/red preview, 10 Hz simulation tick, first tests |
 | 2 (done) | Roads & warehouses | Paint roads; buildings only work when connected by road to a warehouse; each warehouse reaches a set distance along its roads; storage per island |
 | 3 (done) | Housing & population | Farmer residences; needs (fish, work clothes) with supply %; population per island; houses upgrade or shrink |
-| 4 | Production chains | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
+| **4** | **Production chains** | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
 | 5 | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
 | 6 | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
 | 7 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
@@ -293,7 +293,7 @@ Residents also show up as **walkers**: one little voxel person (trousers, a shir
 - One temporary demo patch for screenshots, which is removed afterwards.
 - Play-test before committing, then one commit for M3.
 
-## Scale-up, in detail (before Milestone 4)
+## Scale-up, in detail (done)
 
 Build tiles grow from 4 to 12 voxels (a farmer house is 36x36, roads are 12 wide, room for carts with horses), buildings become editable MagicaVoxel models, people about 10 voxels tall, and islands about 5x bigger (800-1150 voxels across).
 
@@ -394,3 +394,151 @@ Build tiles grow from 4 to 12 voxels (a farmer house is 36x36, roads are 12 wide
 - Steps 3–4: play-test the buildings, then commit.
 - Step 5: play-test the people, then commit.
 - The temporary demo patch screenshots each part and is removed afterwards.
+
+## Milestone 4, in detail
+
+Producers with workforce, location rules and carts. Trees: one tree per clump of high tree noise (its peak), so a lumberjack can fell exactly one; felled trees are left out of generated chunks and grow back after 5 minutes unless a building or road covers the spot.
+
+### The chains
+
+| Building (tiles) | Workforce | Input → output | Cycle | Location rule |
+|---|---|---|---|---|
+| Fishery (3×3) | 5 Farmers | → Fish | 30 s | **Coast** (required): open sea within 2 tiles of the footprint |
+| Lumberjack (3×3) | 5 Farmers | → Wood | 20 s | **Trees** within 6 tiles; productivity = standing trees ÷ 6. Fells the nearest tree each cycle; it regrows after 5 min |
+| Sawmill (3×3) | 5 Farmers | Wood → Planks | 20 s | — |
+| Sheep Farm (3×3) | 5 Farmers | → Wool | 30 s | **Pasture**: free grass tiles within 3 tiles; productivity = free tiles ÷ 24 |
+| Framework Knitter (3×3) | 10 Farmers | Wool → Work Clothes | 30 s | — |
+| Pig Farm (3×3) | 10 Workers | → Pigs (new good) | 60 s | **Pasture**, as for the sheep farm |
+| Slaughterhouse (3×3) | 15 Workers | Pigs → Sausages | 30 s | — |
+
+**Balance:**
+- 1 fishery makes 2 fish a minute, which feeds 40 Farmers.
+- One Farmer house gives 10 workforce, so a starting town of 6 houses can staff the first chains.
+
+**Other rules:**
+- A producer holds up to **4** of each input and **4** outputs.
+- A **cart carries up to 4** goods and moves **0.6 tiles a second**, about 7 voxels a second.
+
+
+
+### 1. Data and build menu
+- **`ItemType`:** add `Pigs`.
+- **`src/Economy/ProductionChains.h`:** a `constexpr` table, one row per producer:
+  - workforce tier and amount;
+  - up to 2 inputs and the output;
+  - cycle ticks;
+  - the location rule (`None`, `Coast`, `Trees`, `Pasture`) with its radius in tiles and its full-speed count.
+- **`BuildingTypes`:**
+  - new role `Producer` and a `chain` index;
+  - the 7 types above, each with a `modelName` and a `height` (24–34).
+- **`BuildMenu`** gets **tabs**:
+  - Housing: Farmer House, Marketplace;
+  - Production: the 7 producers;
+  - Infrastructure: Warehouse, Road.
+  - Number keys pick within the open tab.
+  - **Tab** cycles tabs in strategy mode; it still frees the mouse in free-fly mode.
+
+### 2. Producer models
+`tools/building_models/generate.py` gains 7 models, 36×36, same palette rules, with the README updated:
+
+| Model | Look |
+|---|---|
+| Fishery | Timber hut on a stone quay with a jetty sticking out at the back, nets on frames, fish crates, barrels |
+| Lumberjack | Log cabin with a chopping block and axe, log piles, a saw horse |
+| Sawmill | Open-sided shed with a saw bench and plank stacks, a log pile |
+| Sheep farm | Barn with a fenced yard and hay racks. Sheep are white blocks: new `WOOL_WHITE` material |
+| Framework knitter | Two-storey workshop with a loom visible through big windows and wool bales |
+| Pig farm | Low sty with a mud pen, troughs and pigs: new `PIG_PINK` material |
+| Slaughterhouse | Stone building with a smokehouse chimney and hanging sausages: new `SAUSAGE` material |
+
+The new materials take block IDs 96–99.
+
+### 3. Location rules — `src/Simulation/ProducerLocation.h/.cpp`
+These are pure functions over the terrain noise, `IslandRegistry`, `OccupancyGrid`, `RoadNetwork` and `TreeRegistry`. No voxels are needed, so they are testable.
+- **`Coast`:** some column within the radius has `TerrainHeightAt < SEA_LEVEL`. Otherwise placement fails with the new `PlacementError::NeedsCoast`.
+- **`Pasture`:** counts free tiles in the radius: island ground, not road, not occupied.
+- **`Trees`:** counts standing trees in the radius.
+- **`LocationFactor`** is per mille. It is stored in `ProductionComponent` and recomputed when buildings, roads or trees change, so building a road through a pasture lowers its farm's output.
+- **Placement preview:**
+  - counted tiles (pasture or trees) and the coast ring are tinted in `TileOverlay` with a new color;
+  - the build bar shows "Productivity 75% (18/24 pasture)" or "needs coast".
+
+### 4. Trees — `src/Simulation/TreeRegistry.h/.cpp`
+- **Tree positions:** `TerrainGenerator::IsTreeRoot(wx, wz)` holds the root test from `StampTrees`, and `ForEachTreeRoot(min, max, f)` builds on it. So trees are known without voxels.
+- **The registry** stores only changed trees: a map from root to regrow tick, reserved up front.
+  - Felling and regrowth push `TreeChange` events, which `Application` drains like look changes.
+- **Visual consistency:**
+  - the terrain generator skips felled trees. It reads a mutex-guarded copy of the felled set, so chunks generated later agree;
+  - **loaded CPU chunks:** `WorldEditor::StampModel(root, model, erase)` removes a felled tree's voxels (only voxels still holding that model's IDs) or stamps a regrown tree back;
+  - **GPU-only far chunks:** `ChunkStreamer::RegenerateChunk(key)` regenerates them in the background.
+
+### 5. Production simulation — `src/Economy/Production.h/.cpp`
+- **`ProductionComponent`** (flat array in `GameObjectRegistry`):
+  - `progress`;
+  - `inputs[2]` and `output`;
+  - `locationFactor` and `productivity` (per mille);
+  - `status`: Working, NoRoad, NoWorkforce, MissingInput, OutputFull, BadLocation;
+  - the cart state (step 6).
+- **`ProductionSystem::Update`** runs in `Simulation::FixedUpdate` after population.
+  1. **Workforce, per island and tier:**
+     - available = residents of that tier;
+     - required = the workforce of every connected producer of that tier;
+     - ratio = min(1000, available × 1000 ÷ required), stored in `IslandStorage.workforce[tier]` for the UI.
+  2. **Per producer:**
+     - productivity = ratio × locationFactor ÷ 1000;
+     - it waits when output = 4 (OutputFull) or an input is 0 (MissingInput);
+     - at the end of a cycle it takes the inputs and adds 1 output. A lumberjack also fells a tree.
+- **Island panel:** workforce lines such as "Farmer jobs: 45 / 60 residents" (green), or red when short.
+
+### 6. Carts: horse and wagon
+- **State in `ProductionComponent`:** `Idle`, `ToWarehouse`, `Unloading`, `ToProducer`.
+  - `path[31]` holds the road tiles.
+  - `progress` per tile.
+  - `cargo` holds an item and an amount.
+- **Leaving:** the cart sets out when output ≥ 4, or when output > 0 and it has been idle 20 s.
+- **Path:** downhill on the warehouse distance field (`RoadTile.distance`) from a road tile next to the producer. It needs no search, and its length is at most 30, the warehouse range.
+- **At the warehouse:**
+  - it unloads into island storage, and waits if storage is full;
+  - it loads up to 4 of each input the producer is missing, then drives back along the same path.
+- **Back home:** inputs go into the producer's buffer.
+- **Cut road:** if the road is cut, the cart returns home with its cargo.
+- **Drawing:** `ProductionSystem` exposes cart figures, interpolated between ticks with `GameClock::Alpha()`. `walkers.comp` draws a new **cart kind**:
+  - a brown horse about 6 long and 6 tall, with a 4-frame leg cycle, a mane and a harness;
+  - a 3-wide wagon with 4 wheels behind it;
+  - a cargo crate colored by the good when loaded.
+  - The figure's `w` gains a kind bit and the cargo item.
+  - New block IDs for the horse and wagon wheels sit in the person and cart range, which becomes 47–59.
+- **Lanes:** carts drive in the right-hand lane, and the erase box grows to cover them.
+
+### 7. UI
+- **Hover tooltip for a producer:**
+  - status in words;
+  - productivity, with workforce and location shown separately;
+  - buffers;
+  - the cart's state;
+  - cycle progress.
+- **Markers:** red (no road), grey "no workforce", orange "missing input".
+- **F3:** producers working / total, and carts on the road.
+- **The debug goods button moves into the F3 window:** the island panel stays clean now that goods are produced.
+
+### 8. Tests and docs
+- **`tests/ProductionTests.cpp`** (synthetic objects and roads):
+  - a cycle takes `cycleTicks` at 100% and twice as long at 50% workforce;
+  - a workforce shortage slows every producer of the tier;
+  - the sawmill doesn't run without wood, and output stops at 4;
+  - a cart trip takes the expected ticks per tile, delivers 4 to storage and brings inputs back;
+  - a cut road sends the cart home;
+  - Farmers' jobs are not filled by Workers.
+- **`tests/ProducerLocationTests.cpp`** (`TestWorld`):
+  - the fishery passes at the coast and gets NeedsCoast inland;
+  - the pasture count drops when a road is built through it;
+  - the lumberjack's tree count;
+  - felling and regrowth events, with their timing;
+  - the generator skips felled trees.
+- **Model tests** cover the new producer models through the existing tests (every type has a model that fits, rotation).
+- **Docs:** `docs/ROADMAP.md` (scale-up done, M4 detail) and the `CLAUDE.md` layout.
+
+### Order of work
+1–2, play-test, commit. Then 3–4, play-test, commit. Then 5–6, then 7–8, play-test, commit.
+- Demo patches are used for screenshots and removed afterwards.
+- `cdb` is available for any crash.

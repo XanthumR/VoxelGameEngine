@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <vector>
 
+class FelledTrees;
 struct VoxModel;
 
 // Procedural world: flat islands in an ocean, with beaches, caves, trees and
@@ -30,7 +31,26 @@ public:
     // voxels around it too, so the player does not start on a sliver of beach
     glm::ivec2 FindSpawnColumn(glm::ivec2 searchStart);
 
+    // Trees. A tree stands on the column where the tree noise peaks within its clump, on grass
+    // outside the open-grassland biome; the tree model is stamped with its root there. Trees in
+    // the felled set (shared with the simulation) are left out of generated chunks.
+    bool IsTreeRoot(int wx, int wz);
+    int TreeRootY(int wx, int wz) { return TerrainHeightAt(wx, wz) - 1; } // The ground voxel under the trunk
+    template <typename Function>
+    void ForEachTreeRoot(glm::ivec2 minColumn, glm::ivec2 maxColumn, Function function) { // Inclusive bounds
+        for (int wz = minColumn.y; wz <= maxColumn.y; wz++) {
+            for (int wx = minColumn.x; wx <= maxColumn.x; wx++) {
+                if (IsTreeRoot(wx, wz)) function(glm::ivec2(wx, wz));
+            }
+        }
+    }
+    void SetFelledTrees(const FelledTrees* felled) { m_Felled = felled; }
+    const VoxModel& TreeModel() const { return m_Trees; }
+
+    static constexpr int TREE_SPACING = 2; // A root is the highest tree noise within this many columns
+
 private:
+    float TreeNoise(int wx, int wz);
     enum Biome { CRYSTALLINE_PEAKS = 1, VERDANT_CAVERNS = 2, CRUST = 3 };
     static int BiomeFromNoise(float biomeNoise);
     float BiomeNoise(int wx, int wz);
@@ -41,6 +61,7 @@ private:
     void StampGrass(int startX, int startY, int startZ, std::vector<uint8_t>& data);
 
     const VoxModel& m_Trees;
+    const FelledTrees* m_Felled = nullptr;
     FastNoiseLite m_Noise;       // Ground height, tree placement
     FastNoiseLite m_BiomeNoise;
     FastNoiseLite m_CaveNoise;

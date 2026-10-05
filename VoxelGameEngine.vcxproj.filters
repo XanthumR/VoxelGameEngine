@@ -147,10 +147,16 @@
     <ClCompile Include="src\Simulation\Placement.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
+    <ClCompile Include="src\Simulation\ProducerLocation.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
     <ClCompile Include="src\Simulation\RoadNetwork.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation\Simulation.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation\TreeRegistry.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\UI\BuildMenu.cpp">
@@ -388,10 +394,16 @@
     <ClInclude Include="src\Simulation\Placement.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
+    <ClInclude Include="src\Simulation\ProducerLocation.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
     <ClInclude Include="src\Simulation\RoadNetwork.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\Simulation.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\TreeRegistry.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\ThirdParty\FastNoiseLite.h">
@@ -425,6 +437,9 @@
       <Filter>src\World</Filter>
     </ClInclude>
     <ClInclude Include="src\World\ChunkStreamer.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\FelledTrees.h">
       <Filter>src\World</Filter>
     </ClInclude>
     <ClInclude Include="src\World\GrassTufts.h">

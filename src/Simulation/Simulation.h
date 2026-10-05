@@ -8,6 +8,7 @@
 #include "Simulation/OccupancyGrid.h"
 #include "Simulation/Placement.h"
 #include "Simulation/RoadNetwork.h"
+#include "Simulation/TreeRegistry.h"
 
 #include <cstdint>
 
@@ -37,6 +38,7 @@ public:
     LogisticsSystem& Logistics() { return m_Logistics; }
     const LogisticsSystem& Logistics() const { return m_Logistics; }
     PopulationSystem& Population() { return m_Population; }
+    TreeRegistry& Trees() { return m_Trees; }
     const PopulationSystem& Population() const { return m_Population; }
 
     // Everything placement checks against, for this world
@@ -54,6 +56,7 @@ private:
     IslandEconomyManager m_Economy;
     LogisticsSystem m_Logistics;
     PopulationSystem m_Population;
+    TreeRegistry m_Trees;
 
     uint64_t m_TickCount = 0;
     double m_SimulationSeconds = 0.0;

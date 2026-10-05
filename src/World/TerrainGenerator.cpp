@@ -2,6 +2,7 @@
 
 #include "World/BlockTypes.h"
 #include "World/Chunk.h"
+#include "World/FelledTrees.h"
 #include "World/VoxModel.h"
 
 #include <algorithm>
@@ -123,6 +124,26 @@ void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t
     if (GRASS_TUFTS_ENABLED) StampGrass(startX, startY, startZ, data);
 }
 
+float TerrainGenerator::TreeNoise(int wx, int wz) {
+    return m_Noise.GetNoise((float)wx * 15.0f, (float)wz * 15.0f);
+}
+
+bool TerrainGenerator::IsTreeRoot(int wx, int wz) {
+    float noise = TreeNoise(wx, wz);
+    if (noise <= 0.85f) return false;
+    if (BiomeNoise(wx, wz) < -0.2f) return false; // No trees in the Crystalline Peaks biome (open grassland)
+
+    // One tree per clump of high tree noise: only its peak (ties go to the lower x, then z)
+    for (int dz = -TREE_SPACING; dz <= TREE_SPACING; dz++) {
+        for (int dx = -TREE_SPACING; dx <= TREE_SPACING; dx++) {
+            if (dx == 0 && dz == 0) continue;
+            float other = TreeNoise(wx + dx, wz + dz);
+            if (other > noise || (other == noise && (dx < 0 || (dx == 0 && dz < 0)))) return false;
+        }
+    }
+    return !IsSandy(wx, wz, TreeRootY(wx, wz) + 1); // No trees on beaches or underwater
+}
+
 // Roots are scanned in a margin around the chunk so trees rooted in a neighbour stamp their
 // overhanging part here too, keeping trees whole across chunk borders
 void TerrainGenerator::StampTrees(int startX, int startY, int startZ, std::vector<uint8_t>& data) {
@@ -132,13 +153,10 @@ void TerrainGenerator::StampTrees(int startX, int startY, int startZ, std::vecto
         for (int rx = -treeMax.x; rx < CHUNK_SIZE - treeMin.x; rx++) {
             int wx = startX + rx;
 
-            if (BiomeNoise(wx, wz) < -0.2f) continue; // No trees in the Crystalline Peaks biome (open grassland)
+            if (!IsTreeRoot(wx, wz)) continue;
+            if (m_Felled && m_Felled->Contains(glm::ivec2(wx, wz))) continue; // Cut down by a lumberjack
 
-            float treeNoise = m_Noise.GetNoise((float)wx * 15.0f, (float)wz * 15.0f);
-            if (treeNoise <= 0.85f) continue;
-
-            int rootY = TerrainHeightAt(wx, wz) - 1;
-            if (IsSandy(wx, wz, rootY + 1)) continue; // No trees on beaches or underwater
+            int rootY = TreeRootY(wx, wz);
             int localY = rootY - startY;
             if (localY + treeMax.y < 0 || localY + treeMin.y >= CHUNK_SIZE) continue;
 

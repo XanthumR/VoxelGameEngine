@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <vector>
 
+class FelledTrees;
 class VoxelWorld;
 struct VoxModel;
 
@@ -53,6 +54,13 @@ public:
     // Re-uploads an edited chunk, or makes it resident if it is close enough
     void RefreshChunk(uint64_t key);
 
+    // Generates a chunk again and re-uploads it, for GPU-only chunks whose generated content
+    // changed (a tree felled or grown back); chunks with CPU data are edited directly instead
+    void RegenerateChunk(int cx, int cy, int cz);
+
+    // Trees the workers leave out (set before Start)
+    void SetFelledTrees(const FelledTrees* felled) { m_Felled = felled; }
+
     void SetRenderDistance(int chunks); // Clamped; re-streams immediately
     int RenderDistance() const { return m_RenderDistance; }
     size_t PendingRequests() { return m_Requests.Size(); }
@@ -60,6 +68,7 @@ public:
 private:
     struct Request {
         int cx, cy, cz;
+        bool regenerate = false; // Replace the GPU copy even though it is resident
     };
 
     struct Result {
@@ -67,6 +76,7 @@ private:
         std::vector<uint8_t> data; // Empty when the chunk is all air
         uint8_t brickMask[BRICK_MASK_SIZE] = {};
         bool cancelled = false; // Player moved away before the worker got to it
+        bool regenerate = false;
     };
 
     // A square of chunk columns around the player; radius -1 means empty
@@ -86,6 +96,7 @@ private:
     VoxelWorld& m_World;
     GpuChunkCache& m_Cache;
     const VoxModel& m_Trees;
+    const FelledTrees* m_Felled = nullptr;
 
     glm::ivec3 m_PlayerChunk = glm::ivec3(0);
     int m_RenderDistance = 18; // GPU upload radius

@@ -165,8 +165,10 @@
     <ClCompile Include="src\Simulation\Logistics.cpp" />
     <ClCompile Include="src\Simulation\OccupancyGrid.cpp" />
     <ClCompile Include="src\Simulation\Placement.cpp" />
+    <ClCompile Include="src\Simulation\ProducerLocation.cpp" />
     <ClCompile Include="src\Simulation\RoadNetwork.cpp" />
     <ClCompile Include="src\Simulation\Simulation.cpp" />
+    <ClCompile Include="src\Simulation\TreeRegistry.cpp" />
     <ClCompile Include="src\UI\BuildMenu.cpp" />
     <ClCompile Include="src\UI\BuildingInfo.cpp" />
     <ClCompile Include="src\UI\BuildingMarkers.cpp" />
@@ -248,8 +250,10 @@
     <ClInclude Include="src\Simulation\Logistics.h" />
     <ClInclude Include="src\Simulation\OccupancyGrid.h" />
     <ClInclude Include="src\Simulation\Placement.h" />
+    <ClInclude Include="src\Simulation\ProducerLocation.h" />
     <ClInclude Include="src\Simulation\RoadNetwork.h" />
     <ClInclude Include="src\Simulation\Simulation.h" />
+    <ClInclude Include="src\Simulation\TreeRegistry.h" />
     <ClInclude Include="src\ThirdParty\FastNoiseLite.h" />
     <ClInclude Include="src\UI\BuildMenu.h" />
     <ClInclude Include="src\UI\BuildingInfo.h" />
@@ -261,6 +265,7 @@
     <ClInclude Include="src\World\BuildingModel.h" />
     <ClInclude Include="src\World\Chunk.h" />
     <ClInclude Include="src\World\ChunkStreamer.h" />
+    <ClInclude Include="src\World\FelledTrees.h" />
     <ClInclude Include="src\World\GrassTufts.h" />
     <ClInclude Include="src\World\Raycast.h" />
     <ClInclude Include="src\World\TerrainGenerator.h" />

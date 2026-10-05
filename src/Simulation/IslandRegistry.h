@@ -42,6 +42,8 @@ public:
     // True when the column is flat island ground (TerrainGenerator height check only)
     bool IsLandColumn(int wx, int wz);
 
+    TerrainGenerator& Terrain() const { return m_Terrain; }
+
 private:
     static uint64_t CellKey(glm::ivec2 cell);
     bool IsLandCell(glm::ivec2 cell);

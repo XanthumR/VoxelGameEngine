@@ -31,6 +31,7 @@ BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& s
         largest = std::max(largest, (size_t)columns.x * columns.y * BuildingHeight(type));
     }
     m_LookBuffer.reserve(largest);
+    m_LocationTiles.reserve(1024);
 }
 
 int BuildTool::EntryCount(BuildCategory tab) {
@@ -79,6 +80,8 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
     m_HasPlacement = false;
     m_PreviewConnected = false;
     m_PreviewInMarket = false;
+    bool hadLocation = m_HasLocation;
+    m_HasLocation = false;
     m_HoveredBuilding = INVALID_GAME_OBJECT;
 
     // The road tool owns the mouse while it is selected
@@ -90,6 +93,7 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
 
     if (!hover.hit) {
         if (rightClick) SelectType(NO_TYPE);
+        if (hadLocation) m_LocationRevision++; // The preview went away
         return;
     }
 
@@ -116,6 +120,19 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         m_LastCheck = ValidatePlacement(m_Simulation.MakePlacementContext(m_World), (uint16_t)m_SelectedType, m_Rotation, minTile);
         m_PreviewConnected = LogisticsSystem::ConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
         m_PreviewInMarket = LogisticsSystem::MarketConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
+
+        // Producers: what the location rule makes of this spot
+        if (type.role == BuildingRole::Producer) {
+            LocationKey key{ m_SelectedType, m_Rotation, minTile, m_Simulation.Trees().Revision(), m_Simulation.Roads().Revision(),
+                m_Simulation.BuildingsRevision() };
+            if (!hadLocation || !(key == m_LocationKey)) {
+                m_LocationKey = key;
+                m_Location = EvaluateLocation(PRODUCTION_CHAINS[type.chain], minTile, tiles, m_Simulation.Islands(), m_Simulation.Occupancy(),
+                    m_Simulation.Roads(), m_Simulation.Trees(), &m_LocationTiles);
+                m_LocationRevision++;
+            }
+            m_HasLocation = true;
+        }
 
         if (leftClick && m_LastCheck.error == PlacementError::None) {
             m_HoveredBuilding = Place((uint16_t)m_SelectedType, m_Rotation, minTile);

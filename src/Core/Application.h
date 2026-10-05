@@ -46,6 +46,7 @@ private:
     void HandleKeys(float deltaTime);
     void UpdatePicking();
     void UpdateTileOverlay();
+    void ApplyTreeChange(const TreeChange& change);
     void SetCameraMode(CameraMode mode);
     ICamera& ActiveCamera();
     void Shutdown();
@@ -107,6 +108,7 @@ private:
         GameObjectId highlightedWarehouse = INVALID_GAME_OBJECT;
         GameObjectId highlightedMarket = INVALID_GAME_OBJECT;
         int previewReachType = -1; // Building type whose reach is previewed (warehouse or marketplace), or -1
+        uint32_t locationRevision = 0;
         glm::ivec2 previewMinTile = glm::ivec2(0), previewTiles = glm::ivec2(0);
         bool operator==(const TileOverlayKey&) const = default;
     };

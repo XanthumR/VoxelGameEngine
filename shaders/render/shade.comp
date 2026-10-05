@@ -40,6 +40,7 @@ vec4 tileOverlayColor(uint index) {
     if (index == 6u) return vec4(0.20, 0.75, 1.00, 0.70); // Warehouse reach
     if (index == 7u) return vec4(1.00, 0.70, 0.20, 0.55); // Road in a marketplace's reach
     if (index == 8u) return vec4(1.00, 0.80, 0.10, 0.75); // Marketplace reach
+    if (index == 9u) return vec4(0.75, 1.00, 0.45, 0.45); // Pasture or trees a producer counts
     return vec4(0.0);
 }
 

@@ -2,6 +2,7 @@
 
 #include "World/Chunk.h"
 #include "World/ChunkStreamer.h"
+#include "World/VoxModel.h"
 #include "World/VoxelWorld.h"
 
 #include <algorithm>
@@ -64,6 +65,21 @@ bool WorldEditor::PlaceVoxel(glm::ivec3 position, uint8_t id) {
     m_TerrainChanged = true;
     m_Streamer.RefreshChunk(ChunkKey(position.x >> 5, position.y >> 5, position.z >> 5));
     return true;
+}
+
+void WorldEditor::StampModel(glm::ivec3 base, const VoxModel& model, bool erase, uint8_t groundId) {
+    for (const VoxelOffset& offset : model.voxels) {
+        glm::ivec3 p = base + glm::ivec3(offset.x, offset.y, offset.z);
+        uint8_t current = m_World.GetVoxel(p.x, p.y, p.z);
+        bool ground = offset.y == 0;
+        uint8_t empty = ground ? groundId : (uint8_t)0; // What the voxel is without the model
+        if (erase ? current != offset.blockType : current != empty) continue;
+        if (m_World.SetVoxel(p.x, p.y, p.z, erase ? empty : (uint8_t)offset.blockType)) {
+            uint64_t key = ChunkKey(p.x >> 5, p.y >> 5, p.z >> 5);
+            if (std::find(m_Touched.begin(), m_Touched.end(), key) == m_Touched.end()) m_Touched.push_back(key);
+        }
+    }
+    RefreshTouched();
 }
 
 bool WorldEditor::ConsumeTerrainChanged() {
