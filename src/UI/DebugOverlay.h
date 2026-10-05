@@ -38,6 +38,7 @@ struct OverlayContext {
     Simulation& simulation;
     uint64_t droppedSimulationSteps;
     const BuildTool& buildTool;
+    size_t walkers;
 };
 
 // The F3 debug window: engine metrics, a top-down minimap and the editor and render controls

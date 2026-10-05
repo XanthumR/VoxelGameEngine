@@ -103,8 +103,8 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     for (size_t i = 0; i < c.simulation.Economy().IslandSlotCount(); i++) {
         for (int residents : c.simulation.Economy().IslandAt(i).population) population += residents;
     }
-    ImGui::Text("Population: %d | Upgrades: %u | Downgrades: %u", population, c.simulation.Population().Upgrades(),
-        c.simulation.Population().Downgrades());
+    ImGui::Text("Population: %d | Walkers: %zu | Upgrades: %u | Downgrades: %u", population, c.walkers,
+        c.simulation.Population().Upgrades(), c.simulation.Population().Downgrades());
     const BuildTool& build = c.buildTool;
     if (build.SelectedType() != BuildTool::NO_TYPE) {
         const char* facing[] = { "-z", "+x", "+z", "-x" };

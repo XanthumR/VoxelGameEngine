@@ -3,6 +3,7 @@
 #include "Core/LaunchOptions.h"
 #include "Gameplay/BuildTool.h"
 #include "Gameplay/RoadTool.h"
+#include "Gameplay/Walkers.h"
 #include "Gameplay/DebugEditTool.h"
 #include "Gameplay/FreeFlyCamera.h"
 #include "Gameplay/Picking.h"
@@ -14,6 +15,7 @@
 #include "Rendering/ShoreMap.h"
 #include "Rendering/TileOverlay.h"
 #include "Rendering/VoxelRenderer.h"
+#include "Rendering/WalkerRenderer.h"
 #include "Simulation/GameClock.h"
 #include "Simulation/Simulation.h"
 #include "UI/DebugOverlay.h"
@@ -91,6 +93,8 @@ private:
     OceanSimulation m_Ocean;
     ShoreMap m_Shore;
     GrassAnimator m_Grass;
+    WalkerSystem m_Walkers; // Residents walking the roads (visual only)
+    WalkerRenderer m_WalkerRenderer;
     DebugOverlay m_Overlay;
     TileOverlay m_TileOverlay;
 

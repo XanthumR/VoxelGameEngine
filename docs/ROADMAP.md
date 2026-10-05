@@ -195,6 +195,8 @@ Roads, the road-path preview and the warehouse range are all per-tile highlights
 
 Residents move into houses that are connected to a warehouse and within a marketplace's road reach, and consume goods from island storage (a debug button adds goods until production arrives in Milestone 4). Each need's supply decides how many residents a house holds; a full, fully supplied Farmer house upgrades to a Worker house (2 planks), and a Worker house that stays at Farmer size falls back.
 
+Residents also show up as **walkers**: one little voxel person (trousers, a shirt in the tier's color, a head) per 5 residents of an island steps out of a house next to a road and wanders the road network. They are visual only (`WalkerSystem`, outside the deterministic tick) and drawn straight into the GPU chunk data each frame (`WalkerRenderer`, `shaders/people/walkers.comp`), like the grass animation.
+
 ### 1. Data: goods, tiers, new buildings
 - **`src/Simulation/ItemType.h`:** add `Sausages`, a Worker need, to the item list, and extend `STARTING_GOODS` to match.
 - **`src/Economy/PopulationNeeds.h/.cpp`** (the name `CLAUDE.md` uses): a `constexpr` tier table.

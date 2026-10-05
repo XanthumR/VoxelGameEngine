@@ -1,0 +1,59 @@
+#version 440 core
+// Residents walking the roads (WalkerSystem / WalkerRenderer in src/). Each walker is a column of
+// three voxels standing on the road: trousers, a shirt in its tier's color, and a head. Runs twice
+// per frame:
+//   mode 0 (erase): last frame's figures are removed (only voxels that still hold a walker)
+//   mode 1 (draw):  this frame's figures are drawn (only into air)
+// so the world is never damaged, and figures wiped by a chunk re-upload come back the next frame.
+layout(local_size_x = 64) in;
+
+#include "include/voxel_write.glsl"
+
+// Block IDs, as in src/World/BlockTypes.h (colored in render/shade.comp)
+const int PERSON_SKIN = 47;
+const int PERSON_TROUSERS = 48;
+const int PERSON_SHIRT_FARMER = 49;
+const int PERSON_SHIRT_WORKER = 50;
+
+layout(std430, binding = 4) buffer FigureBuffer {
+    ivec4 figures[]; // xyz = feet voxel, w = population tier
+};
+
+uniform int numFigures;
+uniform int mode; // 0 = erase, 1 = draw
+
+bool isWalker(int id) {
+    return id >= PERSON_SKIN && id <= PERSON_SHIRT_WORKER;
+}
+
+void drawVoxel(ivec3 p, int id) {
+    ivec3 c, b;
+    int pool = locateVoxel(p, c, b);
+    if (pool < 0) return;
+    int current = voxelId(loadVoxel(pool, c));
+    if (current != 0 && !isWalker(current)) return; // Something is in the way
+    storeVoxel(pool, c, float(id) / 255.0);
+    markBrick(pool, b);
+}
+
+void eraseVoxel(ivec3 p) {
+    ivec3 c, b;
+    int pool = locateVoxel(p, c, b);
+    if (pool < 0) return;
+    if (isWalker(voxelId(loadVoxel(pool, c)))) storeVoxel(pool, c, 0.0);
+}
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= uint(numFigures)) return;
+    ivec3 feet = figures[index].xyz;
+
+    if (mode == 0) {
+        for (int y = 0; y < 3; y++) eraseVoxel(feet + ivec3(0, y, 0));
+    } else {
+        int shirt = figures[index].w == 0 ? PERSON_SHIRT_FARMER : PERSON_SHIRT_WORKER;
+        drawVoxel(feet, PERSON_TROUSERS);
+        drawVoxel(feet + ivec3(0, 1, 0), shirt);
+        drawVoxel(feet + ivec3(0, 2, 0), PERSON_SKIN);
+    }
+}

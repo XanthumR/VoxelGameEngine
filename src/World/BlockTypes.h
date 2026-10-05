@@ -23,6 +23,12 @@ constexpr uint8_t STONE_WALL = 43;  // Masonry walls
 // Roads replace the grass layer (see RoadTool); 45 is kept for a cobbled road
 constexpr uint8_t ROAD_DIRT = 44;
 constexpr uint8_t AWNING = 46;     // Striped market awning (stripes drawn by the shader)
+// Walking residents: drawn straight into the GPU chunk data each frame (WalkerRenderer), never in
+// the CPU world
+constexpr uint8_t PERSON_SKIN = 47;
+constexpr uint8_t PERSON_TROUSERS = 48;
+constexpr uint8_t PERSON_SHIRT_FARMER = 49;
+constexpr uint8_t PERSON_SHIRT_WORKER = 50;
 } // namespace Block
 
 // Grass tufts and water are drawn, but the player, raycasts and projectiles pass through them

@@ -108,7 +108,8 @@ bool Application::Init() {
     }
 
     // GPU systems (each loads its shaders, so a missing or broken file fails fast)
-    if (!m_Renderer.Init() || !m_Ocean.Init() || !m_Shore.Init() || !m_Grass.Init(m_Terrain) || !m_Cache.Init()) {
+    if (!m_Renderer.Init() || !m_Ocean.Init() || !m_Shore.Init() || !m_Grass.Init(m_Terrain) || !m_Cache.Init() ||
+        !m_WalkerRenderer.Init()) {
         return false;
     }
 
@@ -342,7 +343,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
         m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS,
         m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover,
-        m_HoverIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool };
+        m_HoverIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool, m_Walkers.Count() };
     m_Overlay.Draw(overlay);
     if (m_CameraMode == CameraMode::Strategy) {
         DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
@@ -368,6 +369,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     float animationTime = m_Options.fixedTime >= 0.0f ? m_Options.fixedTime : (float)glfwGetTime();
     m_Ocean.Update(animationTime);
     m_Grass.Animate(animationTime, m_Cache);
+    m_Walkers.Update(deltaTime, m_Simulation.Objects(), m_Simulation.Roads(), m_Simulation.Economy());
+    m_WalkerRenderer.Draw(m_Walkers.Figures(), m_Cache);
 
     // --- Render ---
     const ICamera& camera = ActiveCamera();

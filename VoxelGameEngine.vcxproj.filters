@@ -16,6 +16,9 @@
     <Filter Include="shaders\include">
       <UniqueIdentifier>{1dc10a21-a394-5850-9c07-08c639a33e7a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\people">
+      <UniqueIdentifier>{2ae5eb19-e339-56e1-9eb7-a350e9bead7d}</UniqueIdentifier>
+    </Filter>
     <Filter Include="shaders\render">
       <UniqueIdentifier>{e97c6b7b-9330-57db-83fe-1a79c4a9b610}</UniqueIdentifier>
     </Filter>
@@ -87,6 +90,9 @@
     <ClCompile Include="src\Gameplay\StrategyCamera.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
+    <ClCompile Include="src\Gameplay\Walkers.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
     <ClCompile Include="src\Rendering\GpuChunkCache.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
@@ -112,6 +118,9 @@
       <Filter>src\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\WalkerRenderer.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation\BuildingLook.cpp">
@@ -206,6 +215,9 @@
     <None Include="shaders\grass\grass_animate.comp">
       <Filter>shaders\grass</Filter>
     </None>
+    <None Include="shaders\people\walkers.comp">
+      <Filter>shaders\people</Filter>
+    </None>
     <None Include="shaders\render\shade.comp">
       <Filter>shaders\render</Filter>
     </None>
@@ -246,6 +258,9 @@
       <Filter>shaders\include</Filter>
     </None>
     <None Include="shaders\include\voxel_data.glsl">
+      <Filter>shaders\include</Filter>
+    </None>
+    <None Include="shaders\include\voxel_write.glsl">
       <Filter>shaders\include</Filter>
     </None>
     <None Include="shaders\include\water.glsl">
@@ -295,6 +310,9 @@
     <ClInclude Include="src\Gameplay\StrategyCamera.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
+    <ClInclude Include="src\Gameplay\Walkers.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\BuildPreview.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -326,6 +344,9 @@
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\VoxelRenderer.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\WalkerRenderer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\BuildingLook.h">

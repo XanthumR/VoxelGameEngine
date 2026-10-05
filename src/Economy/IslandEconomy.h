@@ -54,6 +54,7 @@ public:
     // Settled islands in a stable order (for deterministic iteration)
     size_t IslandSlotCount() const { return m_Islands.size(); }
     IslandStorage& IslandAt(size_t index) { return m_Islands[index]; }
+    const IslandStorage& IslandAt(size_t index) const { return m_Islands[index]; }
 
     size_t SettledIslandCount() const { return m_Islands.size(); }
 

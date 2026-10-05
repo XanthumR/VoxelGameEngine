@@ -146,6 +146,7 @@
     <ClCompile Include="src\Gameplay\Picking.cpp" />
     <ClCompile Include="src\Gameplay\RoadTool.cpp" />
     <ClCompile Include="src\Gameplay\StrategyCamera.cpp" />
+    <ClCompile Include="src\Gameplay\Walkers.cpp" />
     <ClCompile Include="src\Rendering\GpuChunkCache.cpp" />
     <ClCompile Include="src\Rendering\GrassAnimator.cpp" />
     <ClCompile Include="src\Rendering\OceanSimulation.cpp" />
@@ -155,6 +156,7 @@
     <ClCompile Include="src\Rendering\SkyLighting.cpp" />
     <ClCompile Include="src\Rendering\TileOverlay.cpp" />
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp" />
+    <ClCompile Include="src\Rendering\WalkerRenderer.cpp" />
     <ClCompile Include="src\Simulation\BuildingLook.cpp" />
     <ClCompile Include="src\Simulation\GameClock.cpp" />
     <ClCompile Include="src\Simulation\GameObjects.cpp" />
@@ -187,6 +189,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\grass\grass_animate.comp" />
+    <None Include="shaders\people\walkers.comp" />
     <None Include="shaders\render\shade.comp" />
     <None Include="shaders\render\shadow.comp" />
     <None Include="shaders\render\trace.comp" />
@@ -201,6 +204,7 @@
     <None Include="shaders\include\ocean_fft_common.glsl" />
     <None Include="shaders\include\scene.glsl" />
     <None Include="shaders\include\voxel_data.glsl" />
+    <None Include="shaders\include\voxel_write.glsl" />
     <None Include="shaders\include\water.glsl" />
   </ItemGroup>
   <ItemGroup>
@@ -218,6 +222,7 @@
     <ClInclude Include="src\Gameplay\Picking.h" />
     <ClInclude Include="src\Gameplay\RoadTool.h" />
     <ClInclude Include="src\Gameplay\StrategyCamera.h" />
+    <ClInclude Include="src\Gameplay\Walkers.h" />
     <ClInclude Include="src\Rendering\BuildPreview.h" />
     <ClInclude Include="src\Rendering\GpuChunkCache.h" />
     <ClInclude Include="src\Rendering\GrassAnimator.h" />
@@ -229,6 +234,7 @@
     <ClInclude Include="src\Rendering\SkyLighting.h" />
     <ClInclude Include="src\Rendering\TileOverlay.h" />
     <ClInclude Include="src\Rendering\VoxelRenderer.h" />
+    <ClInclude Include="src\Rendering\WalkerRenderer.h" />
     <ClInclude Include="src\Simulation\BuildingLook.h" />
     <ClInclude Include="src\Simulation\BuildingTypes.h" />
     <ClInclude Include="src\Simulation\GameClock.h" />
