@@ -96,6 +96,15 @@
     <ClCompile Include="src\Simulation\GameClock.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
+    <ClCompile Include="src\Simulation\GameObjects.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation\IslandRegistry.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation\OccupancyGrid.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
     <ClCompile Include="src\Simulation\Simulation.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
@@ -254,6 +263,15 @@
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\GameClock.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\GameObjects.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\IslandRegistry.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\OccupancyGrid.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\Simulation.h">

@@ -4,6 +4,7 @@
 #include "Rendering/GpuChunkCache.h"
 #include "Rendering/RenderSettings.h"
 #include "Rendering/RenderTargets.h"
+#include "Simulation/Simulation.h"
 #include "World/BlockTypes.h"
 #include "World/ChunkStreamer.h"
 #include "World/VoxelWorld.h"
@@ -86,8 +87,16 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     } else {
         ImGui::Text("Hovered: nothing");
     }
-    ImGui::Text("Simulation: tick %llu (%.1f s at 10 Hz), %llu dropped", (unsigned long long)c.simulationTick,
-        c.simulationSeconds, (unsigned long long)c.droppedSimulationSteps);
+    if (const IslandInfo* island = c.simulation.Islands().Info(c.hoverIsland)) {
+        glm::ivec2 size = island->maxColumn - island->minColumn + 1;
+        ImGui::Text("Island: #%u (%d cells, %d x %d columns%s)", island->id, island->cellCount, size.x, size.y,
+            island->truncated ? ", truncated" : "");
+    } else {
+        ImGui::Text("Island: none");
+    }
+    ImGui::Text("Islands discovered: %zu | Objects: %u", c.simulation.Islands().IslandCount(), c.simulation.Objects().AliveCount());
+    ImGui::Text("Simulation: tick %llu (%.1f s at 10 Hz), %llu dropped", (unsigned long long)c.simulation.TickCount(),
+        c.simulation.SimulationSeconds(), (unsigned long long)c.droppedSimulationSteps);
 
     ImGui::Separator();
 

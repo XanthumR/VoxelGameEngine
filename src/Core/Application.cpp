@@ -30,7 +30,8 @@ Application::Application(const LaunchOptions& options)
       m_Streamer(m_World, m_Cache, m_Trees),
       m_Editor(m_World, m_Streamer),
       m_Terrain(m_Trees),
-      m_EditTool(m_World, m_Editor) {
+      m_EditTool(m_World, m_Editor),
+      m_Simulation(m_Terrain) {
     m_Settings.renderScale = options.renderScale;
 }
 
@@ -207,6 +208,7 @@ void Application::HandleKeys(float deltaTime) {
 // Strategy camera: the voxel under the mouse cursor. Free-fly: the voxel under the crosshair.
 void Application::UpdatePicking() {
     m_Hover = PickResult();
+    m_HoverIsland = NO_ISLAND;
     if (m_CameraMode == CameraMode::Strategy) {
         if (ImGui::GetIO().WantCaptureMouse) return; // Pointing at a UI window
         double cursorX, cursorY;
@@ -219,6 +221,7 @@ void Application::UpdatePicking() {
         glfwGetWindowSize(m_Window, &width, &height);
         m_Hover = PickUnderCursor(m_FreeFlyCamera, glm::vec2(width * 0.5f, height * 0.5f), glm::ivec2(width, height), m_World);
     }
+    if (m_Hover.hit) m_HoverIsland = m_Simulation.Islands().IslandIdAt(m_Hover.voxel.x, m_Hover.voxel.z);
 }
 
 void Application::RunFrame(double frameStartTime, double frameSeconds, float deltaTime) {
@@ -253,7 +256,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
         m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS,
         m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover,
-        m_Simulation.TickCount(), m_Simulation.SimulationSeconds(), m_Clock.DroppedSteps() };
+        m_HoverIsland, m_Simulation, m_Clock.DroppedSteps() };
     m_Overlay.Draw(overlay);
 
     if (minimized) {

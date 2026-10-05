@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 
 #include "Gameplay/Picking.h"
+#include "Simulation/IslandRegistry.h"
 
 #include <cstdint>
 #include <vector>
@@ -14,6 +15,7 @@ class ChunkStreamer;
 class GpuChunkCache;
 class DebugEditTool;
 class RenderTargets;
+class Simulation;
 class VoxelWorld;
 
 // Everything the overlay shows or lets the player change
@@ -31,8 +33,8 @@ struct OverlayContext {
     int grassAnimationRadius;
     const char* cameraMode;
     PickResult hover;
-    uint64_t simulationTick;
-    double simulationSeconds;
+    IslandId hoverIsland;
+    Simulation& simulation;
     uint64_t droppedSimulationSteps;
 };
 

@@ -150,6 +150,9 @@
     <ClCompile Include="src\Rendering\SkyLighting.cpp" />
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp" />
     <ClCompile Include="src\Simulation\GameClock.cpp" />
+    <ClCompile Include="src\Simulation\GameObjects.cpp" />
+    <ClCompile Include="src\Simulation\IslandRegistry.cpp" />
+    <ClCompile Include="src\Simulation\OccupancyGrid.cpp" />
     <ClCompile Include="src\Simulation\Simulation.cpp" />
     <ClCompile Include="src\UI\DebugOverlay.cpp" />
     <ClCompile Include="src\UI\Hud.cpp" />
@@ -206,6 +209,9 @@
     <ClInclude Include="src\Rendering\SkyLighting.h" />
     <ClInclude Include="src\Rendering\VoxelRenderer.h" />
     <ClInclude Include="src\Simulation\GameClock.h" />
+    <ClInclude Include="src\Simulation\GameObjects.h" />
+    <ClInclude Include="src\Simulation\IslandRegistry.h" />
+    <ClInclude Include="src\Simulation\OccupancyGrid.h" />
     <ClInclude Include="src\Simulation\Simulation.h" />
     <ClInclude Include="src\ThirdParty\FastNoiseLite.h" />
     <ClInclude Include="src\UI\DebugOverlay.h" />

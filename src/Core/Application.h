@@ -72,6 +72,7 @@ private:
     CameraMode m_CameraMode = CameraMode::Strategy;
     DebugEditTool m_EditTool;
     PickResult m_Hover; // What the cursor (or the free-fly crosshair) points at
+    IslandId m_HoverIsland = NO_ISLAND;
 
     // Game simulation (fixed 10 Hz steps)
     GameClock m_Clock;
