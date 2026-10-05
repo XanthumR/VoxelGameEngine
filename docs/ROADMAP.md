@@ -560,3 +560,10 @@ These are pure functions over the terrain noise, `IslandRegistry`, `OccupancyGri
 - **Cycles:** progress grows by productivity (workforce share x location factor) while the inputs are there and the output buffer (4) has room; a cycle uses one of each input and makes one output. Lumberjacks fell the nearest tree each cycle.
 - **Status** (`ProducerStatus`): working, no road, no workers, bad location, waiting for input, output full. It is shown in the tooltip and with grey and orange markers. Fishing boats sail and producers smoke only while working.
 - **Next, step 6:** carts take the output to the warehouse and bring the inputs; until then, outputs stop at 4 and inputs only come from the buffer.
+
+### Upgrades on request (after step 5)
+
+- Houses no longer upgrade by themselves, so the player decides how many Farmers stay for the Farmer jobs.
+- A full house with every need met for 10 s is **ready to upgrade**: a green arrow marker shows above it.
+- With no build entry selected, left-clicking a building opens its panel on the right (Escape or clicking open ground closes it). For a ready house the panel has an **Upgrade** button, which costs 2 planks. The upgrade happens on the next tick, and only if the house is still ready and the planks are there.
+- Downgrades stay automatic.

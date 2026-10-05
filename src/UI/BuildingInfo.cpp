@@ -7,6 +7,8 @@
 
 #include "imgui.h"
 
+#include <cstdio>
+
 namespace {
 
 const ImVec4 GOOD_COLOR(0.5f, 1.0f, 0.55f, 1.0f);
@@ -44,11 +46,13 @@ void HouseInfo(GameObjectId id, const GameObjectRegistry& objects, const IslandE
         ImGui::TextDisabled("Upgrade: needs a full house");
     } else if (!allMet) {
         ImGui::TextDisabled("Upgrade: needs every need at %d%%", PopulationSystem::UPGRADE_SUPPLY / 10);
-    } else if (!storage || storage->Amount(ItemType::Planks) < UPGRADE_PLANKS) {
-        ImGui::TextColored(WARNING_COLOR, "Upgrade: needs %d planks", UPGRADE_PLANKS);
-    } else {
-        ImGui::Text("Upgrade to %s: %d%%", POPULATION_TIERS[type.tier + 1].name,
+    } else if (!PopulationSystem::IsReadyToUpgrade(objects, id)) {
+        ImGui::Text("Upgrade to %s: getting ready %d%%", POPULATION_TIERS[type.tier + 1].name,
             residence.upgradeTicks * 100 / PopulationSystem::UPGRADE_TICKS);
+    } else if (!storage || storage->Amount(ItemType::Planks) < UPGRADE_PLANKS) {
+        ImGui::TextColored(WARNING_COLOR, "Ready to upgrade, but needs %d planks", UPGRADE_PLANKS);
+    } else {
+        ImGui::TextColored(GOOD_COLOR, "Ready to upgrade to %s: click the house", POPULATION_TIERS[type.tier + 1].name);
     }
 }
 
@@ -114,13 +118,10 @@ void WarehouseInfo(GameObjectId id, const GameObjectRegistry& objects, const Isl
     }
 }
 
-} // namespace
 
-void DrawBuildingInfo(GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
-    if (!objects.IsAlive(building)) return;
+// The building's name and what it is doing, for the tooltip and the panel
+void BuildingDetails(GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
     const BuildingType& type = BUILDING_TYPES[objects.Building(building).type];
-
-    ImGui::BeginTooltip();
     ImGui::TextUnformatted(type.name);
     ImGui::Separator();
     switch (type.role) {
@@ -129,5 +130,39 @@ void DrawBuildingInfo(GameObjectId building, const GameObjectRegistry& objects, 
     case BuildingRole::Storage: WarehouseInfo(building, objects, economy); break;
     case BuildingRole::Producer: ProducerInfo(building, objects, economy); break;
     }
+}
+
+} // namespace
+
+void DrawBuildingInfo(GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
+    if (!objects.IsAlive(building)) return;
+    ImGui::BeginTooltip();
+    BuildingDetails(building, objects, economy);
     ImGui::EndTooltip();
+}
+
+bool DrawBuildingPanel(GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy, PopulationSystem& population) {
+    if (!objects.IsAlive(building)) return false;
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImVec2 rightMiddle(viewport->WorkPos.x + viewport->WorkSize.x - 12.0f, viewport->WorkPos.y + viewport->WorkSize.y * 0.5f);
+    ImGui::SetNextWindowPos(rightMiddle, ImGuiCond_Always, ImVec2(1.0f, 0.5f));
+    bool open = true;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing;
+    ImGui::Begin("Building", &open, flags);
+    BuildingDetails(building, objects, economy);
+
+    // Houses: the upgrade, when the residents are ready for it
+    const BuildingType& type = BUILDING_TYPES[objects.Building(building).type];
+    if (type.role == BuildingRole::Residence && type.tier + 1 < TIER_COUNT) {
+        ImGui::Separator();
+        bool can = PopulationSystem::CanUpgrade(objects, economy, building);
+        ImGui::BeginDisabled(!can);
+        char label[64];
+        std::snprintf(label, sizeof(label), "Upgrade to %s (%d planks)", POPULATION_TIERS[type.tier + 1].name, UPGRADE_PLANKS);
+        if (ImGui::Button(label)) population.RequestUpgrade(building);
+        ImGui::EndDisabled();
+    }
+    ImGui::End();
+    return open;
 }

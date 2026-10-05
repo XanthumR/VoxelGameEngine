@@ -20,6 +20,7 @@ int16_t Smooth(int16_t current, int sample) {
 
 PopulationSystem::PopulationSystem() {
     m_LookChanges.reserve(GameObjectRegistry::MAX_OBJECTS);
+    m_UpgradeRequests.reserve(64);
 }
 
 // Only within the reserved capacity (the frame loop clears the list every frame)
@@ -27,7 +28,39 @@ void PopulationSystem::PushLookChange(GameObjectId id) {
     if (m_LookChanges.size() < m_LookChanges.capacity()) m_LookChanges.push_back(id);
 }
 
+bool PopulationSystem::IsReadyToUpgrade(const GameObjectRegistry& objects, GameObjectId id) {
+    if (!objects.IsAlive(id)) return false;
+    const BuildingType& type = BUILDING_TYPES[objects.Building(id).type];
+    return type.role == BuildingRole::Residence && type.tier + 1 < TIER_COUNT && objects.Residence(id).upgradeTicks >= UPGRADE_TICKS;
+}
+
+bool PopulationSystem::CanUpgrade(const GameObjectRegistry& objects, const IslandEconomyManager& economy, GameObjectId id) {
+    if (!IsReadyToUpgrade(objects, id)) return false;
+    const IslandStorage* storage = economy.Find(objects.Building(id).island);
+    return storage && storage->Amount(ItemType::Planks) >= UPGRADE_PLANKS;
+}
+
+void PopulationSystem::RequestUpgrade(GameObjectId id) {
+    if (m_UpgradeRequests.size() < m_UpgradeRequests.capacity()) m_UpgradeRequests.push_back(id);
+}
+
+void PopulationSystem::ApplyUpgradeRequests(GameObjectRegistry& objects, IslandEconomyManager& economy) {
+    for (GameObjectId id : m_UpgradeRequests) {
+        if (!CanUpgrade(objects, economy, id)) continue; // No longer ready, or the planks ran out
+        BuildingComponent& building = objects.Building(id);
+        ResidenceComponent& residence = objects.Residence(id);
+        economy.Remove(building.island, ItemType::Planks, UPGRADE_PLANKS);
+        building.type = RESIDENCE_FOR_TIER[BUILDING_TYPES[building.type].tier + 1];
+        residence.upgradeTicks = 0;
+        residence.downgradeTicks = 0;
+        PushLookChange(id);
+        m_Upgrades++;
+    }
+    m_UpgradeRequests.clear();
+}
+
 void PopulationSystem::Update(GameObjectRegistry& objects, IslandEconomyManager& economy, uint64_t tick) {
+    ApplyUpgradeRequests(objects, economy);
     if (tick % CONSUMPTION_INTERVAL == 0) Consume(objects, economy);
     for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
         GameObjectId id = objects.IdAtSlot(slot);
@@ -111,18 +144,9 @@ void PopulationSystem::UpdateHouse(GameObjectRegistry& objects, IslandEconomyMan
         else if (residence.residents > target) residence.residents--;
     }
 
-    // Upgrade to the next tier: full, every need met for a while, and planks in storage
+    // Ready to upgrade once full with every need met for a while; the player decides (RequestUpgrade)
     bool canRise = type.tier + 1 < TIER_COUNT && residence.residents >= tier.maxResidents && allNeedsMet;
     residence.upgradeTicks = canRise ? (uint16_t)std::min(residence.upgradeTicks + 1, UPGRADE_TICKS) : (uint16_t)0;
-    if (residence.upgradeTicks >= UPGRADE_TICKS && storage && storage->Amount(ItemType::Planks) >= UPGRADE_PLANKS) {
-        economy.Remove(building.island, ItemType::Planks, UPGRADE_PLANKS);
-        building.type = RESIDENCE_FOR_TIER[type.tier + 1];
-        residence.upgradeTicks = 0;
-        residence.downgradeTicks = 0;
-        PushLookChange(id);
-        m_Upgrades++;
-        return;
-    }
 
     // Downgrade: no more residents than the tier below holds, for a long time
     if (type.tier > 0) {

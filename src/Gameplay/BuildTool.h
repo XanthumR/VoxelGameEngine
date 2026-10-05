@@ -58,6 +58,10 @@ public:
     bool PreviewInMarketRange() const { return m_PreviewInMarket; } // ... and a marketplace's reach
     GameObjectId HoveredBuilding() const { return m_HoveredBuilding; }
 
+    // The building clicked with nothing selected (its panel is open); INVALID when none
+    GameObjectId InspectedBuilding() const { return m_InspectedBuilding; }
+    void ClearInspection() { m_InspectedBuilding = INVALID_GAME_OBJECT; }
+
     // Producers: how the previewed spot does on the chain's location rule, and the tiles that count
     bool HasLocationPreview() const { return m_HasLocation; }
     const LocationReport& PreviewLocation() const { return m_Location; }
@@ -88,6 +92,7 @@ private:
     uint8_t m_Rotation = 0;
     PlacementCheck m_LastCheck;
     GameObjectId m_HoveredBuilding = INVALID_GAME_OBJECT;
+    GameObjectId m_InspectedBuilding = INVALID_GAME_OBJECT;
     BuildPreview m_Preview;
     bool m_HasPlacement = false;
     glm::ivec2 m_PreviewMinTile = glm::ivec2(0);

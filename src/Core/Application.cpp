@@ -195,6 +195,8 @@ void Application::HandleKeys(float deltaTime) {
     if (KeyPressed(GLFW_KEY_ESCAPE, m_EscapeWasPressed)) {
         if (m_CameraMode == CameraMode::Strategy && m_BuildTool.SelectedType() != BuildTool::NO_TYPE) {
             m_BuildTool.SelectType(BuildTool::NO_TYPE);
+        } else if (m_CameraMode == CameraMode::Strategy && m_BuildTool.InspectedBuilding() != INVALID_GAME_OBJECT) {
+            m_BuildTool.ClearInspection();
         } else {
             glfwSetWindowShouldClose(m_Window, true);
         }
@@ -375,8 +377,13 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_CameraMode == CameraMode::Strategy) {
         DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
         DrawIslandPanel(m_PanelIsland, m_Simulation.Economy());
-        if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && !ImGui::GetIO().WantCaptureMouse) {
+        if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && !ImGui::GetIO().WantCaptureMouse &&
+            m_BuildTool.HoveredBuilding() != m_BuildTool.InspectedBuilding()) {
             DrawBuildingInfo(m_BuildTool.HoveredBuilding(), m_Simulation.Objects(), m_Simulation.Economy());
+        }
+        if (m_BuildTool.InspectedBuilding() != INVALID_GAME_OBJECT &&
+            !DrawBuildingPanel(m_BuildTool.InspectedBuilding(), m_Simulation.Objects(), m_Simulation.Economy(), m_Simulation.Population())) {
+            m_BuildTool.ClearInspection();
         }
         int width, height;
         glfwGetWindowSize(m_Window, &width, &height);

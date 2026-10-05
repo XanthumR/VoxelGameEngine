@@ -2,6 +2,7 @@
 
 #include "Gameplay/Camera.h"
 #include "Gameplay/Picking.h"
+#include "Economy/PopulationSystem.h"
 #include "Simulation/BuildingLook.h"
 #include "Simulation/GameObjects.h"
 #include "World/WorldConstants.h"
@@ -19,6 +20,7 @@ void DrawBuildingMarkers(const ICamera& camera, const GameObjectRegistry& object
     ImDrawList* drawList = ImGui::GetBackgroundDrawList(); // Behind the UI windows
     ImU32 red = ImGui::ColorConvertFloat4ToU32(ImVec4(0.85f, 0.12f, 0.10f, 0.95f));
     ImU32 amber = ImGui::ColorConvertFloat4ToU32(ImVec4(0.95f, 0.62f, 0.10f, 0.95f));
+    ImU32 green = ImGui::ColorConvertFloat4ToU32(ImVec4(0.20f, 0.65f, 0.25f, 0.95f));
     ImU32 grey = ImGui::ColorConvertFloat4ToU32(ImVec4(0.45f, 0.45f, 0.48f, 0.95f));
     ImU32 white = ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
     ImU32 outline = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 0.0f, 0.0f, 0.6f));
@@ -37,7 +39,8 @@ void DrawBuildingMarkers(const ICamera& camera, const GameObjectRegistry& object
         ProducerStatus status = type.role == BuildingRole::Producer ? objects.Production(id).status : ProducerStatus::Working;
         bool idle = status == ProducerStatus::NoWorkforce || status == ProducerStatus::BadLocation;
         bool starved = status == ProducerStatus::MissingInput;
-        if (!noRoad && !noMarket && !idle && !starved) continue;
+        bool ready = type.role == BuildingRole::Residence && PopulationSystem::IsReadyToUpgrade(objects, id);
+        if (!noRoad && !noMarket && !idle && !starved && !ready) continue;
 
         // Above the middle of the roof
         const VoxelAnchorComponent& anchor = objects.Anchor(id);
@@ -49,9 +52,14 @@ void DrawBuildingMarkers(const ICamera& camera, const GameObjectRegistry& object
         if (!WorldToScreen(camera, world, windowSize, screen)) continue;
         ImVec2 center(screen.x, screen.y);
         drawList->AddCircleFilled(center, BADGE_RADIUS + 1.5f, outline);
-        ImU32 color = noRoad ? red : idle ? grey : amber;
+        bool problem = noRoad || noMarket || idle || starved;
+        ImU32 color = noRoad ? red : idle ? grey : (noMarket || starved) ? amber : green;
         drawList->AddCircleFilled(center, BADGE_RADIUS, color);
-        if (noRoad || idle || starved) {
+        if (!problem) {
+            // Ready to upgrade: an arrow pointing up
+            drawList->AddTriangleFilled(ImVec2(center.x - 6.0f, center.y), ImVec2(center.x, center.y - 7.0f), ImVec2(center.x + 6.0f, center.y), white);
+            drawList->AddRectFilled(ImVec2(center.x - 2.0f, center.y), ImVec2(center.x + 2.0f, center.y + 6.0f), white);
+        } else if (noRoad || idle || starved) {
             // "!" drawn with shapes so it does not depend on the font size
             drawList->AddRectFilled(ImVec2(center.x - 1.5f, center.y - 7.0f), ImVec2(center.x + 1.5f, center.y + 2.0f), white);
             drawList->AddRectFilled(ImVec2(center.x - 1.5f, center.y + 4.0f), ImVec2(center.x + 1.5f, center.y + 7.0f), white);

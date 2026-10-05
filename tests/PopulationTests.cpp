@@ -151,18 +151,28 @@ TEST(PopulationTest, LowerTierGetsScarceGoodsFirst) {
     EXPECT_GE(f.Storage().owed[TIER_WORKERS][FISH_NEED], PopulationSystem::OWED_PER_GOOD); // Still owed
 }
 
-TEST(PopulationTest, FullySuppliedHouseUpgradesAndUsesPlanks) {
+TEST(PopulationTest, FullySuppliedHouseWaitsForThePlayerToUpgrade) {
     PopulationFixture f;
     f.Stock(ItemType::Fish, 200);
     f.Stock(ItemType::WorkClothes, 200);
     f.Stock(ItemType::Planks, 10);
     GameObjectId house = f.AddHouse(12);
     f.Run(90 * 10);
+    // Ready, but nothing happens on its own
+    EXPECT_EQ(f.objects.Building(house).type, BUILDING_FARMER_HOUSE);
+    EXPECT_TRUE(PopulationSystem::IsReadyToUpgrade(f.objects, house));
+    EXPECT_TRUE(PopulationSystem::CanUpgrade(f.objects, f.economy, house));
+    EXPECT_EQ(f.Amount(ItemType::Planks), 10);
+    EXPECT_EQ(f.population.Upgrades(), 0u);
+
+    f.population.RequestUpgrade(house);
+    f.Run(1);
     EXPECT_EQ(f.objects.Building(house).type, BUILDING_WORKER_HOUSE);
     EXPECT_EQ(f.Amount(ItemType::Planks), 10 - UPGRADE_PLANKS);
     EXPECT_EQ(f.population.Upgrades(), 1u);
     ASSERT_EQ(f.population.LookChanges().size(), 1u);
     EXPECT_EQ(f.population.LookChanges()[0], house);
+    EXPECT_FALSE(PopulationSystem::IsReadyToUpgrade(f.objects, house)); // Starts over in the new tier
 }
 
 TEST(PopulationTest, NoUpgradeWithoutPlanks) {
@@ -172,11 +182,34 @@ TEST(PopulationTest, NoUpgradeWithoutPlanks) {
     f.Stock(ItemType::Planks, 1);
     GameObjectId house = f.AddHouse(12);
     f.Run(90 * 10);
+    EXPECT_TRUE(PopulationSystem::IsReadyToUpgrade(f.objects, house));
+    EXPECT_FALSE(PopulationSystem::CanUpgrade(f.objects, f.economy, house));
+    f.population.RequestUpgrade(house);
+    f.Run(1);
     EXPECT_EQ(f.objects.Building(house).type, BUILDING_FARMER_HOUSE);
-    EXPECT_EQ(f.objects.Residence(house).upgradeTicks, PopulationSystem::UPGRADE_TICKS); // Ready, waiting for planks
+    EXPECT_EQ(f.Amount(ItemType::Planks), 1);
+
+    // A request does not wait: with the planks there, the player asks again
     f.Stock(ItemType::Planks, UPGRADE_PLANKS);
     f.Run(1);
+    EXPECT_EQ(f.objects.Building(house).type, BUILDING_FARMER_HOUSE);
+    f.population.RequestUpgrade(house);
+    f.Run(1);
     EXPECT_EQ(f.objects.Building(house).type, BUILDING_WORKER_HOUSE);
+}
+
+TEST(PopulationTest, HouseNotReadyCannotUpgrade) {
+    PopulationFixture f;
+    f.Stock(ItemType::Fish, 0); // A need unmet: never ready
+    f.Stock(ItemType::WorkClothes, 200);
+    f.Stock(ItemType::Planks, 10);
+    GameObjectId house = f.AddHouse(12);
+    f.Run(90 * 10);
+    EXPECT_FALSE(PopulationSystem::IsReadyToUpgrade(f.objects, house));
+    f.population.RequestUpgrade(house);
+    f.Run(1);
+    EXPECT_EQ(f.objects.Building(house).type, BUILDING_FARMER_HOUSE);
+    EXPECT_EQ(f.Amount(ItemType::Planks), 10);
 }
 
 TEST(PopulationTest, WorkerHouseWithoutSupplyDowngrades) {

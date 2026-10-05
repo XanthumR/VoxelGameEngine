@@ -98,6 +98,7 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
 
     if (!hover.hit) {
         if (rightClick) SelectType(NO_TYPE);
+        if (leftClick && m_SelectedType == NO_TYPE) m_InspectedBuilding = INVALID_GAME_OBJECT;
         if (hadLocation) m_LocationRevision++; // The preview went away
         return;
     }
@@ -105,6 +106,9 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
     glm::ivec2 hoverTile(ColumnToTile(hover.voxel.x), ColumnToTile(hover.voxel.z));
     GameObjectId under = m_Simulation.Occupancy().At(hoverTile);
     if (m_Simulation.Objects().IsAlive(under)) m_HoveredBuilding = under;
+
+    // Nothing selected: a click opens the building's panel, or closes it on open ground
+    if (leftClick && m_SelectedType == NO_TYPE) m_InspectedBuilding = m_HoveredBuilding;
 
     if (rightClick) {
         if (m_HoveredBuilding != INVALID_GAME_OBJECT) {
