@@ -20,6 +20,9 @@ glm::ivec2 FootprintColumns(const BuildingType& type, uint8_t rotation);
 // Voxels from the ground to the top
 int BuildingHeight(const BuildingType& type);
 
+// The whole stamped volume, from belowGround voxels under the ground to the top
+inline int BuildingVolumeHeight(const BuildingType& type) { return type.belowGround + type.height; }
+
 // A column of the building's own frame (u across the front, v from the front) in the rotated
 // footprint of the given size (FootprintColumns): the front ends up facing the rotation's direction
 inline glm::ivec2 RotateToFootprint(int u, int v, uint8_t rotation, glm::ivec2 size) {

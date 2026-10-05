@@ -62,7 +62,7 @@ TEST(BuildingModelTest, RotationKeepsTheSameVoxels) {
         std::vector<uint8_t> base;
         Library().BuildVoxels(type, 0, 0, base);
         glm::ivec2 size = FootprintColumns(BUILDING_TYPES[type], 0);
-        EXPECT_EQ(base.size(), (size_t)size.x * size.y * BuildingHeight(BUILDING_TYPES[type]));
+        EXPECT_EQ(base.size(), (size_t)size.x * size.y * BuildingVolumeHeight(BUILDING_TYPES[type]));
         std::sort(base.begin(), base.end());
         for (uint8_t rotation = 1; rotation < 4; rotation++) {
             std::vector<uint8_t> turned;

@@ -7,6 +7,8 @@
 bool BuildingModel::Load(const std::string& path) {
     width = depth = height = 0;
     ids.clear();
+    smokeEmitters.clear();
+    boatBerths.clear();
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) return false;
 
@@ -49,7 +51,10 @@ bool BuildingModel::Load(const std::string& path) {
                 file.read((char*)v, 4);
                 if (v[0] >= sizeX || v[1] >= sizeY || v[2] >= sizeZ) continue;
                 int u = width - 1 - v[0];
-                ids[(size_t)u + (size_t)width * ((size_t)v[1] + (size_t)depth * v[2])] = v[3];
+                glm::ivec3 position(u, v[2], v[1]);
+                if (v[3] == SMOKE_EMITTER) smokeEmitters.push_back({ position.x, position.z, position.y });
+                else if (v[3] == BOAT_BERTH) boatBerths.push_back({ position.x, position.z, position.y });
+                else ids[(size_t)u + (size_t)width * ((size_t)v[1] + (size_t)depth * v[2])] = v[3];
             }
             haveVoxels = (bool)file;
         } else {

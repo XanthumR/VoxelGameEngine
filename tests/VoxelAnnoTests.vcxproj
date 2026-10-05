@@ -79,6 +79,8 @@
     <ClCompile Include="..\src\Economy\IslandEconomy.cpp" />
     <ClCompile Include="..\src\Economy\PopulationNeeds.cpp" />
     <ClCompile Include="..\src\Economy\PopulationSystem.cpp" />
+    <ClCompile Include="..\src\Gameplay\FishingBoats.cpp" />
+    <ClCompile Include="..\src\Gameplay\Smoke.cpp" />
     <ClCompile Include="..\src\Gameplay\Walkers.cpp" />
     <ClCompile Include="..\src\Simulation\BuildingLook.cpp" />
     <ClCompile Include="..\src\Simulation\BuildingModels.cpp" />
@@ -101,6 +103,7 @@
   <ItemGroup>
     <ClCompile Include="BuildingLookTests.cpp" />
     <ClCompile Include="BuildingModelTests.cpp" />
+    <ClCompile Include="CoastAndSmokeTests.cpp" />
     <ClCompile Include="GameClockTests.cpp" />
     <ClCompile Include="GameObjectTests.cpp" />
     <ClCompile Include="IslandEconomyTests.cpp" />

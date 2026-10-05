@@ -542,3 +542,13 @@ These are pure functions over the terrain noise, `IslandRegistry`, `OccupancyGri
 1–2, play-test, commit. Then 3–4, play-test, commit. Then 5–6, then 7–8, play-test, commit.
 - Demo patches are used for screenshots and removed afterwards.
 - `cdb` is available for any crash.
+
+### Coastal fishery and chimney smoke (added during Milestone 4)
+
+- **The fishery is a coastal building:** 3x4 tiles, the two back rows a plank dock on pilings over the water.
+  - Placement counts columns: the land rows must not be open water, and at least half of them must be at island height. At least half of the dock columns must be open water.
+  - The model reaches 6 voxels below ground; only its solid voxels are written there, and demolishing restores the generated terrain.
+- **Fishing boats:** each fishery has a boat that leaves the dock, sails out up to 80 voxels (stopping before shallow water), fishes and comes back every 30 seconds. In step 5 this will follow the production cycle.
+- **Chimney smoke:** voxel puffs rise from smoke emitters in the models (palette index 100), drift with the wind, grow and thin out. They appear while a building is in use.
+- **Drawing:** people, smoke puffs and boats are all `Figure`s, drawn by `FigureRenderer` into the GPU chunk pools; erasing puts the sea back below sea level.
+- **Shore map:** figures count as water, so a passing boat does not leave surf behind.

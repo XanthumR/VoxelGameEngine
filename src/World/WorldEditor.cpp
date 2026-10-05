@@ -35,22 +35,24 @@ void WorldEditor::FillSphere(glm::ivec3 center, int radius, uint8_t id) {
     RefreshTouched();
 }
 
-void WorldEditor::WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const std::vector<uint8_t>& ids) {
+void WorldEditor::WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const std::vector<uint8_t>& ids, int solidOnlyLayers) {
     if (ids.size() < (size_t)size.x * size.y * size.z) return;
-    WriteBox(minCorner, size, ids.data(), 0);
+    WriteBox(minCorner, size, ids.data(), 0, solidOnlyLayers);
 }
 
 void WorldEditor::FillBox(glm::ivec3 minCorner, glm::ivec3 size, uint8_t id) {
-    WriteBox(minCorner, size, nullptr, id);
+    WriteBox(minCorner, size, nullptr, id, 0);
 }
 
-void WorldEditor::WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const uint8_t* ids, uint8_t fill) {
+void WorldEditor::WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const uint8_t* ids, uint8_t fill, int solidOnlyLayers) {
     size_t i = 0;
     for (int y = 0; y < size.y; y++) {
         for (int z = 0; z < size.z; z++) {
             for (int x = 0; x < size.x; x++, i++) {
                 glm::ivec3 p = minCorner + glm::ivec3(x, y, z);
-                if (m_World.SetVoxel(p.x, p.y, p.z, ids ? ids[i] : fill)) {
+                uint8_t id = ids ? ids[i] : fill;
+                if (id == 0 && y < solidOnlyLayers) continue; // Keep the ground or sea around it
+                if (m_World.SetVoxel(p.x, p.y, p.z, id)) {
                     uint64_t key = ChunkKey(p.x >> 5, p.y >> 5, p.z >> 5);
                     if (std::find(m_Touched.begin(), m_Touched.end(), key) == m_Touched.end()) m_Touched.push_back(key);
                 }

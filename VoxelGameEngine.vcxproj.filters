@@ -78,6 +78,9 @@
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
+    <ClCompile Include="src\Gameplay\FishingBoats.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\FreeFlyCamera.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
@@ -87,11 +90,17 @@
     <ClCompile Include="src\Gameplay\RoadTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
+    <ClCompile Include="src\Gameplay\Smoke.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\StrategyCamera.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="src\Gameplay\Walkers.cpp">
       <Filter>src\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\FigureRenderer.cpp">
+      <Filter>src\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\GpuChunkCache.cpp">
       <Filter>src\Rendering</Filter>
@@ -118,9 +127,6 @@
       <Filter>src\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp">
-      <Filter>src\Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Rendering\WalkerRenderer.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation\BuildingLook.cpp">
@@ -227,7 +233,7 @@
     <None Include="shaders\grass\grass_animate.comp">
       <Filter>shaders\grass</Filter>
     </None>
-    <None Include="shaders\people\walkers.comp">
+    <None Include="shaders\people\figures.comp">
       <Filter>shaders\people</Filter>
     </None>
     <None Include="shaders\render\shade.comp">
@@ -313,6 +319,12 @@
     <ClInclude Include="src\Gameplay\DebugEditTool.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
+    <ClInclude Include="src\Gameplay\Figure.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Gameplay\FishingBoats.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
     <ClInclude Include="src\Gameplay\FreeFlyCamera.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
@@ -322,6 +334,9 @@
     <ClInclude Include="src\Gameplay\RoadTool.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
+    <ClInclude Include="src\Gameplay\Smoke.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
     <ClInclude Include="src\Gameplay\StrategyCamera.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
@@ -329,6 +344,9 @@
       <Filter>src\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\BuildPreview.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\FigureRenderer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\GpuChunkCache.h">
@@ -359,9 +377,6 @@
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\VoxelRenderer.h">
-      <Filter>src\Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Rendering\WalkerRenderer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\BuildingLook.h">

@@ -16,6 +16,7 @@
 struct GLFWwindow;
 class BuildingModelLibrary;
 class RoadTool;
+class TerrainGenerator;
 class Simulation;
 class VoxelWorld;
 class WorldEditor;
@@ -37,7 +38,8 @@ public:
     BuildCategory Tab() const { return m_Tab; }
     void SetTab(BuildCategory tab) { m_Tab = tab; }
 
-    BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models);
+    BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models,
+        TerrainGenerator& terrain);
 
     void SelectType(int type);
     int SelectedType() const { return m_SelectedType; }
@@ -69,11 +71,17 @@ public:
     void RefreshLook(GameObjectId id);
 
 private:
+    // Puts the generated terrain back in a box (under a demolished dock)
+    void RestoreTerrain(glm::ivec3 minCorner, glm::ivec3 size);
+
     const VoxelWorld& m_World;
     WorldEditor& m_Editor;
     Simulation& m_Simulation;
     RoadTool& m_RoadTool;
     const BuildingModelLibrary& m_Models;
+    TerrainGenerator& m_Terrain;
+    std::vector<uint8_t> m_ChunkScratch;   // One generated chunk (RestoreTerrain)
+    std::vector<uint8_t> m_RestoreBuffer;  // The restored box
 
     int m_SelectedType = NO_TYPE;
     BuildCategory m_Tab = BuildCategory::Housing;

@@ -155,7 +155,7 @@ void WalkerSystem::Update(float deltaTime, const GameObjectRegistry& objects, co
         glm::vec2 to = glm::vec2(walker.next * TILE_SIZE + walker.lane);
         glm::ivec2 column = glm::ivec2(glm::floor(glm::mix(from, to, walker.progress) + 0.5f));
         int frame = (int)(walker.walked / STRIDE) & 3;
-        int look = WalkerFigure::Pack(walker.tier, walker.direction, frame, walker.variant);
+        int look = Figure::PackPerson(walker.tier, walker.direction, frame, walker.variant);
         m_Figures.push_back({ glm::ivec4(column.x, BUILD_GROUND_Y, column.y, look) });
     }
 }

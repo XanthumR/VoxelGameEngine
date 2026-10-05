@@ -50,6 +50,8 @@ struct BuildingType {
     const char* modelName; // assets/buildings/<modelName>_<n>.vox (BuildingModelLibrary); nullptr: procedural only
     BuildCategory category;
     int8_t chain;          // Producers: index into PRODUCTION_CHAINS (src/Economy/ProductionChains.h), else -1
+    int dockRows = 0;      // Tiles at the back of the footprint that stand over the water (a dock)
+    int belowGround = 0;   // Voxels the look reaches below the ground (pilings, a moored hull)
 };
 
 // Index = BuildingComponent::type
@@ -58,7 +60,7 @@ constexpr std::array<BuildingType, 11> BUILDING_TYPES = { {
     { "Farmer House", 3, 3, 14, 30, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true, "farmer_house", BuildCategory::Housing, -1 },
     { "Marketplace", 4, 3, 10, 24, Block::PLANK, Block::AWNING, BuildingRole::Market, 0, LookStyle::Stall, true, "marketplace", BuildCategory::Housing, -1 },
     { "Worker House", 3, 3, 24, 42, Block::PLANK, Block::ROOF, BuildingRole::Residence, 1, LookStyle::TwoStorey, false, "worker_house", BuildCategory::Housing, -1 },
-    { "Fishery", 3, 3, 12, 26, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "fishery", BuildCategory::Production, 0 },
+    { "Fishery", 3, 4, 12, 26, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "fishery", BuildCategory::Production, 0, 2, 6 },
     { "Lumberjack", 3, 3, 12, 24, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "lumberjack", BuildCategory::Production, 1 },
     { "Sawmill", 3, 3, 12, 26, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "sawmill", BuildCategory::Production, 2 },
     { "Sheep Farm", 3, 3, 12, 28, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "sheep_farm", BuildCategory::Production, 3 },

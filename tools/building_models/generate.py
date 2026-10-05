@@ -27,6 +27,8 @@ FENCE_WOOD, HAY, CRATE, BARREL, IRON = 83, 84, 85, 86, 87
 AWNING_RED, AWNING_WHITE, AWNING_BLUE, AWNING_YELLOW = 88, 89, 90, 91
 WELL_WATER, GARDEN_SOIL, VEGETABLES, FISH_SILVER = 92, 93, 94, 95
 WOOL_WHITE, PIG_PINK, SAUSAGE, MUD = 96, 97, 98, 99
+# Markers: not drawn; the game reads their positions (src/World/BuildingModel.h)
+SMOKE_EMITTER, BOAT_BERTH = 100, 101
 
 # In-game colors (shaders/render/shade.comp), for the .vox palette
 COLORS = {
@@ -41,6 +43,7 @@ COLORS = {
     85: (158, 115, 64), 86: (107, 66, 33), 87: (56, 56, 61), 88: (194, 36, 31), 89: (237, 227, 204),
     90: (46, 89, 179), 91: (230, 184, 46), 92: (26, 77, 115), 93: (77, 51, 31), 94: (82, 158, 46), 95: (179, 189, 199),
     96: (235, 232, 219), 97: (230, 158, 153), 98: (148, 56, 41), 99: (71, 51, 33),
+    100: (90, 90, 90), 101: (0, 200, 255),  # Markers: smoke emitter, boat berth
 }
 
 
@@ -198,9 +201,10 @@ def crate(m, u, v, y=0, size=3):
 
 
 def chimney(m, u, v, y0, y1):
+    """A 3 x 3 brick chimney with a stone cap; smoke rises from its opening."""
     m.box(u, v, y0, u + 2, v + 2, y1, CHIMNEY_BRICK)
     m.box(u, v, y1, u + 2, v + 2, y1, STONE_DARK)
-    m.set(u + 1, v + 1, y1, AIR)
+    m.set(u + 1, v + 1, y1, SMOKE_EMITTER)
 
 
 # --- Buildings ---------------------------------------------------------------------------------
@@ -460,50 +464,73 @@ def pig(m, u, v):
 
 
 def fishery():
-    """36 x 36 x 26: a fisher's hut on a paved quay with a jetty at the back (turn the back to the
-    sea), net frames with drying fish, fish crates and barrels."""
-    m = Model(36, 36, 26)
-    m.box(0, 20, 0, 35, 35, 0, STONE_LIGHT)
-    for u in range(0, 36, 3):
-        m.box(u, 20, 0, u, 35, 0, COBBLE)
-    m.box(13, 26, 1, 22, 35, 1, TIMBER_LIGHT)  # Jetty deck
-    for u in (13, 22):
-        for v in (27, 31, 35):
-            m.box(u, v, 0, u, v, 3, TIMBER_DARK)
-    m.box(13, 35, 2, 22, 35, 2, TIMBER_DARK)
+    """36 x 48 x 32: a fisher's hut on a paved quay (the two land rows) and a plank dock on pilings
+    reaching out over the water (the two dock rows at the back). The model's base is 6 voxels below
+    the ground (G), so the pilings stand in the sea; the boat berth marker at the dock's end is at
+    the waterline (world y 42). Nets with drying fish, crates, barrels and mooring posts."""
+    m = Model(36, 48, 32)
+    G = 6  # Ground level in the model (world y 46)
+
+    # Stone foundation under the land rows: where they stand over the shore's slope or the beach,
+    # it fills the space down to the model's base (only solid voxels below ground are written)
+    m.box(0, 0, 0, 35, 23, G - 1, STONE_DARK)
+    for v in range(0, 17):
+        for u in range(36):
+            m.set(u, v, G - 1, 1)  # Grass on top (block 1), the same as the ground it continues
+    # Paved quay along the water's edge (replaces the grass layer)
+    for u in range(36):
+        for v in range(17, 24):
+            m.set(u, v, G - 1, COBBLE if (u // 3 + v // 3) % 2 else STONE_LIGHT)
 
     # Hut
-    u0, u1, v0, v1 = 3, 18, 5, 18
-    m.ring(u0, v0, u1, v1, 0, 9, TIMBER_LIGHT)
+    u0, u1, v0, v1 = 3, 18, 3, 15
+    m.ring(u0, v0, u1, v1, G, G + 9, TIMBER_LIGHT)
     for u, v in ((u0, v0), (u1, v0), (u0, v1), (u1, v1)):
-        m.box(u, v, 0, u, v, 9, TIMBER_DARK)
-    m.ring(u0, v0, u1, v1, 9, 9, TIMBER_DARK)
-    m.box(9, v0, 0, 11, v0, 6, DOOR_WOOD)
-    window(m, 14, v0, 3, 2, 3, SHUTTER_BLUE, None, facing=-1)
-    side_window(m, u1, 10, 3, 3, 3, None, facing=+1)
-    gable_roof(m, u0, u1, v0, v1, 9, 18, ROOF_TILE_DARK, ROOF_SLATE, overhang=2, gable_wall=TIMBER_LIGHT)
-    chimney(m, 5, 14, 9, 21)
+        m.box(u, v, G, u, v, G + 9, TIMBER_DARK)
+    m.ring(u0, v0, u1, v1, G + 9, G + 9, TIMBER_DARK)
+    m.box(9, v0, G, 11, v0, G + 6, DOOR_WOOD)
+    window(m, 14, v0, G + 3, 2, 3, SHUTTER_BLUE, None, facing=-1)
+    side_window(m, u1, 8, G + 3, 3, 3, None, facing=+1)
+    gable_roof(m, u0, u1, v0, v1, G + 9, G + 18, ROOF_TILE_DARK, ROOF_SLATE, overhang=2, gable_wall=TIMBER_LIGHT)
+    chimney(m, 5, 10, G + 9, G + 21)
 
     # Net frames with fish drying
     for u in (22, 33):
-        m.box(u, 6, 0, u, 6, 9, TIMBER_DARK)
-        m.box(u, 14, 0, u, 14, 9, TIMBER_DARK)
-    m.box(22, 6, 9, 33, 6, 9, TIMBER_DARK)
-    m.box(22, 14, 9, 33, 14, 9, TIMBER_DARK)
+        m.box(u, 4, G, u, 4, G + 9, TIMBER_DARK)
+        m.box(u, 12, G, u, 12, G + 9, TIMBER_DARK)
+    m.box(22, 4, G + 9, 33, 4, G + 9, TIMBER_DARK)
+    m.box(22, 12, G + 9, 33, 12, G + 9, TIMBER_DARK)
     for u in range(23, 33):
-        for y in range(3, 9):
+        for y in range(G + 3, G + 9):
             if (u + y) % 2 == 0:
-                m.set(u, 6, y, TIMBER_DARK)
+                m.set(u, 4, y, TIMBER_DARK)
     for u in range(24, 33, 3):
-        m.box(u, 14, 5, u, 14, 7, FISH_SILVER)
+        m.box(u, 12, G + 5, u, 12, G + 7, FISH_SILVER)
 
-    # Crates of fish and barrels on the quay
-    crate(m, 25, 22, 1)
-    m.box(26, 23, 4, 26, 23, 4, FISH_SILVER)
-    crate(m, 29, 22, 1)
-    m.box(29, 22, 4, 31, 24, 4, FISH_SILVER)
-    barrel(m, 3, 22, 1)
-    barrel(m, 7, 23, 1)
+    # The dock: plank deck flush with the quay, on pilings down into the sea
+    d0, d1 = 11, 24
+    for v in range(24, 48):
+        for u in range(d0, d1 + 1):
+            m.set(u, v, G - 1, TIMBER_LIGHT if (v // 2) % 2 == 0 else FENCE_WOOD)
+    for v in (24, 30, 36, 42, 47):
+        for u in (d0, d1):
+            m.box(u, v, 0, u, v, G - 2, TIMBER_DARK)
+    for v in (30, 40, 47):  # Mooring posts
+        for u in (d0, d1):
+            m.box(u, v, G, u, v, G + 2, TIMBER_DARK)
+    crate(m, d0 + 2, 26, G)
+    m.box(d0 + 3, 27, G + 3, d0 + 3, 27, G + 3, FISH_SILVER)
+    barrel(m, d1 - 4, 28, G)
+    for u, v in ((d1 - 3, 41), (d1 - 2, 40), (d1 - 1, 41), (d1 - 2, 42)):
+        m.set(u, v, G, FENCE_WOOD)  # A coil of rope
+    m.set((d0 + d1) // 2, 47, 2, BOAT_BERTH)  # Waterline at the dock's end: the boat moors here
+
+    # Crates and barrels on the quay
+    crate(m, 25, 18, G)
+    crate(m, 29, 18, G)
+    m.box(29, 18, G + 3, 31, 20, G + 3, FISH_SILVER)
+    barrel(m, 3, 18, G)
+    barrel(m, 7, 19, G)
     return m
 
 
@@ -665,6 +692,7 @@ def slaughterhouse():
     m.box(28, 20, 0, 31, 23, 30, CHIMNEY_BRICK)
     m.box(28, 20, 31, 31, 23, 31, STONE_DARK)
     m.box(29, 21, 31, 30, 22, 31, AIR)
+    m.set(29, 21, 31, SMOKE_EMITTER)
 
     # Lean-to with hanging sausages at the front
     for u in (4, 22):

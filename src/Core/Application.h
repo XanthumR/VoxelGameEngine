@@ -3,6 +3,8 @@
 #include "Core/LaunchOptions.h"
 #include "Gameplay/BuildTool.h"
 #include "Gameplay/RoadTool.h"
+#include "Gameplay/FishingBoats.h"
+#include "Gameplay/Smoke.h"
 #include "Gameplay/Walkers.h"
 #include "Gameplay/DebugEditTool.h"
 #include "Gameplay/FreeFlyCamera.h"
@@ -15,7 +17,7 @@
 #include "Rendering/ShoreMap.h"
 #include "Rendering/TileOverlay.h"
 #include "Rendering/VoxelRenderer.h"
-#include "Rendering/WalkerRenderer.h"
+#include "Rendering/FigureRenderer.h"
 #include "Simulation/BuildingModels.h"
 #include "Simulation/GameClock.h"
 #include "Simulation/Simulation.h"
@@ -97,7 +99,10 @@ private:
     ShoreMap m_Shore;
     GrassAnimator m_Grass;
     WalkerSystem m_Walkers; // Residents walking the roads (visual only)
-    WalkerRenderer m_WalkerRenderer;
+    SmokeSystem m_Smoke;    // Chimney smoke (visual only)
+    FishingBoats m_Boats;   // Fishing boats of the fisheries (visual only)
+    FigureRenderer m_FigureRenderer;
+    std::vector<Figure> m_Figures; // This frame's walkers, puffs and boats, reserved at setup
     DebugOverlay m_Overlay;
     TileOverlay m_TileOverlay;
 

@@ -71,10 +71,10 @@ TEST(WalkerTest, FiguresStayOnTheRoad) {
     f.SetPopulation(40);
     for (int step = 0; step < 600; step++) {
         f.walkers.Update(0.1f, f.objects, f.roads, f.economy);
-        for (const WalkerFigure& figure : f.walkers.Figures()) {
-            glm::ivec2 tile(ColumnToTile(figure.feet.x), ColumnToTile(figure.feet.z));
+        for (const Figure& figure : f.walkers.Figures()) {
+            glm::ivec2 tile(ColumnToTile(figure.position.x), ColumnToTile(figure.position.z));
             ASSERT_TRUE(f.roads.IsRoad(tile)) << "step " << step;
-            ASSERT_EQ(figure.feet.y, BUILD_GROUND_Y);
+            ASSERT_EQ(figure.position.y, BUILD_GROUND_Y);
         }
     }
 }
@@ -108,7 +108,7 @@ TEST(WalkerTest, HouseWithoutRoadSendsNobody) {
 }
 
 TEST(WalkerTest, PackedLookRoundTrips) {
-    int packed = WalkerFigure::Pack(1, 3, 2, 5);
+    int packed = Figure::PackPerson(1, 3, 2, 5);
     EXPECT_EQ(packed & 3, 1);
     EXPECT_EQ((packed >> 2) & 3, 3);
     EXPECT_EQ((packed >> 4) & 3, 2);
@@ -122,10 +122,10 @@ TEST(WalkerTest, FiguresFaceTheWayTheyWalk) {
     ASSERT_EQ(f.walkers.Figures().size(), 1u);
     int checked = 0;
     for (int step = 0; step < 300; step++) {
-        glm::ivec4 before = f.walkers.Figures()[0].feet;
+        glm::ivec4 before = f.walkers.Figures()[0].position;
         f.walkers.Update(0.1f, f.objects, f.roads, f.economy);
         ASSERT_EQ(f.walkers.Figures().size(), 1u);
-        glm::ivec4 after = f.walkers.Figures()[0].feet;
+        glm::ivec4 after = f.walkers.Figures()[0].position;
         glm::ivec2 moved(after.x - before.x, after.z - before.z);
         if (moved.x != 0 && moved.y != 0) continue; // Turning a corner this step
         int direction = (after.w >> 2) & 3;
@@ -143,7 +143,7 @@ TEST(WalkerTest, WalkCycleGoesThroughEveryFrame) {
     bool seen[4] = {};
     for (int step = 0; step < 100; step++) {
         f.walkers.Update(0.1f, f.objects, f.roads, f.economy);
-        for (const WalkerFigure& figure : f.walkers.Figures()) seen[(figure.feet.w >> 4) & 3] = true;
+        for (const Figure& figure : f.walkers.Figures()) seen[(figure.position.w >> 4) & 3] = true;
     }
     EXPECT_TRUE(seen[0] && seen[1] && seen[2] && seen[3]);
 }

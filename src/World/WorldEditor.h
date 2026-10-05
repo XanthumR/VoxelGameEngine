@@ -19,8 +19,9 @@ public:
     bool PlaceVoxel(glm::ivec3 position, uint8_t id);
 
     // Writes a box of voxels (ids ordered x fastest, then z, then y), or fills it with one ID.
-    // Voxels in unloaded chunks are skipped.
-    void WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const std::vector<uint8_t>& ids);
+    // Voxels in unloaded chunks are skipped. In the lowest solidOnlyLayers layers only non-air ids
+    // are written, so what is already there (ground, sea) stays around them.
+    void WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const std::vector<uint8_t>& ids, int solidOnlyLayers = 0);
     void FillBox(glm::ivec3 minCorner, glm::ivec3 size, uint8_t id);
 
     // Removes a model's voxels at base (only voxels that still hold the model's block there), or
@@ -32,7 +33,7 @@ public:
     bool ConsumeTerrainChanged();
 
 private:
-    void WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const uint8_t* ids, uint8_t fill);
+    void WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const uint8_t* ids, uint8_t fill, int solidOnlyLayers);
     void RefreshTouched();
 
     VoxelWorld& m_World;

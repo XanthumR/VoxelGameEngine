@@ -2,6 +2,7 @@
 
 #include "Simulation/BuildingLook.h"
 
+#include <algorithm>
 #include <iostream>
 
 int BuildingModelLibrary::LoadAll(const std::string& directory) {
@@ -17,7 +18,7 @@ int BuildingModelLibrary::LoadAll(const std::string& directory) {
             if (!Fits(model, building)) {
                 std::cerr << "Building model " << path << " is " << model.width << " x " << model.depth << " x " << model.height
                           << "; " << building.name << " needs " << building.footprintWidth * TILE_SIZE << " x "
-                          << building.footprintDepth * TILE_SIZE << " x at most " << building.height << ". Skipped." << std::endl;
+                          << building.footprintDepth * TILE_SIZE << " x at most " << BuildingVolumeHeight(building) << ". Skipped." << std::endl;
                 continue;
             }
             m_Models[type].push_back(std::move(model));
@@ -30,7 +31,12 @@ int BuildingModelLibrary::LoadAll(const std::string& directory) {
 
 bool BuildingModelLibrary::Fits(const BuildingModel& model, const BuildingType& type) {
     return model.width == type.footprintWidth * TILE_SIZE && model.depth == type.footprintDepth * TILE_SIZE &&
-           model.height >= 1 && model.height <= type.height;
+           model.height >= 1 && model.height <= BuildingVolumeHeight(type);
+}
+
+const BuildingModel* BuildingModelLibrary::Model(uint16_t type, uint8_t variant) const {
+    const std::vector<BuildingModel>& models = m_Models[type];
+    return models.empty() ? nullptr : &models[variant % models.size()];
 }
 
 uint8_t BuildingModelLibrary::PickVariant(uint16_t type, uint32_t seed) const {
@@ -43,14 +49,17 @@ uint8_t BuildingModelLibrary::PickVariant(uint16_t type, uint32_t seed) const {
 void BuildingModelLibrary::BuildVoxels(uint16_t type, uint8_t variant, uint8_t rotation, std::vector<uint8_t>& ids) const {
     const BuildingType& building = BUILDING_TYPES[type];
     const std::vector<BuildingModel>& models = m_Models[type];
+    const glm::ivec2 size = FootprintColumns(building, rotation);
+    const int height = BuildingVolumeHeight(building);
     if (models.empty()) {
-        BuildLook(building, rotation, ids);
+        // The procedural look stands on the ground: put it above the below-ground layers
+        BuildLook(building, rotation, m_LookScratch);
+        ids.assign((size_t)size.x * size.y * height, Block::AIR);
+        std::copy(m_LookScratch.begin(), m_LookScratch.end(), ids.begin() + (size_t)size.x * size.y * building.belowGround);
         return;
     }
 
     const BuildingModel& model = models[variant % models.size()];
-    const glm::ivec2 size = FootprintColumns(building, rotation);
-    const int height = BuildingHeight(building);
     ids.assign((size_t)size.x * size.y * height, Block::AIR);
     for (int y = 0; y < model.height; y++) {
         for (int v = 0; v < model.depth; v++) {

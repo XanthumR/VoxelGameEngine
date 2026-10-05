@@ -27,6 +27,7 @@ namespace {
 
 const char* TREE_MODEL_PATH = "assets/tree.vox";
 const char* BUILDING_MODEL_DIRECTORY = "assets/buildings";
+const float SMOKE_DISTANCE = 1500.0f; // Voxels from the camera's focus within which chimneys smoke
 const glm::ivec2 SPAWN_SEARCH_START(640, 640); // Spawn is the nearest decent island to here
 
 } // namespace
@@ -39,7 +40,7 @@ Application::Application(const LaunchOptions& options)
       m_EditTool(m_World, m_Editor),
       m_Simulation(m_Terrain),
       m_RoadTool(m_World, m_Editor, m_Simulation),
-      m_BuildTool(m_World, m_Editor, m_Simulation, m_RoadTool, m_BuildingModels) {
+      m_BuildTool(m_World, m_Editor, m_Simulation, m_RoadTool, m_BuildingModels, m_Terrain) {
     m_Settings.renderScale = options.renderScale;
 }
 
@@ -110,7 +111,7 @@ bool Application::Init() {
 
     // GPU systems (each loads its shaders, so a missing or broken file fails fast)
     if (!m_Renderer.Init() || !m_Ocean.Init() || !m_Shore.Init() || !m_Grass.Init(m_Terrain) || !m_Cache.Init() ||
-        !m_WalkerRenderer.Init()) {
+        !m_FigureRenderer.Init()) {
         return false;
     }
 
@@ -132,6 +133,7 @@ bool Application::Init() {
     m_Overlay.Init();
     m_TileOverlay.Init(TILE_SIZE);
     m_ReachScratch.reserve(8192);
+    m_Figures.reserve(FigureRenderer::MAX_FIGURES);
 
     // The tree model must be loaded before the workers start generating
     if (!m_Trees.Load(TREE_MODEL_PATH)) {
@@ -394,8 +396,16 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     float animationTime = m_Options.fixedTime >= 0.0f ? m_Options.fixedTime : (float)glfwGetTime();
     m_Ocean.Update(animationTime);
     m_Grass.Animate(animationTime, m_Cache);
+    // Figures: walkers, chimney smoke and fishing boats, drawn into the voxels on the GPU
     m_Walkers.Update(deltaTime, m_Simulation.Objects(), m_Simulation.Roads(), m_Simulation.Economy());
-    m_WalkerRenderer.Draw(m_Walkers.Figures(), m_Cache);
+    glm::vec3 focus = ActiveCamera().FocusPoint() * VOXELS_PER_UNIT;
+    m_Smoke.Update(deltaTime, m_Simulation.Objects(), m_BuildingModels, glm::vec2(focus.x, focus.z), SMOKE_DISTANCE);
+    m_Boats.Update(deltaTime, m_Simulation.Objects(), m_BuildingModels, m_Terrain);
+    m_Figures.clear();
+    m_Figures.insert(m_Figures.end(), m_Walkers.Figures().begin(), m_Walkers.Figures().end());
+    m_Smoke.AppendFigures(m_Figures);
+    m_Boats.AppendFigures(m_Figures);
+    m_FigureRenderer.Draw(m_Figures, m_Cache, SEA_LEVEL);
 
     // --- Render ---
     const ICamera& camera = ActiveCamera();

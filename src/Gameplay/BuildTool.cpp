@@ -6,6 +6,8 @@
 #include "Simulation/Logistics.h"
 #include "Simulation/Simulation.h"
 #include "World/BlockTypes.h"
+#include "World/Chunk.h"
+#include "World/TerrainGenerator.h"
 #include "World/WorldEditor.h"
 
 #include <GLFW/glfw3.h>
@@ -23,14 +25,17 @@ bool Pressed(bool down, bool& wasDown) {
 
 } // namespace
 
-BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models)
-    : m_World(world), m_Editor(editor), m_Simulation(simulation), m_RoadTool(roads), m_Models(models) {
+BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models,
+    TerrainGenerator& terrain)
+    : m_World(world), m_Editor(editor), m_Simulation(simulation), m_RoadTool(roads), m_Models(models), m_Terrain(terrain) {
     size_t largest = 0;
     for (const BuildingType& type : BUILDING_TYPES) {
         glm::ivec2 columns = FootprintColumns(type, 0);
-        largest = std::max(largest, (size_t)columns.x * columns.y * BuildingHeight(type));
+        largest = std::max(largest, (size_t)columns.x * columns.y * BuildingVolumeHeight(type));
     }
     m_LookBuffer.reserve(largest);
+    m_RestoreBuffer.reserve(largest);
+    m_ChunkScratch.reserve(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
     m_LocationTiles.reserve(1024);
 }
 
@@ -143,14 +148,14 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         m_PreviewMinTile = minTile;
         m_PreviewTiles = tiles;
         m_Preview.state = m_LastCheck.error == PlacementError::None ? BuildPreview::VALID : BuildPreview::INVALID;
-        m_Preview.min = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y, minTile.y * TILE_SIZE);
-        m_Preview.max = m_Preview.min + glm::ivec3(tiles.x * TILE_SIZE, BuildingHeight(type), tiles.y * TILE_SIZE);
+        m_Preview.min = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y - type.belowGround, minTile.y * TILE_SIZE);
+        m_Preview.max = m_Preview.min + glm::ivec3(tiles.x * TILE_SIZE, BuildingVolumeHeight(type), tiles.y * TILE_SIZE);
     } else if (m_HoveredBuilding != INVALID_GAME_OBJECT) {
         const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(m_HoveredBuilding);
         const BuildingType& type = BUILDING_TYPES[m_Simulation.Objects().Building(m_HoveredBuilding).type];
         m_Preview.state = BuildPreview::SELECTED;
-        m_Preview.min = anchor.origin;
-        m_Preview.max = anchor.origin + glm::ivec3(anchor.footprint.x, BuildingHeight(type), anchor.footprint.y);
+        m_Preview.min = anchor.origin - glm::ivec3(0, type.belowGround, 0);
+        m_Preview.max = m_Preview.min + glm::ivec3(anchor.footprint.x, BuildingVolumeHeight(type), anchor.footprint.y);
     }
 }
 
@@ -177,7 +182,9 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     m_Simulation.MarkBuildingsChanged();
 
     m_Models.BuildVoxels(type, component.variant, rotation, m_LookBuffer);
-    m_Editor.WriteBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), m_LookBuffer);
+    glm::ivec3 volumeOrigin = anchor.origin - glm::ivec3(0, building.belowGround, 0);
+    m_Editor.WriteBox(volumeOrigin, glm::ivec3(anchor.footprint.x, BuildingVolumeHeight(building), anchor.footprint.y), m_LookBuffer,
+        building.belowGround);
     return id;
 }
 
@@ -191,7 +198,33 @@ void BuildTool::RefreshLook(GameObjectId id) {
     // Clear the tallest a building can be (the old look may have been taller), then stamp the new one
     m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, MaxBuildingHeight(), anchor.footprint.y), Block::AIR);
     m_Models.BuildVoxels(component.type, component.variant, component.rotation, m_LookBuffer);
-    m_Editor.WriteBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), m_LookBuffer);
+    glm::ivec3 volumeOrigin = anchor.origin - glm::ivec3(0, building.belowGround, 0);
+    m_Editor.WriteBox(volumeOrigin, glm::ivec3(anchor.footprint.x, BuildingVolumeHeight(building), anchor.footprint.y), m_LookBuffer,
+        building.belowGround);
+}
+
+void BuildTool::RestoreTerrain(glm::ivec3 minCorner, glm::ivec3 size) {
+    m_RestoreBuffer.assign((size_t)size.x * size.y * size.z, Block::AIR);
+    glm::ivec3 maxCorner = minCorner + size - 1;
+    for (int cy = minCorner.y >> 5; cy <= maxCorner.y >> 5; cy++) {
+        for (int cz = minCorner.z >> 5; cz <= maxCorner.z >> 5; cz++) {
+            for (int cx = minCorner.x >> 5; cx <= maxCorner.x >> 5; cx++) {
+                m_Terrain.GenerateChunk(cx, cy, cz, m_ChunkScratch);
+                glm::ivec3 from = glm::max(minCorner, glm::ivec3(cx, cy, cz) * CHUNK_SIZE);
+                glm::ivec3 to = glm::min(maxCorner, glm::ivec3(cx, cy, cz) * CHUNK_SIZE + (CHUNK_SIZE - 1));
+                for (int y = from.y; y <= to.y; y++) {
+                    for (int z = from.z; z <= to.z; z++) {
+                        for (int x = from.x; x <= to.x; x++) {
+                            glm::ivec3 local = glm::ivec3(x, y, z) - minCorner;
+                            m_RestoreBuffer[(size_t)local.x + (size_t)size.x * ((size_t)local.z + (size_t)size.z * (size_t)local.y)] =
+                                m_ChunkScratch[LocalIndex(x & 31, y & 31, z & 31)];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    m_Editor.WriteBox(minCorner, size, m_RestoreBuffer);
 }
 
 // Clears the building's voxels (the ground under it was never changed) and frees its tiles
@@ -203,6 +236,10 @@ void BuildTool::Demolish(GameObjectId id) {
     const BuildingComponent component = objects.Building(id);
     const BuildingType& building = BUILDING_TYPES[component.type];
     m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), Block::AIR);
+    if (building.belowGround > 0) {
+        // Pilings and hulls stood in the ground or the sea: put the generated terrain back
+        RestoreTerrain(anchor.origin - glm::ivec3(0, building.belowGround, 0), glm::ivec3(anchor.footprint.x, building.belowGround, anchor.footprint.y));
+    }
 
     glm::ivec2 minTile(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
     m_Simulation.Occupancy().Release(minTile, anchor.footprint / TILE_SIZE, id);

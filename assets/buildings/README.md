@@ -12,7 +12,7 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
 | Farmer House | `farmer_house_n.vox` | 36 x 36 x up to 30 |
 | Worker House | `worker_house_n.vox` | 36 x 36 x up to 42 |
 | Marketplace | `marketplace_n.vox` | 48 x 36 x up to 24 |
-| Fishery | `fishery_n.vox` | 36 x 36 x up to 26 (jetty at the back: the side that faces the sea) |
+| Fishery | `fishery_n.vox` | 36 x 48 x up to 32 (a coastal building: see below) |
 | Lumberjack | `lumberjack_n.vox` | 36 x 36 x up to 24 |
 | Sawmill | `sawmill_n.vox` | 36 x 36 x up to 26 |
 | Sheep Farm | `sheep_farm_n.vox` | 36 x 36 x up to 28 |
@@ -63,6 +63,13 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
     | 99 | mud |
 
   - The older blocks (1–50) also work. Changing a color in the palette changes nothing in the game: colors come from `shaders/render/shade.comp`.
+- **Markers:** two palette indices are not drawn. The game reads their positions instead:
+  - **100, smoke emitter:** put it in a chimney opening; smoke rises from there while the building is in use.
+  - **101, boat berth:** where a boat moors. It sails out from there toward the model's back (+y).
+- **Coastal buildings** (the fishery, `dockRows` in the building table): the back rows of the footprint stand over the water as a dock.
+  - The model reaches `belowGround` voxels under the ground (6 for the fishery), so z = 6 is ground level and z = 2 is the sea's surface.
+  - Below ground only solid voxels are written, so the sea stays around pilings and quay walls.
+  - Put a foundation under the land rows: on a coast they may stand over the shore's slope.
 - **Editing:** edit a file in MagicaVoxel and restart the game to see it.
 
 ## Regenerating

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Gameplay/Figure.h"
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/GameObjects.h"
 
@@ -11,20 +12,10 @@
 class IslandEconomyManager;
 class RoadNetwork;
 
-// One drawn walker, 16 bytes to match the std430 layout in shaders/people/walkers.comp
-struct WalkerFigure {
-    glm::ivec4 feet; // xyz = voxel of the feet, w = packed look (see Pack)
-
-    // bits 0-1 tier, 2-3 direction (0 +x, 1 -x, 2 +z, 3 -z), 4-5 walk frame, 6-8 look variant
-    static int Pack(int tier, int direction, int frame, int variant) {
-        return (tier & 3) | ((direction & 3) << 2) | ((frame & 3) << 4) | ((variant & 7) << 6);
-    }
-};
-
 // Residents walking the roads. Purely visual (not part of the deterministic simulation): every
 // island has one walker per RESIDENTS_PER_WALKER residents; they step out of houses next to a road,
 // wander from road tile to road tile, and vanish again when the population drops or their road is
-// removed. Positions are turned into voxel figures for WalkerRenderer every frame.
+// removed. Positions are turned into voxel figures (Figure::PERSON) for FigureRenderer every frame.
 class WalkerSystem {
 public:
     static constexpr int MAX_WALKERS = 512;
@@ -37,7 +28,7 @@ public:
 
     void Update(float deltaTime, const GameObjectRegistry& objects, const RoadNetwork& roads, const IslandEconomyManager& economy);
 
-    const std::vector<WalkerFigure>& Figures() const { return m_Figures; }
+    const std::vector<Figure>& Figures() const { return m_Figures; }
     size_t Count() const { return m_Walkers.size(); }
     size_t CountOn(IslandId island) const;
 
@@ -63,7 +54,7 @@ private:
     uint32_t Random();
 
     std::vector<Walker> m_Walkers;
-    std::vector<WalkerFigure> m_Figures;
+    std::vector<Figure> m_Figures;
     std::vector<float> m_SpawnTimers;  // Per settled island (IslandEconomyManager order)
     uint32_t m_SpawnCursor = 0;        // Next object slot to look for a home in
     uint32_t m_RandomState = 0x9E3779B9u;

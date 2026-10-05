@@ -25,6 +25,7 @@ enum class PlacementError {
     Road,       // A road already uses a tile
     TwoIslands, // The footprint spans more than one island
     NeedsCoast, // A producer that must stand by the sea (fishery)
+    DockNotOverWater, // The dock part of a coastal building is over land
 };
 
 const char* PlacementErrorText(PlacementError error);

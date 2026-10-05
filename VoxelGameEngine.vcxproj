@@ -142,11 +142,14 @@
     <ClCompile Include="src\Economy\PopulationSystem.cpp" />
     <ClCompile Include="src\Gameplay\BuildTool.cpp" />
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp" />
+    <ClCompile Include="src\Gameplay\FishingBoats.cpp" />
     <ClCompile Include="src\Gameplay\FreeFlyCamera.cpp" />
     <ClCompile Include="src\Gameplay\Picking.cpp" />
     <ClCompile Include="src\Gameplay\RoadTool.cpp" />
+    <ClCompile Include="src\Gameplay\Smoke.cpp" />
     <ClCompile Include="src\Gameplay\StrategyCamera.cpp" />
     <ClCompile Include="src\Gameplay\Walkers.cpp" />
+    <ClCompile Include="src\Rendering\FigureRenderer.cpp" />
     <ClCompile Include="src\Rendering\GpuChunkCache.cpp" />
     <ClCompile Include="src\Rendering\GrassAnimator.cpp" />
     <ClCompile Include="src\Rendering\OceanSimulation.cpp" />
@@ -156,7 +159,6 @@
     <ClCompile Include="src\Rendering\SkyLighting.cpp" />
     <ClCompile Include="src\Rendering\TileOverlay.cpp" />
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp" />
-    <ClCompile Include="src\Rendering\WalkerRenderer.cpp" />
     <ClCompile Include="src\Simulation\BuildingLook.cpp" />
     <ClCompile Include="src\Simulation\BuildingModels.cpp" />
     <ClCompile Include="src\Simulation\GameClock.cpp" />
@@ -193,7 +195,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\grass\grass_animate.comp" />
-    <None Include="shaders\people\walkers.comp" />
+    <None Include="shaders\people\figures.comp" />
     <None Include="shaders\render\shade.comp" />
     <None Include="shaders\render\shadow.comp" />
     <None Include="shaders\render\trace.comp" />
@@ -223,12 +225,16 @@
     <ClInclude Include="src\Gameplay\BuildTool.h" />
     <ClInclude Include="src\Gameplay\Camera.h" />
     <ClInclude Include="src\Gameplay\DebugEditTool.h" />
+    <ClInclude Include="src\Gameplay\Figure.h" />
+    <ClInclude Include="src\Gameplay\FishingBoats.h" />
     <ClInclude Include="src\Gameplay\FreeFlyCamera.h" />
     <ClInclude Include="src\Gameplay\Picking.h" />
     <ClInclude Include="src\Gameplay\RoadTool.h" />
+    <ClInclude Include="src\Gameplay\Smoke.h" />
     <ClInclude Include="src\Gameplay\StrategyCamera.h" />
     <ClInclude Include="src\Gameplay\Walkers.h" />
     <ClInclude Include="src\Rendering\BuildPreview.h" />
+    <ClInclude Include="src\Rendering\FigureRenderer.h" />
     <ClInclude Include="src\Rendering\GpuChunkCache.h" />
     <ClInclude Include="src\Rendering\GrassAnimator.h" />
     <ClInclude Include="src\Rendering\OceanSimulation.h" />
@@ -239,7 +245,6 @@
     <ClInclude Include="src\Rendering\SkyLighting.h" />
     <ClInclude Include="src\Rendering\TileOverlay.h" />
     <ClInclude Include="src\Rendering\VoxelRenderer.h" />
-    <ClInclude Include="src\Rendering\WalkerRenderer.h" />
     <ClInclude Include="src\Simulation\BuildingLook.h" />
     <ClInclude Include="src\Simulation\BuildingModels.h" />
     <ClInclude Include="src\Simulation\BuildingTypes.h" />

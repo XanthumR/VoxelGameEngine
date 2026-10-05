@@ -24,8 +24,8 @@ constexpr uint8_t STONE_WALL = 43;  // Masonry walls
 constexpr uint8_t ROAD_DIRT = 44;
 constexpr uint8_t ROAD_EDGE = 45;
 constexpr uint8_t AWNING = 46;     // Striped market awning (stripes drawn by the shader)
-// Walking residents: drawn straight into the GPU chunk data each frame (WalkerRenderer), never in
-// the CPU world
+// Figures (people, smoke, boats): drawn straight into the GPU chunk data each frame
+// (FigureRenderer), never in the CPU world
 constexpr uint8_t PERSON_SKIN = 47;
 constexpr uint8_t PERSON_TROUSERS = 48;
 constexpr uint8_t PERSON_SHIRT_FARMER = 49;
@@ -38,6 +38,9 @@ constexpr uint8_t PERSON_STRAW_HAT = 55;
 constexpr uint8_t PERSON_CAP = 56;
 constexpr uint8_t PERSON_SHOES = 57;
 constexpr uint8_t PERSON_FIRST = PERSON_SKIN, PERSON_LAST = PERSON_SHOES;
+constexpr uint8_t SMOKE_LIGHT = 58; // Smoke puffs, and sails
+constexpr uint8_t BOAT_WOOD = 59;
+constexpr uint8_t FIGURE_FIRST = PERSON_SKIN, FIGURE_LAST = BOAT_WOOD;
 
 // Building materials of the .vox building models (assets/buildings): palette index = block ID, so
 // the colors in MagicaVoxel are the colors in the game (table in shaders/render/shade.comp)

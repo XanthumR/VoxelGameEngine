@@ -86,7 +86,7 @@ TEST(ProducerLocationTest, CoastIsFoundNearTheSeaOnly) {
     EXPECT_FALSE(HasCoast(test.terrain, InlandTile(), PRODUCER_TILES, Fishery().radius));
 }
 
-TEST(ProducerLocationTest, FisheryInlandNeedsTheCoast) {
+TEST(ProducerLocationTest, FisheryInlandIsRefused) {
     TestWorld& test = TestWorld::Get();
     IslandRegistry islands(test.terrain);
     OccupancyGrid occupancy;
@@ -99,7 +99,7 @@ TEST(ProducerLocationTest, FisheryInlandNeedsTheCoast) {
                 glm::ivec2 tile = InlandTile() + glm::ivec2(dx, dz);
                 if (HasCoast(test.terrain, tile, PRODUCER_TILES, Fishery().radius)) continue;
                 if (ValidatePlacement(context, BUILDING_FARMER_HOUSE, 0, tile).error != PlacementError::None) continue;
-                EXPECT_EQ(ValidatePlacement(context, BUILDING_FISHERY, 0, tile).error, PlacementError::NeedsCoast);
+                EXPECT_EQ(ValidatePlacement(context, BUILDING_FISHERY, 0, tile).error, PlacementError::DockNotOverWater);
                 EXPECT_EQ(ValidatePlacement(context, BUILDING_SAWMILL, 0, tile).error, PlacementError::None); // No location rule
                 return;
             }
