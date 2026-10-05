@@ -106,7 +106,9 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     ImGui::Text("Population: %d | Walkers: %zu | Upgrades: %u | Downgrades: %u", population, c.walkers,
         c.simulation.Population().Upgrades(), c.simulation.Population().Downgrades());
     const BuildTool& build = c.buildTool;
-    if (build.SelectedType() != BuildTool::NO_TYPE) {
+    if (build.SelectedType() == BuildTool::ROAD) {
+        ImGui::Text("Build: Road");
+    } else if (build.SelectedType() >= 0) {
         const char* facing[] = { "-z", "+x", "+z", "-x" };
         ImGui::Text("Build: %s, front %s: %s", BUILDING_TYPES[build.SelectedType()].name, facing[build.Rotation()],
             PlacementErrorText(build.LastError()));
