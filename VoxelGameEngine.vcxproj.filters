@@ -295,6 +295,9 @@
     <ClInclude Include="src\Economy\PopulationSystem.h">
       <Filter>src\Economy</Filter>
     </ClInclude>
+    <ClInclude Include="src\Economy\ProductionChains.h">
+      <Filter>src\Economy</Filter>
+    </ClInclude>
     <ClInclude Include="src\Gameplay\BuildTool.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>

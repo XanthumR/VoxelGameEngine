@@ -34,7 +34,7 @@ public:
     static constexpr size_t MAX_ISLANDS = 256;
 
     // Starting goods of a new settlement
-    static constexpr std::array<int, ITEM_COUNT> STARTING_GOODS = { 20, 30, 0, 0, 0, 0, 0 };
+    static constexpr std::array<int, ITEM_COUNT> STARTING_GOODS = { 20, 30, 0, 0, 0, 0, 0, 0 };
 
     IslandEconomyManager();
 

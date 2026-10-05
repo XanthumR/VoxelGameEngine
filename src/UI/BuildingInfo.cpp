@@ -2,6 +2,7 @@
 
 #include "Economy/IslandEconomy.h"
 #include "Economy/PopulationSystem.h"
+#include "Economy/ProductionChains.h"
 #include "Simulation/BuildingTypes.h"
 
 #include "imgui.h"
@@ -67,6 +68,15 @@ void MarketInfo(GameObjectId id, const GameObjectRegistry& objects) {
     ImGui::Text("Serves %d houses, %d residents", houses, residents);
 }
 
+// What the producer makes, from what, with whom
+void ProducerInfo(GameObjectId id, const GameObjectRegistry& objects) {
+    const ProductionChain& chain = PRODUCTION_CHAINS[BUILDING_TYPES[objects.Building(id).type].chain];
+    if (chain.inputCount == 0) ImGui::Text("Makes %s", ItemName(chain.output));
+    else ImGui::Text("Makes %s from %s", ItemName(chain.output), ItemName(chain.inputs[0]));
+    ImGui::Text("Cycle %d s, %d %s workers", chain.cycleTicks / 10, chain.workforce, POPULATION_TIERS[chain.workforceTier].name);
+    if (!objects.Logistics(id).connected) ImGui::TextColored(BAD_COLOR, "No road to a warehouse");
+}
+
 void WarehouseInfo(GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
     const IslandStorage* storage = economy.Find(objects.Building(id).island);
     if (!storage) return;
@@ -89,6 +99,7 @@ void DrawBuildingInfo(GameObjectId building, const GameObjectRegistry& objects, 
     case BuildingRole::Residence: HouseInfo(building, objects, economy); break;
     case BuildingRole::Market: MarketInfo(building, objects); break;
     case BuildingRole::Storage: WarehouseInfo(building, objects, economy); break;
+    case BuildingRole::Producer: ProducerInfo(building, objects); break;
     }
     ImGui::EndTooltip();
 }

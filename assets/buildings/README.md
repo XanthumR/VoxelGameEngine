@@ -12,6 +12,13 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
 | Farmer House | `farmer_house_n.vox` | 36 x 36 x up to 30 |
 | Worker House | `worker_house_n.vox` | 36 x 36 x up to 42 |
 | Marketplace | `marketplace_n.vox` | 48 x 36 x up to 24 |
+| Fishery | `fishery_n.vox` | 36 x 36 x up to 26 (jetty at the back: the side that faces the sea) |
+| Lumberjack | `lumberjack_n.vox` | 36 x 36 x up to 24 |
+| Sawmill | `sawmill_n.vox` | 36 x 36 x up to 26 |
+| Sheep Farm | `sheep_farm_n.vox` | 36 x 36 x up to 28 |
+| Framework Knitter | `framework_knitter_n.vox` | 36 x 36 x up to 34 |
+| Pig Farm | `pig_farm_n.vox` | 36 x 36 x up to 22 |
+| Slaughterhouse | `slaughterhouse_n.vox` | 36 x 36 x up to 32 |
 
 ## Rules
 
@@ -25,7 +32,7 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
   - The game rotates the model in quarter turns when the player presses R.
 - **Palette:** palette index = block ID.
   - The colors saved in these files are the in-game colors, so what you see in MagicaVoxel is what you get.
-  - Use the building materials, indices **60–95**:
+  - Use the building materials, indices **60–99**:
 
     | Range | Materials |
     |---|---|
@@ -50,6 +57,10 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
     | 93 | garden soil |
     | 94 | vegetables |
     | 95 | fish |
+    | 96 | wool |
+    | 97 | pig |
+    | 98 | sausage |
+    | 99 | mud |
 
   - The older blocks (1–50) also work. Changing a color in the palette changes nothing in the game: colors come from `shaders/render/shade.comp`.
 - **Editing:** edit a file in MagicaVoxel and restart the game to see it.

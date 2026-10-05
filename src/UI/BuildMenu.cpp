@@ -10,6 +10,8 @@
 namespace {
 
 const ImVec2 BUTTON_SIZE(150.0f, 52.0f);
+const ImVec2 TAB_SIZE(150.0f, 0.0f);
+const char* TAB_NAMES[] = { "Housing", "Production", "Infrastructure" };
 const ImVec4 SELECTED_COLOR(0.85f, 0.55f, 0.15f, 0.9f);
 const ImVec4 ERROR_COLOR(1.0f, 0.45f, 0.4f, 1.0f);
 const ImVec4 WARNING_COLOR(1.0f, 0.85f, 0.3f, 1.0f);
@@ -34,17 +36,29 @@ void DrawBuildMenu(BuildTool& tool, uint32_t buildingCount) {
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
     ImGui::Begin("Build Menu", nullptr, flags);
 
-    // One button per buildable type (hotkeys 1, 2, ...), then the road tool
-    char label[64];
-    int buildable = BuildTool::BuildableCount();
-    for (int i = 0; i < buildable; i++) {
-        int type = BuildTool::BuildableAt(i);
-        const BuildingType& building = BUILDING_TYPES[type];
-        std::snprintf(label, sizeof(label), "%s\n%dx%d  [%d]", building.name, building.footprintWidth, building.footprintDepth, i + 1);
-        SelectButton(tool, type, label);
+    // Tabs (Tab key cycles them)
+    for (int tab = 0; tab < (int)BuildCategory::Count; tab++) {
+        bool open = tool.Tab() == (BuildCategory)tab;
+        if (open) ImGui::PushStyleColor(ImGuiCol_Button, SELECTED_COLOR);
+        if (ImGui::Button(TAB_NAMES[tab], TAB_SIZE)) tool.SetTab((BuildCategory)tab);
+        if (open) ImGui::PopStyleColor();
+        ImGui::SameLine();
     }
-    std::snprintf(label, sizeof(label), "Road\n1x1  [%d]", buildable + 1);
-    SelectButton(tool, BuildTool::ROAD, label);
+    ImGui::TextDisabled("[Tab]");
+
+    // The open tab's buildings (hotkeys 1, 2, ...)
+    char label[64];
+    int entries = BuildTool::EntryCount(tool.Tab());
+    for (int i = 0; i < entries; i++) {
+        int entry = BuildTool::EntryAt(tool.Tab(), i);
+        if (entry == BuildTool::ROAD) {
+            std::snprintf(label, sizeof(label), "Road\n1x1  [%d]", i + 1);
+        } else {
+            const BuildingType& building = BUILDING_TYPES[entry];
+            std::snprintf(label, sizeof(label), "%s\n%dx%d  [%d]", building.name, building.footprintWidth, building.footprintDepth, i + 1);
+        }
+        SelectButton(tool, entry, label);
+    }
 
     ImGui::BeginDisabled(tool.SelectedType() == BuildTool::NO_TYPE);
     if (ImGui::Button("Cancel", ImVec2(80.0f, BUTTON_SIZE.y))) tool.SelectType(BuildTool::NO_TYPE);

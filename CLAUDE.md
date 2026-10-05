@@ -38,7 +38,7 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 * `src/Economy/` – `IslandEconomy` (`IslandEconomyManager`: per-island storage, capacity from warehouses, starting goods, population and need supply), `PopulationNeeds` (tier table: needs, residents granted, consumption), `PopulationSystem` (consumption per island and tier, residents moving in and out, house upgrades and downgrades).
 * `src/UI/` – `DebugOverlay` (F3 window + minimap), `Hud` (free-fly crosshair + block hotbar), `BuildMenu` (strategy build bar), `IslandPanel` (island population, need supply, storage, debug goods button), `BuildingMarkers` ("no road" / "no marketplace" badges), `BuildingInfo` (hover tooltip: residents, needs, upgrade progress).
 * `src/ThirdParty/` – `FastNoiseLite.h`, `glad.c`.
-* `assets/buildings/` – building models (MagicaVoxel, palette index = block ID 60-95; see its `README.md`); `tools/building_models/generate.py` generates the first versions.
+* `assets/buildings/` – building models (MagicaVoxel, palette index = block ID 60-99; see its `README.md`); `tools/building_models/generate.py` generates the first versions.
 * `tests/` – `VoxelAnnoTests` (gtest): clock, game objects, occupancy, islands, building looks, placement, roads, logistics, island economy, population, walkers, building models; `TestWorld` generates the real spawn island once for the tests that need voxels.
 * `shaders/include/` shared GLSL (voxel lookup, scene uniforms, water, lighting, G-buffer); `shaders/render/` the three render passes; `shaders/water/` ocean FFT and shore map passes; `shaders/grass/` grass animation; `shaders/people/` walkers. Animation passes that write voxels on the GPU share `shaders/include/voxel_write.glsl`.
 

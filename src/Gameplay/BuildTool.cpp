@@ -33,17 +33,18 @@ BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& s
     m_LookBuffer.reserve(largest);
 }
 
-int BuildTool::BuildableCount() {
-    int count = 0;
-    for (const BuildingType& type : BUILDING_TYPES) count += type.buildable ? 1 : 0;
+int BuildTool::EntryCount(BuildCategory tab) {
+    int count = tab == BuildCategory::Infrastructure ? 1 : 0; // The road
+    for (const BuildingType& type : BUILDING_TYPES) count += (type.buildable && type.category == tab) ? 1 : 0;
     return count;
 }
 
-int BuildTool::BuildableAt(int index) {
+int BuildTool::EntryAt(BuildCategory tab, int index) {
     for (int type = 0; type < (int)BUILDING_TYPES.size(); type++) {
-        if (!BUILDING_TYPES[type].buildable) continue;
+        if (!BUILDING_TYPES[type].buildable || BUILDING_TYPES[type].category != tab) continue;
         if (index-- == 0) return type;
     }
+    if (tab == BuildCategory::Infrastructure && index == 0) return ROAD;
     return NO_TYPE;
 }
 
@@ -60,11 +61,14 @@ void BuildTool::SelectType(int type) {
 }
 
 void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFree, bool keyboardFree) {
-    // Hotkeys (shown on the build menu buttons): 1, 2, ... pick a building, the next number the road
-    int buildable = BuildableCount();
-    for (int key = 0; key <= buildable && key < (int)m_NumberWasPressed.size(); key++) {
+    // Hotkeys (shown on the build menu buttons): Tab switches tabs, 1, 2, ... pick from the open tab
+    if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS, m_TabWasPressed)) {
+        m_Tab = (BuildCategory)(((int)m_Tab + 1) % (int)BuildCategory::Count);
+    }
+    int entries = EntryCount(m_Tab);
+    for (int key = 0; key < (int)m_NumberWasPressed.size(); key++) {
         bool down = keyboardFree && glfwGetKey(window, GLFW_KEY_1 + key) == GLFW_PRESS;
-        if (Pressed(down, m_NumberWasPressed[key])) SelectType(key < buildable ? BuildableAt(key) : ROAD);
+        if (Pressed(down, m_NumberWasPressed[key]) && key < entries) SelectType(EntryAt(m_Tab, key));
     }
     if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS, m_RWasPressed)) m_Rotation = (m_Rotation + 1) & 3;
     bool leftClick = Pressed(mouseFree && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS, m_LeftWasPressed);

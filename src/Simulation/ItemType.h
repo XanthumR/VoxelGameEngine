@@ -12,12 +12,13 @@ enum class ItemType : uint8_t {
     WorkClothes,
     Bricks,
     Sausages,
+    Pigs,
     Count
 };
 
 constexpr int ITEM_COUNT = (int)ItemType::Count;
 
-constexpr std::array<const char*, ITEM_COUNT> ITEM_NAMES = { "Wood", "Planks", "Fish", "Wool", "Work Clothes", "Bricks", "Sausages" };
+constexpr std::array<const char*, ITEM_COUNT> ITEM_NAMES = { "Wood", "Planks", "Fish", "Wool", "Work Clothes", "Bricks", "Sausages", "Pigs" };
 
 constexpr const char* ItemName(ItemType item) {
     return ITEM_NAMES[(size_t)item];

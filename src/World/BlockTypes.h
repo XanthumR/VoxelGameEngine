@@ -78,7 +78,11 @@ constexpr uint8_t WELL_WATER = 92;
 constexpr uint8_t GARDEN_SOIL = 93;
 constexpr uint8_t VEGETABLES = 94;
 constexpr uint8_t FISH_SILVER = 95;
-constexpr uint8_t MODEL_MATERIALS_LAST = 95;
+constexpr uint8_t WOOL_WHITE = 96;
+constexpr uint8_t PIG_PINK = 97;
+constexpr uint8_t SAUSAGE = 98;
+constexpr uint8_t MUD = 99;
+constexpr uint8_t MODEL_MATERIALS_LAST = 99;
 } // namespace Block
 
 // Grass tufts and water are drawn, but the player, raycasts and projectiles pass through them

@@ -217,6 +217,7 @@
     <ClInclude Include="src\Economy\IslandEconomy.h" />
     <ClInclude Include="src\Economy\PopulationNeeds.h" />
     <ClInclude Include="src\Economy\PopulationSystem.h" />
+    <ClInclude Include="src\Economy\ProductionChains.h" />
     <ClInclude Include="src\Gameplay\BuildTool.h" />
     <ClInclude Include="src\Gameplay\Camera.h" />
     <ClInclude Include="src\Gameplay\DebugEditTool.h" />

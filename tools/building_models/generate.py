@@ -26,6 +26,7 @@ CHIMNEY_BRICK, FLOWER_RED, FLOWER_YELLOW, LEAVES = 79, 80, 81, 82
 FENCE_WOOD, HAY, CRATE, BARREL, IRON = 83, 84, 85, 86, 87
 AWNING_RED, AWNING_WHITE, AWNING_BLUE, AWNING_YELLOW = 88, 89, 90, 91
 WELL_WATER, GARDEN_SOIL, VEGETABLES, FISH_SILVER = 92, 93, 94, 95
+WOOL_WHITE, PIG_PINK, SAUSAGE, MUD = 96, 97, 98, 99
 
 # In-game colors (shaders/render/shade.comp), for the .vox palette
 COLORS = {
@@ -39,6 +40,7 @@ COLORS = {
     80: (219, 36, 41), 81: (245, 204, 41), 82: (51, 122, 36), 83: (148, 112, 71), 84: (219, 184, 89),
     85: (158, 115, 64), 86: (107, 66, 33), 87: (56, 56, 61), 88: (194, 36, 31), 89: (237, 227, 204),
     90: (46, 89, 179), 91: (230, 184, 46), 92: (26, 77, 115), 93: (77, 51, 31), 94: (82, 158, 46), 95: (179, 189, 199),
+    96: (235, 232, 219), 97: (230, 158, 153), 98: (148, 56, 41), 99: (71, 51, 33),
 }
 
 
@@ -429,6 +431,254 @@ def marketplace():
     return m
 
 
+# --- Producers (Milestone 4) -------------------------------------------------------------------
+
+def log_pile(m, u0, u1, v0, rows):
+    """Logs lying along u, stacked in a pyramid toward the top; cut ends are lighter."""
+    for layer in range(rows):
+        for v in range(v0 + layer, v0 + 2 * rows - layer - 1):
+            m.box(u0, v, layer, u1, v, layer, TIMBER_LIGHT)
+            m.set(u0, v, layer, PLASTER_CREAM)
+            m.set(u1, v, layer, PLASTER_CREAM)
+
+
+def sheep(m, u, v):
+    """A sheep facing -v: wool body, dark head and legs."""
+    m.box(u, v + 1, 1, u + 2, v + 4, 3, WOOL_WHITE)
+    m.box(u, v, 2, u + 2, v, 3, STONE_DARK)
+    for leg_u, leg_v in ((u, v + 1), (u + 2, v + 1), (u, v + 4), (u + 2, v + 4)):
+        m.set(leg_u, leg_v, 0, STONE_DARK)
+
+
+def pig(m, u, v):
+    """A pig facing -u."""
+    m.box(u + 1, v, 1, u + 4, v + 2, 2, PIG_PINK)
+    m.box(u, v, 1, u, v + 2, 2, PIG_PINK)
+    m.set(u, v + 1, 1, SAUSAGE)  # Snout
+    for leg_u, leg_v in ((u + 1, v), (u + 4, v), (u + 1, v + 2), (u + 4, v + 2)):
+        m.set(leg_u, leg_v, 0, PIG_PINK)
+
+
+def fishery():
+    """36 x 36 x 26: a fisher's hut on a paved quay with a jetty at the back (turn the back to the
+    sea), net frames with drying fish, fish crates and barrels."""
+    m = Model(36, 36, 26)
+    m.box(0, 20, 0, 35, 35, 0, STONE_LIGHT)
+    for u in range(0, 36, 3):
+        m.box(u, 20, 0, u, 35, 0, COBBLE)
+    m.box(13, 26, 1, 22, 35, 1, TIMBER_LIGHT)  # Jetty deck
+    for u in (13, 22):
+        for v in (27, 31, 35):
+            m.box(u, v, 0, u, v, 3, TIMBER_DARK)
+    m.box(13, 35, 2, 22, 35, 2, TIMBER_DARK)
+
+    # Hut
+    u0, u1, v0, v1 = 3, 18, 5, 18
+    m.ring(u0, v0, u1, v1, 0, 9, TIMBER_LIGHT)
+    for u, v in ((u0, v0), (u1, v0), (u0, v1), (u1, v1)):
+        m.box(u, v, 0, u, v, 9, TIMBER_DARK)
+    m.ring(u0, v0, u1, v1, 9, 9, TIMBER_DARK)
+    m.box(9, v0, 0, 11, v0, 6, DOOR_WOOD)
+    window(m, 14, v0, 3, 2, 3, SHUTTER_BLUE, None, facing=-1)
+    side_window(m, u1, 10, 3, 3, 3, None, facing=+1)
+    gable_roof(m, u0, u1, v0, v1, 9, 18, ROOF_TILE_DARK, ROOF_SLATE, overhang=2, gable_wall=TIMBER_LIGHT)
+    chimney(m, 5, 14, 9, 21)
+
+    # Net frames with fish drying
+    for u in (22, 33):
+        m.box(u, 6, 0, u, 6, 9, TIMBER_DARK)
+        m.box(u, 14, 0, u, 14, 9, TIMBER_DARK)
+    m.box(22, 6, 9, 33, 6, 9, TIMBER_DARK)
+    m.box(22, 14, 9, 33, 14, 9, TIMBER_DARK)
+    for u in range(23, 33):
+        for y in range(3, 9):
+            if (u + y) % 2 == 0:
+                m.set(u, 6, y, TIMBER_DARK)
+    for u in range(24, 33, 3):
+        m.box(u, 14, 5, u, 14, 7, FISH_SILVER)
+
+    # Crates of fish and barrels on the quay
+    crate(m, 25, 22, 1)
+    m.box(26, 23, 4, 26, 23, 4, FISH_SILVER)
+    crate(m, 29, 22, 1)
+    m.box(29, 22, 4, 31, 24, 4, FISH_SILVER)
+    barrel(m, 3, 22, 1)
+    barrel(m, 7, 23, 1)
+    return m
+
+
+def lumberjack():
+    """36 x 36 x 24: a log cabin with log piles, a chopping block with an axe and a saw horse."""
+    m = Model(36, 36, 24)
+    u0, u1, v0, v1 = 5, 20, 8, 23
+    for y in range(0, 10):
+        m.ring(u0, v0, u1, v1, y, y, TIMBER_LIGHT if y % 2 == 0 else TIMBER_DARK)
+    for u, v in ((u0 - 1, v0), (u1 + 1, v0), (u0 - 1, v1), (u1 + 1, v1), (u0, v0 - 1), (u1, v0 - 1), (u0, v1 + 1), (u1, v1 + 1)):
+        for y in range(0, 10, 2):
+            m.set(u, v, y, PLASTER_CREAM)  # Log ends at the corners
+    m.box(11, v0, 0, 13, v0, 6, DOOR_WOOD)
+    window(m, 16, v0, 3, 2, 3, SHUTTER_GREEN, None, facing=-1)
+    side_window(m, u0, 14, 3, 3, 3, None, facing=-1)
+    gable_roof(m, u0, u1, v0, v1, 9, 19, ROOF_SLATE, STONE_DARK, overhang=2, gable_wall=TIMBER_LIGHT)
+    chimney(m, 7, 18, 9, 22)
+
+    log_pile(m, 24, 34, 4, 3)
+    log_pile(m, 24, 34, 13, 2)
+    m.box(26, 20, 0, 27, 21, 1, BARREL)  # Chopping block
+    m.box(27, 20, 2, 27, 20, 3, TIMBER_LIGHT)
+    m.set(27, 20, 4, IRON)
+    for i in range(3):  # Saw horse
+        m.set(30 + i, 24, i, TIMBER_DARK)
+        m.set(32 - i, 24, i, TIMBER_DARK)
+    m.box(29, 24, 2, 33, 24, 2, TIMBER_LIGHT)
+    for u, v in ((3, 28), (12, 30), (20, 27), (29, 31)):
+        m.box(u, v, 0, u + 1, v + 1, 0, TIMBER_DARK)  # Stumps
+    return m
+
+
+def sawmill():
+    """36 x 36 x 26: an open-sided shed over a saw bench, plank stacks inside, logs waiting at the
+    back."""
+    m = Model(36, 36, 26)
+    u0, u1, v0, v1 = 3, 32, 6, 25
+    for u in range(u0, u1 + 1, 6):
+        for v in (v0, v1):
+            m.box(u, v, 0, u, v, 11, TIMBER_DARK)
+    for u in (u0, u1):
+        m.box(u, v0, 0, u, v1, 0, TIMBER_DARK)
+    m.ring(u0, v0, u1, v1, 11, 11, TIMBER_DARK)
+    gable_roof(m, u0, u1, v0, v1, 11, 22, ROOF_TILE_RED, ROOF_TILE_DARK, overhang=2)
+    m.box(u0, v1, 0, u1, v1, 5, TIMBER_LIGHT)  # Back wall, half height
+
+    # Saw bench with a blade
+    m.box(9, 14, 2, 26, 17, 2, TIMBER_LIGHT)
+    for u, v in ((9, 14), (26, 14), (9, 17), (26, 17)):
+        m.box(u, v, 0, u, v, 1, TIMBER_DARK)
+    m.box(17, 15, 3, 18, 16, 5, IRON)
+    m.box(10, 15, 3, 15, 16, 3, TIMBER_LIGHT)  # A log on the bench
+
+    # Plank stacks with spacers
+    for base_u in (5, 28):
+        for layer in range(4):
+            m.box(base_u, 8, layer, base_u + 2, 12, layer, TIMBER_LIGHT if layer % 2 == 0 else PLASTER_CREAM)
+    log_pile(m, 8, 27, 27, 3)
+    return m
+
+
+def sheep_farm():
+    """36 x 36 x 28: a barn with a fenced sheep yard and a hay rack."""
+    m = Model(36, 36, 28)
+    u0, u1, v0, v1 = 2, 16, 16, 33
+    m.ring(u0, v0, u1, v1, 0, 10, TIMBER_LIGHT)
+    for u in range(u0, u1 + 1, 2):
+        m.box(u, v0, 0, u, v0, 10, TIMBER_DARK)
+    m.box(6, v0, 0, 12, v0, 8, DOOR_WOOD)
+    m.box(9, v0, 0, 9, v0, 8, TIMBER_DARK)
+    gable_roof(m, u0, u1, v0, v1, 10, 22, THATCH, THATCH_DARK, overhang=2, gable_wall=TIMBER_LIGHT)
+
+    fence(m, 19, 2, 34, 33, gate=(24, 27))
+    m.box(22, 28, 0, 27, 31, 0, TIMBER_DARK)  # Hay rack
+    m.box(22, 28, 1, 27, 31, 3, HAY)
+    for u in (22, 27):
+        m.box(u, 28, 1, u, 28, 4, TIMBER_DARK)
+    for u, v in ((21, 5), (27, 7), (31, 12), (23, 15), (29, 20), (25, 23)):
+        sheep(m, u, v)
+    sheep(m, 7, 4)
+    m.box(4, 10, 0, 7, 12, 1, HAY)
+    return m
+
+
+def framework_knitter():
+    """36 x 36 x 34: a two-storey workshop: stone ground floor with big windows onto a loom,
+    framed upper floor, wool bales outside."""
+    m = Model(36, 36, 34)
+    u0, u1, v0, v1 = 3, 32, 8, 31
+    m.ring(u0, v0, u1, v1, 0, 10, STONE_LIGHT)
+    m.ring(u0, v0, u1, v1, 0, 0, STONE_DARK)
+    for y in range(0, 11, 2):
+        for u, v in ((u0, v0), (u1, v0), (u0, v1), (u1, v1)):
+            m.set(u, v, y, STONE_DARK)
+    m.box(16, v0, 0, 19, v0, 7, DOOR_WOOD)
+    for left in (6, 22):  # Wide workshop windows
+        m.box(left - 1, v0, 2, left + 7, v0, 8, WINDOW_FRAME)
+        m.box(left, v0, 3, left + 6, v0, 7, WINDOW_GLASS)
+    # The loom behind the left window, with wool on it
+    m.box(7, v0 + 2, 0, 12, v0 + 2, 6, TIMBER_DARK)
+    m.box(8, v0 + 2, 1, 11, v0 + 2, 5, WOOL_WHITE)
+    m.box(7, v0 + 3, 0, 7, v0 + 5, 6, TIMBER_DARK)
+    m.box(12, v0 + 3, 0, 12, v0 + 5, 6, TIMBER_DARK)
+
+    m.box(u0, v0 - 1, 11, u1, v1, 11, TIMBER_DARK)
+    timber_frame(m, u0, u1, v0 - 1, v1, 12, 21, PLASTER_CREAM, post_spacing=5)
+    for u in (6, 12, 21, 27):
+        window(m, u, v0 - 1, 14, 3, 4, SHUTTER_RED, None, facing=-1)
+    gable_roof(m, u0, u1, v0 - 1, v1, 21, 32, ROOF_TILE_RED, ROOF_TILE_DARK, overhang=2, gable_wall=PLASTER_CREAM)
+
+    for u in (4, 8):  # Wool bales tied with timber bands
+        m.box(u, 2, 0, u + 2, 4, 2, WOOL_WHITE)
+        m.box(u + 1, 2, 0, u + 1, 4, 2, TIMBER_DARK)
+    m.box(6, 3, 3, 8, 5, 5, WOOL_WHITE)
+    crate(m, 28, 2, 0)
+    return m
+
+
+def pig_farm():
+    """36 x 36 x 22: a low stone sty with a thatched roof and a muddy pen with troughs and pigs."""
+    m = Model(36, 36, 22)
+    u0, u1, v0, v1 = 4, 19, 21, 33
+    m.ring(u0, v0, u1, v1, 0, 5, STONE_DARK)
+    m.box(9, v0, 0, 13, v0, 4, AIR)  # Open doorway into the pen
+    gable_roof(m, u0, u1, v0, v1, 5, 14, THATCH, THATCH_DARK, overhang=2, gable_wall=TIMBER_LIGHT)
+
+    fence(m, 1, 1, 34, 19, gate=(15, 18))
+    for v in range(2, 19):
+        for u in range(2, 34):
+            if (u * 7 + v * 13) % 5 != 0:
+                m.set(u, v, 0, MUD)
+    for u0_trough in (5, 22):  # Troughs with water
+        m.box(u0_trough, 16, 0, u0_trough + 6, 17, 1, TIMBER_DARK)
+        m.box(u0_trough + 1, 16, 1, u0_trough + 5, 17, 1, WELL_WATER)
+    for u, v in ((6, 4), (14, 7), (24, 4), (27, 10), (9, 11)):
+        pig(m, u, v)
+    m.box(24, 26, 0, 29, 29, 2, HAY)
+    return m
+
+
+def slaughterhouse():
+    """36 x 36 x 32: a stone butcher's house with a smokehouse and its tall chimney, sausages
+    hanging under a lean-to at the front, barrels and crates."""
+    m = Model(36, 36, 32)
+    u0, u1, v0, v1 = 3, 23, 10, 31
+    m.ring(u0, v0, u1, v1, 0, 12, STONE_LIGHT)
+    m.ring(u0, v0, u1, v1, 0, 0, STONE_DARK)
+    for y in range(0, 13, 2):
+        for u, v in ((u0, v0), (u1, v0), (u0, v1), (u1, v1)):
+            m.set(u, v, y, STONE_DARK)
+    m.box(11, v0, 0, 14, v0, 8, DOOR_WOOD)
+    for u in (6, 18):
+        window(m, u, v0, 4, 2, 4, None, None, facing=-1)
+    gable_roof(m, u0, u1, v0, v1, 12, 26, ROOF_TILE_DARK, ROOF_SLATE, overhang=2, gable_wall=STONE_LIGHT)
+
+    # Smokehouse with its chimney
+    m.ring(25, 16, 33, 27, 0, 9, TIMBER_DARK)
+    m.box(25, 16, 10, 33, 27, 10, ROOF_SLATE)
+    m.box(28, 20, 0, 31, 23, 30, CHIMNEY_BRICK)
+    m.box(28, 20, 31, 31, 23, 31, STONE_DARK)
+    m.box(29, 21, 31, 30, 22, 31, AIR)
+
+    # Lean-to with hanging sausages at the front
+    for u in (4, 22):
+        m.box(u, 4, 0, u, 4, 9, TIMBER_DARK)
+    m.box(3, 4, 10, 23, 9, 10, ROOF_TILE_RED)
+    m.box(4, 5, 8, 22, 5, 8, TIMBER_DARK)
+    for u in range(5, 22, 2):
+        m.box(u, 5, 5, u, 5, 7, SAUSAGE)
+    barrel(m, 26, 4, 0)
+    barrel(m, 30, 6, 0)
+    crate(m, 26, 9, 0)
+    return m
+
+
 def main():
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     out = os.path.join(root, 'assets', 'buildings')
@@ -441,11 +691,18 @@ def main():
         'worker_house_2': worker_house(1),
         'warehouse_1': warehouse(),
         'marketplace_1': marketplace(),
+        'fishery_1': fishery(),
+        'lumberjack_1': lumberjack(),
+        'sawmill_1': sawmill(),
+        'sheep_farm_1': sheep_farm(),
+        'framework_knitter_1': framework_knitter(),
+        'pig_farm_1': pig_farm(),
+        'slaughterhouse_1': slaughterhouse(),
     }
     for name, model in models.items():
         path = os.path.join(out, name + '.vox')
         model.save(path)
-        print('%-16s %2d x %2d x %2d  %6d voxels  -> %s' % (name, model.width, model.depth, model.height, len(model.voxels), path))
+        print('%-20s %2d x %2d x %2d  %6d voxels  -> %s' % (name, model.width, model.depth, model.height, len(model.voxels), path))
 
 
 if __name__ == '__main__':

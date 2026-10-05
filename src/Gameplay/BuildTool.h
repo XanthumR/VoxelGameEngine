@@ -2,6 +2,7 @@
 
 #include "Gameplay/Picking.h"
 #include "Rendering/BuildPreview.h"
+#include "Simulation/BuildingTypes.h"
 #include "Simulation/GameObjects.h"
 #include "Simulation/Placement.h"
 
@@ -27,9 +28,13 @@ public:
     static constexpr int NO_TYPE = -1;
     static constexpr int ROAD = -2; // The road tool is selected (RoadTool handles the mouse)
 
-    // Build menu order: the buildable types (hotkeys 1, 2, ...), then the road (the next number)
-    static int BuildableCount();
-    static int BuildableAt(int index); // Building type of the index-th buildable type
+    // Build menu tabs: the buildable types of a category (hotkeys 1, 2, ...); the Infrastructure
+    // tab ends with the road
+    static int EntryCount(BuildCategory tab);
+    static int EntryAt(BuildCategory tab, int index); // Building type, or ROAD
+
+    BuildCategory Tab() const { return m_Tab; }
+    void SetTab(BuildCategory tab) { m_Tab = tab; }
 
     BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models);
 
@@ -64,6 +69,7 @@ private:
     const BuildingModelLibrary& m_Models;
 
     int m_SelectedType = NO_TYPE;
+    BuildCategory m_Tab = BuildCategory::Housing;
     uint8_t m_Rotation = 0;
     PlacementCheck m_LastCheck;
     GameObjectId m_HoveredBuilding = INVALID_GAME_OBJECT;
@@ -77,4 +83,5 @@ private:
 
     bool m_LeftWasPressed = false, m_RightWasPressed = false, m_RWasPressed = false;
     std::array<bool, 9> m_NumberWasPressed = {}; // Keys 1-9
+    bool m_TabWasPressed = false;
 };
