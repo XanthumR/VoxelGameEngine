@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36429.23 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VoxelGameEngine", "VoxelGameEngine.vcxproj", "{93B826DC-4CAE-4178-9E3D-959283866FF8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VoxelAnnoTests", "tests\VoxelAnnoTests.vcxproj", "{6F1C2D6E-3B8A-4C57-9A43-2E7D5B9C41A0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,12 @@ Global
 		{93B826DC-4CAE-4178-9E3D-959283866FF8}.Release|x64.Build.0 = Release|x64
 		{93B826DC-4CAE-4178-9E3D-959283866FF8}.Release|x86.ActiveCfg = Release|Win32
 		{93B826DC-4CAE-4178-9E3D-959283866FF8}.Release|x86.Build.0 = Release|Win32
+		{6F1C2D6E-3B8A-4C57-9A43-2E7D5B9C41A0}.Debug|x64.ActiveCfg = Debug|x64
+		{6F1C2D6E-3B8A-4C57-9A43-2E7D5B9C41A0}.Debug|x64.Build.0 = Debug|x64
+		{6F1C2D6E-3B8A-4C57-9A43-2E7D5B9C41A0}.Debug|x86.ActiveCfg = Debug|x64
+		{6F1C2D6E-3B8A-4C57-9A43-2E7D5B9C41A0}.Release|x64.ActiveCfg = Release|x64
+		{6F1C2D6E-3B8A-4C57-9A43-2E7D5B9C41A0}.Release|x64.Build.0 = Release|x64
+		{6F1C2D6E-3B8A-4C57-9A43-2E7D5B9C41A0}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

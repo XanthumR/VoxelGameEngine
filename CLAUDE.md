@@ -13,8 +13,10 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 * **Regression check:** render the same view before and after a change with those three options and compare the PPMs pixel by pixel; the scene is deterministic (only the FPS text in the overlay differs between runs).
 
 ### Testing & Profiling
-* **Run All Tests:** `.\build\bin\Debug\VoxelAnnoTests.exe`
-* **Run Specific Simulation Test:** `.\build\bin\Debug\VoxelAnnoTests.exe --gtest_filter=SimulationTest.*`
+* **Test project:** `tests/VoxelAnnoTests.vcxproj` (Google Test from NuGet, built with the solution). It compiles the pure-logic sources (`src/Simulation/`, terrain, `VoxelWorld`) at `/W4 /WX`; no OpenGL or window.
+* **Restore Google Test (once, or after a clean clone):** `msbuild VoxelGameEngine.sln -t:restore -p:RestorePackagesConfig=true` (Visual Studio restores it automatically)
+* **Run All Tests:** `.\x64\Debug\VoxelAnnoTests.exe`
+* **Run Specific Simulation Test:** `.\x64\Debug\VoxelAnnoTests.exe --gtest_filter=PlacementTest.*`
 * **Format Code:** `clang-format -i -style=file src/**/*.cpp src/**/*.h`
 
 ---
@@ -35,6 +37,7 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 * `src/Simulation/` – deterministic game logic: `GameClock` (fixed 10 Hz step accumulator), `Simulation` (owns game systems, `FixedUpdate` per step), `IslandRegistry` (island ID per column, flood fill over 8x8-column cells), `GameObjects` (`GameObjectRegistry`: slot+generation IDs, flat component arrays), `OccupancyGrid` (build tile -> game object), `BuildingTypes` (building table, `TILE_SIZE` build grid), `BuildingLook` (procedural voxels of a building), `Placement` (`ValidatePlacement`).
 * `src/UI/` – `DebugOverlay` (F3 window + minimap), `Hud` (free-fly crosshair + block hotbar), `BuildMenu` (strategy build bar).
 * `src/ThirdParty/` – `FastNoiseLite.h`, `glad.c`.
+* `tests/` – `VoxelAnnoTests` (gtest): clock, game objects, occupancy, islands, building looks, placement; `TestWorld` generates the real spawn island once for the tests that need voxels.
 * `shaders/include/` shared GLSL (voxel lookup, scene uniforms, water, lighting, G-buffer); `shaders/render/` the three render passes; `shaders/water/` ocean FFT and shore map passes; `shaders/grass/` grass animation.
 
 ### Game Mechanics (Anno 1800 Style)
