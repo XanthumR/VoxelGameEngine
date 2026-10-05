@@ -64,8 +64,57 @@ vec3 getFalseColor(float level) {
 }
 
 // Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 and 46 building materials, 44-45 road, 47-50 walkers)
+// Building model materials, block IDs 60-95 (src/World/BlockTypes.h, and the .vox palette written
+// by tools/building_models/generate.py: keep the three in step)
+const int MODEL_MATERIALS_FIRST = 60;
+const int MODEL_MATERIALS_LAST = 95;
+const int WINDOW_GLASS_ID = 73;
+const vec3 MODEL_PALETTE[36] = vec3[](
+    vec3(0.88, 0.85, 0.78), // 60 plaster white
+    vec3(0.86, 0.77, 0.58), // 61 plaster cream
+    vec3(0.80, 0.60, 0.34), // 62 plaster ochre
+    vec3(0.24, 0.15, 0.09), // 63 timber dark
+    vec3(0.52, 0.36, 0.20), // 64 timber light
+    vec3(0.72, 0.60, 0.32), // 65 thatch
+    vec3(0.55, 0.43, 0.21), // 66 thatch dark
+    vec3(0.62, 0.20, 0.12), // 67 roof tile red
+    vec3(0.44, 0.14, 0.10), // 68 roof tile dark
+    vec3(0.27, 0.30, 0.35), // 69 roof slate
+    vec3(0.66, 0.64, 0.58), // 70 stone light
+    vec3(0.44, 0.43, 0.40), // 71 stone dark
+    vec3(0.52, 0.50, 0.46), // 72 cobble
+    vec3(0.16, 0.24, 0.32), // 73 window glass
+    vec3(0.92, 0.90, 0.84), // 74 window frame
+    vec3(0.38, 0.22, 0.10), // 75 door wood
+    vec3(0.20, 0.42, 0.25), // 76 shutter green
+    vec3(0.20, 0.32, 0.56), // 77 shutter blue
+    vec3(0.60, 0.18, 0.14), // 78 shutter red
+    vec3(0.56, 0.26, 0.18), // 79 chimney brick
+    vec3(0.86, 0.14, 0.16), // 80 flower red
+    vec3(0.96, 0.80, 0.16), // 81 flower yellow
+    vec3(0.20, 0.48, 0.14), // 82 leaves
+    vec3(0.58, 0.44, 0.28), // 83 fence wood
+    vec3(0.86, 0.72, 0.35), // 84 hay
+    vec3(0.62, 0.45, 0.25), // 85 crate
+    vec3(0.42, 0.26, 0.13), // 86 barrel
+    vec3(0.22, 0.22, 0.24), // 87 iron
+    vec3(0.76, 0.14, 0.12), // 88 awning red
+    vec3(0.93, 0.89, 0.80), // 89 awning white
+    vec3(0.18, 0.35, 0.70), // 90 awning blue
+    vec3(0.90, 0.72, 0.18), // 91 awning yellow
+    vec3(0.10, 0.30, 0.45), // 92 well water
+    vec3(0.30, 0.20, 0.12), // 93 garden soil
+    vec3(0.32, 0.62, 0.18), // 94 vegetables
+    vec3(0.70, 0.74, 0.78)  // 95 fish silver
+);
+
 vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     vec3 albedo = vec3(1.0);
+    if (voxelID >= MODEL_MATERIALS_FIRST && voxelID <= MODEL_MATERIALS_LAST) {
+        // A little per-voxel variation so large surfaces do not look flat
+        float variation = 0.93 + 0.07 * hash(vec2(mapPos.xz) * 0.91 + float(mapPos.y) * 3.7);
+        return MODEL_PALETTE[voxelID - MODEL_MATERIALS_FIRST] * variation;
+    }
     if (voxelID == 1) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000); // Grass
     else if (voxelID == 2) albedo = vec3(0.180, 0.110, 0.050); // Dirt
     else if (voxelID == 3) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.42, 0.42, 0.40) : vec3(0.36, 0.36, 0.35); // Stone
@@ -253,6 +302,12 @@ void main() {
             vec3 water = mix(body, reflection, fresnel);
             vec3 foamColor = vec3(0.85, 0.9, 0.92) * (ambient + lightColor * shadow * 0.8);
             lighting = mix(water, foamColor, foam);
+        }
+
+        // --- LIT WINDOWS AT NIGHT ---
+        if (voxelID == WINDOW_GLASS_ID) {
+            float night = clamp(1.0 - dot(lightColor, vec3(0.45)) * 1.6, 0.0, 1.0);
+            lighting = mix(lighting, vec3(1.0, 0.72, 0.38), night * 0.85);
         }
 
         // --- BIOLUMINESCENT CAVE GLOW ---

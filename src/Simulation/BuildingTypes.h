@@ -38,14 +38,15 @@ struct BuildingType {
     uint8_t tier;       // Residences: index into POPULATION_TIERS (src/Economy/PopulationNeeds.h)
     LookStyle style;
     bool buildable;     // In the build menu (upgrades only otherwise)
+    const char* modelName; // assets/buildings/<modelName>_<n>.vox (BuildingModelLibrary); nullptr: procedural only
 };
 
 // Index = BuildingComponent::type
 constexpr std::array<BuildingType, 4> BUILDING_TYPES = { {
-    { "Warehouse", 4, 4, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true },
-    { "Farmer House", 3, 3, 14, 30, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true },
-    { "Marketplace", 4, 3, 10, 24, Block::PLANK, Block::AWNING, BuildingRole::Market, 0, LookStyle::Stall, true },
-    { "Worker House", 3, 3, 24, 42, Block::PLANK, Block::ROOF, BuildingRole::Residence, 1, LookStyle::TwoStorey, false },
+    { "Warehouse", 4, 4, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "warehouse" },
+    { "Farmer House", 3, 3, 14, 30, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true, "farmer_house" },
+    { "Marketplace", 4, 3, 10, 24, Block::PLANK, Block::AWNING, BuildingRole::Market, 0, LookStyle::Stall, true, "marketplace" },
+    { "Worker House", 3, 3, 24, 42, Block::PLANK, Block::ROOF, BuildingRole::Residence, 1, LookStyle::TwoStorey, false, "worker_house" },
 } };
 constexpr uint16_t BUILDING_WAREHOUSE = 0;
 constexpr uint16_t BUILDING_FARMER_HOUSE = 1;

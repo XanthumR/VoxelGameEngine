@@ -126,6 +126,9 @@
     <ClCompile Include="src\Simulation\BuildingLook.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
+    <ClCompile Include="src\Simulation\BuildingModels.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
     <ClCompile Include="src\Simulation\GameClock.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
@@ -167,6 +170,9 @@
     </ClCompile>
     <ClCompile Include="src\UI\IslandPanel.cpp">
       <Filter>src\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\World\BuildingModel.cpp">
+      <Filter>src\World</Filter>
     </ClCompile>
     <ClCompile Include="src\World\ChunkStreamer.cpp">
       <Filter>src\World</Filter>
@@ -352,6 +358,9 @@
     <ClInclude Include="src\Simulation\BuildingLook.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
+    <ClInclude Include="src\Simulation\BuildingModels.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
     <ClInclude Include="src\Simulation\BuildingTypes.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
@@ -404,6 +413,9 @@
       <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\World\BlockTypes.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\BuildingModel.h">
       <Filter>src\World</Filter>
     </ClInclude>
     <ClInclude Include="src\World\Chunk.h">

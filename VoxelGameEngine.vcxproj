@@ -158,6 +158,7 @@
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp" />
     <ClCompile Include="src\Rendering\WalkerRenderer.cpp" />
     <ClCompile Include="src\Simulation\BuildingLook.cpp" />
+    <ClCompile Include="src\Simulation\BuildingModels.cpp" />
     <ClCompile Include="src\Simulation\GameClock.cpp" />
     <ClCompile Include="src\Simulation\GameObjects.cpp" />
     <ClCompile Include="src\Simulation\IslandRegistry.cpp" />
@@ -172,6 +173,7 @@
     <ClCompile Include="src\UI\DebugOverlay.cpp" />
     <ClCompile Include="src\UI\Hud.cpp" />
     <ClCompile Include="src\UI\IslandPanel.cpp" />
+    <ClCompile Include="src\World\BuildingModel.cpp" />
     <ClCompile Include="src\World\ChunkStreamer.cpp" />
     <ClCompile Include="src\World\Raycast.cpp" />
     <ClCompile Include="src\World\TerrainGenerator.cpp" />
@@ -236,6 +238,7 @@
     <ClInclude Include="src\Rendering\VoxelRenderer.h" />
     <ClInclude Include="src\Rendering\WalkerRenderer.h" />
     <ClInclude Include="src\Simulation\BuildingLook.h" />
+    <ClInclude Include="src\Simulation\BuildingModels.h" />
     <ClInclude Include="src\Simulation\BuildingTypes.h" />
     <ClInclude Include="src\Simulation\GameClock.h" />
     <ClInclude Include="src\Simulation\GameObjects.h" />
@@ -254,6 +257,7 @@
     <ClInclude Include="src\UI\Hud.h" />
     <ClInclude Include="src\UI\IslandPanel.h" />
     <ClInclude Include="src\World\BlockTypes.h" />
+    <ClInclude Include="src\World\BuildingModel.h" />
     <ClInclude Include="src\World\Chunk.h" />
     <ClInclude Include="src\World\ChunkStreamer.h" />
     <ClInclude Include="src\World\GrassTufts.h" />

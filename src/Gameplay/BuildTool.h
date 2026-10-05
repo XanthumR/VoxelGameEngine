@@ -12,6 +12,7 @@
 #include <vector>
 
 struct GLFWwindow;
+class BuildingModelLibrary;
 class RoadTool;
 class Simulation;
 class VoxelWorld;
@@ -30,7 +31,7 @@ public:
     static int BuildableCount();
     static int BuildableAt(int index); // Building type of the index-th buildable type
 
-    BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads);
+    BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models);
 
     void SelectType(int type);
     int SelectedType() const { return m_SelectedType; }
@@ -60,6 +61,7 @@ private:
     WorldEditor& m_Editor;
     Simulation& m_Simulation;
     RoadTool& m_RoadTool;
+    const BuildingModelLibrary& m_Models;
 
     int m_SelectedType = NO_TYPE;
     uint8_t m_Rotation = 0;

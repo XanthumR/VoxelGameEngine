@@ -2,6 +2,7 @@
 
 #include "Gameplay/RoadTool.h"
 #include "Simulation/BuildingLook.h"
+#include "Simulation/BuildingModels.h"
 #include "Simulation/Logistics.h"
 #include "Simulation/Simulation.h"
 #include "World/BlockTypes.h"
@@ -22,8 +23,8 @@ bool Pressed(bool down, bool& wasDown) {
 
 } // namespace
 
-BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads)
-    : m_World(world), m_Editor(editor), m_Simulation(simulation), m_RoadTool(roads) {
+BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models)
+    : m_World(world), m_Editor(editor), m_Simulation(simulation), m_RoadTool(roads), m_Models(models) {
     size_t largest = 0;
     for (const BuildingType& type : BUILDING_TYPES) {
         glm::ivec2 columns = FootprintColumns(type, 0);
@@ -146,6 +147,7 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     component.type = type;
     component.island = check.island;
     component.rotation = rotation;
+    component.variant = m_Models.PickVariant(type, id);
     VoxelAnchorComponent& anchor = objects.Anchor(id);
     anchor.origin = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y, minTile.y * TILE_SIZE);
     anchor.footprint = tiles * TILE_SIZE;
@@ -153,7 +155,7 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     if (type == BUILDING_WAREHOUSE) m_Simulation.Economy().OnWarehouseAdded(check.island);
     m_Simulation.MarkBuildingsChanged();
 
-    BuildLook(building, rotation, m_LookBuffer);
+    m_Models.BuildVoxels(type, component.variant, rotation, m_LookBuffer);
     m_Editor.WriteBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), m_LookBuffer);
     return id;
 }
@@ -167,7 +169,7 @@ void BuildTool::RefreshLook(GameObjectId id) {
 
     // Clear the tallest a building can be (the old look may have been taller), then stamp the new one
     m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, MaxBuildingHeight(), anchor.footprint.y), Block::AIR);
-    BuildLook(building, component.rotation, m_LookBuffer);
+    m_Models.BuildVoxels(component.type, component.variant, component.rotation, m_LookBuffer);
     m_Editor.WriteBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), m_LookBuffer);
 }
 

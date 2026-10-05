@@ -17,8 +17,19 @@
 glm::ivec2 FootprintTiles(const BuildingType& type, uint8_t rotation);
 glm::ivec2 FootprintColumns(const BuildingType& type, uint8_t rotation);
 
-// Voxels from the ground to the roof ridge
+// Voxels from the ground to the top
 int BuildingHeight(const BuildingType& type);
+
+// A column of the building's own frame (u across the front, v from the front) in the rotated
+// footprint of the given size (FootprintColumns): the front ends up facing the rotation's direction
+inline glm::ivec2 RotateToFootprint(int u, int v, uint8_t rotation, glm::ivec2 size) {
+    switch (rotation & 3) {
+    case 0: return glm::ivec2(u, v);
+    case 1: return glm::ivec2(size.x - 1 - v, u);
+    case 2: return glm::ivec2(size.x - 1 - u, size.y - 1 - v);
+    default: return glm::ivec2(v, size.y - 1 - u);
+    }
+}
 
 // Fills ids with the building's volume (FootprintColumns x BuildingHeight), AIR where empty.
 // Order: x fastest, then z, then y (from the ground up).

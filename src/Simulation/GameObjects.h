@@ -19,6 +19,7 @@ struct BuildingComponent {
     uint16_t type = 0;          // Index into the building type table
     IslandId island = NO_ISLAND;
     uint8_t rotation = 0;       // Quarter turns
+    uint8_t variant = 0;        // Which of the type's models it is drawn with
 };
 
 // Links an object to the voxels it occupies; the voxels are only its look

@@ -16,6 +16,7 @@
 #include "Rendering/TileOverlay.h"
 #include "Rendering/VoxelRenderer.h"
 #include "Rendering/WalkerRenderer.h"
+#include "Simulation/BuildingModels.h"
 #include "Simulation/GameClock.h"
 #include "Simulation/Simulation.h"
 #include "UI/DebugOverlay.h"
@@ -84,6 +85,7 @@ private:
     // Game simulation (fixed 10 Hz steps)
     GameClock m_Clock;
     Simulation m_Simulation;
+    BuildingModelLibrary m_BuildingModels; // .vox looks of the buildings (loaded in Init)
     RoadTool m_RoadTool;   // Strategy camera: drag roads
     BuildTool m_BuildTool; // Strategy camera: build selection, place and demolish buildings
 

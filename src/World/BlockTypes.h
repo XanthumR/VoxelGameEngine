@@ -30,6 +30,47 @@ constexpr uint8_t PERSON_SKIN = 47;
 constexpr uint8_t PERSON_TROUSERS = 48;
 constexpr uint8_t PERSON_SHIRT_FARMER = 49;
 constexpr uint8_t PERSON_SHIRT_WORKER = 50;
+
+// Building materials of the .vox building models (assets/buildings): palette index = block ID, so
+// the colors in MagicaVoxel are the colors in the game (table in shaders/render/shade.comp)
+constexpr uint8_t MODEL_MATERIALS_FIRST = 60;
+constexpr uint8_t PLASTER_WHITE = 60;
+constexpr uint8_t PLASTER_CREAM = 61;
+constexpr uint8_t PLASTER_OCHRE = 62;
+constexpr uint8_t TIMBER_DARK = 63;
+constexpr uint8_t TIMBER_LIGHT = 64;
+constexpr uint8_t THATCH = 65;
+constexpr uint8_t THATCH_DARK = 66;
+constexpr uint8_t ROOF_TILE_RED = 67;
+constexpr uint8_t ROOF_TILE_DARK = 68;
+constexpr uint8_t ROOF_SLATE = 69;
+constexpr uint8_t STONE_LIGHT = 70;
+constexpr uint8_t STONE_DARK = 71;
+constexpr uint8_t COBBLE = 72;
+constexpr uint8_t WINDOW_GLASS = 73; // Glows warm at night
+constexpr uint8_t WINDOW_FRAME = 74;
+constexpr uint8_t DOOR_WOOD = 75;
+constexpr uint8_t SHUTTER_GREEN = 76;
+constexpr uint8_t SHUTTER_BLUE = 77;
+constexpr uint8_t SHUTTER_RED = 78;
+constexpr uint8_t CHIMNEY_BRICK = 79;
+constexpr uint8_t FLOWER_RED = 80;
+constexpr uint8_t FLOWER_YELLOW = 81;
+constexpr uint8_t LEAVES = 82;
+constexpr uint8_t FENCE_WOOD = 83;
+constexpr uint8_t HAY = 84;
+constexpr uint8_t CRATE = 85;
+constexpr uint8_t BARREL = 86;
+constexpr uint8_t IRON = 87;
+constexpr uint8_t AWNING_RED = 88;
+constexpr uint8_t AWNING_WHITE = 89;
+constexpr uint8_t AWNING_BLUE = 90;
+constexpr uint8_t AWNING_YELLOW = 91;
+constexpr uint8_t WELL_WATER = 92;
+constexpr uint8_t GARDEN_SOIL = 93;
+constexpr uint8_t VEGETABLES = 94;
+constexpr uint8_t FISH_SILVER = 95;
+constexpr uint8_t MODEL_MATERIALS_LAST = 95;
 } // namespace Block
 
 // Grass tufts and water are drawn, but the player, raycasts and projectiles pass through them

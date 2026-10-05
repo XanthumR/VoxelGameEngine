@@ -26,6 +26,7 @@
 namespace {
 
 const char* TREE_MODEL_PATH = "assets/tree.vox";
+const char* BUILDING_MODEL_DIRECTORY = "assets/buildings";
 const glm::ivec2 SPAWN_SEARCH_START(640, 640); // Spawn is the nearest decent island to here
 
 } // namespace
@@ -38,7 +39,7 @@ Application::Application(const LaunchOptions& options)
       m_EditTool(m_World, m_Editor),
       m_Simulation(m_Terrain),
       m_RoadTool(m_World, m_Editor, m_Simulation),
-      m_BuildTool(m_World, m_Editor, m_Simulation, m_RoadTool) {
+      m_BuildTool(m_World, m_Editor, m_Simulation, m_RoadTool, m_BuildingModels) {
     m_Settings.renderScale = options.renderScale;
 }
 
@@ -136,6 +137,7 @@ bool Application::Init() {
     if (!m_Trees.Load(TREE_MODEL_PATH)) {
         std::cerr << "Tree model missing or empty; terrain will have no trees." << std::endl;
     }
+    std::cout << "Loaded " << m_BuildingModels.LoadAll(BUILDING_MODEL_DIRECTORY) << " building models" << std::endl;
     m_Streamer.Start(m_Options.renderDistance);
     return true;
 }

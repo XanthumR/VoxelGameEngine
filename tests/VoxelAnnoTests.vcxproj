@@ -54,7 +54,8 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(RepoRoot)src;$(GlfwDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- Building model tests load the real assets -->
+      <PreprocessorDefinitions>_CONSOLE;ASSET_DIRECTORY="$(RepoRoot.Replace('\', '/'))assets";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -80,6 +81,7 @@
     <ClCompile Include="..\src\Economy\PopulationSystem.cpp" />
     <ClCompile Include="..\src\Gameplay\Walkers.cpp" />
     <ClCompile Include="..\src\Simulation\BuildingLook.cpp" />
+    <ClCompile Include="..\src\Simulation\BuildingModels.cpp" />
     <ClCompile Include="..\src\Simulation\GameClock.cpp" />
     <ClCompile Include="..\src\Simulation\GameObjects.cpp" />
     <ClCompile Include="..\src\Simulation\IslandRegistry.cpp" />
@@ -88,6 +90,7 @@
     <ClCompile Include="..\src\Simulation\Placement.cpp" />
     <ClCompile Include="..\src\Simulation\RoadNetwork.cpp" />
     <ClCompile Include="..\src\Simulation\Simulation.cpp" />
+    <ClCompile Include="..\src\World\BuildingModel.cpp" />
     <ClCompile Include="..\src\World\TerrainGenerator.cpp" />
     <ClCompile Include="..\src\World\VoxModel.cpp" />
     <ClCompile Include="..\src\World\VoxelWorld.cpp" />
@@ -95,6 +98,7 @@
   <!-- The tests -->
   <ItemGroup>
     <ClCompile Include="BuildingLookTests.cpp" />
+    <ClCompile Include="BuildingModelTests.cpp" />
     <ClCompile Include="GameClockTests.cpp" />
     <ClCompile Include="GameObjectTests.cpp" />
     <ClCompile Include="IslandEconomyTests.cpp" />

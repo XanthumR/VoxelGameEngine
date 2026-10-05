@@ -41,14 +41,8 @@ void BuildLook(const BuildingType& type, uint8_t rotation, std::vector<uint8_t>&
     // Local (u, v) to the footprint column, turning the front to face the rotation's direction
     auto set = [&](int u, int v, int y, uint8_t id) {
         if (y < 0 || y >= height) return;
-        int x = 0, z = 0;
-        switch (rotation & 3) {
-        case 0: x = u;              z = v;              break;
-        case 1: x = size.x - 1 - v; z = u;              break;
-        case 2: x = size.x - 1 - u; z = size.y - 1 - v; break;
-        default: x = v;             z = size.y - 1 - u; break;
-        }
-        ids[(size_t)x + (size_t)size.x * ((size_t)z + (size_t)size.y * (size_t)y)] = id;
+        glm::ivec2 column = RotateToFootprint(u, v, rotation, size);
+        ids[(size_t)column.x + (size_t)size.x * ((size_t)column.y + (size_t)size.y * (size_t)y)] = id;
     };
 
     const int u0 = 1, u1 = width - 2, v0 = 1, v1 = depth - 2;
