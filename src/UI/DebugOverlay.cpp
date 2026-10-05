@@ -1,9 +1,11 @@
 #include "UI/DebugOverlay.h"
 
+#include "Gameplay/BuildTool.h"
 #include "Gameplay/DebugEditTool.h"
 #include "Rendering/GpuChunkCache.h"
 #include "Rendering/RenderSettings.h"
 #include "Rendering/RenderTargets.h"
+#include "Simulation/BuildingTypes.h"
 #include "Simulation/Simulation.h"
 #include "World/BlockTypes.h"
 #include "World/ChunkStreamer.h"
@@ -95,6 +97,19 @@ void DebugOverlay::Draw(const OverlayContext& c) {
         ImGui::Text("Island: none");
     }
     ImGui::Text("Islands discovered: %zu | Objects: %u", c.simulation.Islands().IslandCount(), c.simulation.Objects().AliveCount());
+    const BuildTool& build = c.buildTool;
+    if (build.SelectedType() != BuildTool::NO_TYPE) {
+        const char* facing[] = { "-z", "+x", "+z", "-x" };
+        ImGui::Text("Build: %s, front %s: %s", BUILDING_TYPES[build.SelectedType()].name, facing[build.Rotation()],
+            PlacementErrorText(build.LastError()));
+    } else {
+        ImGui::Text("Build: none");
+    }
+    if (build.HoveredBuilding() != INVALID_GAME_OBJECT) {
+        const BuildingComponent& building = c.simulation.Objects().Building(build.HoveredBuilding());
+        ImGui::Text("Building under cursor: %s (object %u, island #%u)", BUILDING_TYPES[building.type].name,
+            build.HoveredBuilding(), building.island);
+    }
     ImGui::Text("Simulation: tick %llu (%.1f s at 10 Hz), %llu dropped", (unsigned long long)c.simulation.TickCount(),
         c.simulation.SimulationSeconds(), (unsigned long long)c.droppedSimulationSteps);
 
@@ -107,6 +122,8 @@ void DebugOverlay::Draw(const OverlayContext& c) {
 
     ImGui::Text("--- CONTROLS & EDITOR ---");
     ImGui::Text("Strategy: WASD/edge pan, Q/E rotate, wheel zoom, middle-drag pan");
+    ImGui::Text("Build: 1 Warehouse, 2 Farmer House, R rotate, left click place,");
+    ImGui::Text("       right click demolish (or cancel)");
     if (glfwGetInputMode(c.window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Free-fly: [TAB] frees the mouse for the UI.");
     }

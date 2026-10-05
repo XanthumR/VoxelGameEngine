@@ -31,7 +31,8 @@ Application::Application(const LaunchOptions& options)
       m_Editor(m_World, m_Streamer),
       m_Terrain(m_Trees),
       m_EditTool(m_World, m_Editor),
-      m_Simulation(m_Terrain) {
+      m_Simulation(m_Terrain),
+      m_BuildTool(m_World, m_Editor, m_Simulation) {
     m_Settings.renderScale = options.renderScale;
 }
 
@@ -247,6 +248,10 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_Overlay.UpdateMinimap(m_World, ActiveCamera().FocusPoint());
     if (m_CameraMode == CameraMode::FreeFly) m_EditTool.HandleMouse(m_Window, m_FreeFlyCamera);
     UpdatePicking();
+    if (m_CameraMode == CameraMode::Strategy) {
+        ImGuiIO& io = ImGui::GetIO();
+        m_BuildTool.Update(m_Window, m_Hover, !io.WantCaptureMouse, !io.WantCaptureKeyboard);
+    }
 
     // --- Game simulation: fixed steps, independent of the frame rate ---
     int steps = m_Clock.StepsToRun(frameSeconds);
@@ -256,7 +261,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
         m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS,
         m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover,
-        m_HoverIsland, m_Simulation, m_Clock.DroppedSteps() };
+        m_HoverIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool };
     m_Overlay.Draw(overlay);
 
     if (minimized) {
@@ -284,6 +289,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     frame.renderDistance = m_Streamer.RenderDistance();
     frame.windowWidth = m_WindowWidth;
     frame.windowHeight = m_WindowHeight;
+    if (m_CameraMode == CameraMode::Strategy) frame.preview = m_BuildTool.Preview();
     m_Renderer.Render(frame, m_Settings, m_Cache, m_Ocean, m_Shore);
 
     if (m_CameraMode == CameraMode::FreeFly) DrawHud(m_EditTool.CrosshairColor(m_FreeFlyCamera), m_EditTool.SelectedBlock());

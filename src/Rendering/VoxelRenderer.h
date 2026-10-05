@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Rendering/BuildPreview.h"
 #include "Rendering/RenderTargets.h"
 
 #include <glad/glad.h>
@@ -19,6 +20,7 @@ struct FrameParams {
     float time;            // Drives the day-night cycle and all animation
     int renderDistance;    // Chunks
     int windowWidth, windowHeight;
+    BuildPreview preview;  // Highlighted box (building placement or selection)
 };
 
 // Draws the voxel world with three compute passes (shaders/render/):
@@ -46,6 +48,7 @@ private:
         GLint seaLevel, oceanTileSizes, oceanChoppiness, shoreOrigin, renderDistanceVoxels;
         GLint dimX, dimY, dimZ, cameraPos, inverseView, inverseProj, time;
         GLint sunDir, moonDir, lightDir, lightColor, skyColor, ambient;
+        GLint previewState, previewMin, previewMax;
 
         void Locate(GLuint program);
     };

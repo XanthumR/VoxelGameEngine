@@ -41,6 +41,9 @@ void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     lightColor = loc("lightColor");
     skyColor = loc("skyColor");
     ambient = loc("ambient");
+    previewState = loc("previewState");
+    previewMin = loc("previewMin");
+    previewMax = loc("previewMax");
 }
 
 bool VoxelRenderer::LoadPass(Pass& pass, const char* path) {
@@ -129,6 +132,11 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glUniform3fv(u.lightColor, 1, &sky.lightColor[0]);
         glUniform3fv(u.skyColor, 1, &sky.skyColor[0]);
         glUniform1f(u.ambient, sky.ambient);
+
+        // Build preview (shade pass only; the other passes have no such uniforms, location -1)
+        glUniform1i(u.previewState, frame.preview.state);
+        glUniform3iv(u.previewMin, 1, &frame.preview.min[0]);
+        glUniform3iv(u.previewMax, 1, &frame.preview.max[0]);
     };
 
     GLuint fullGroupsX = (m_Targets.Width() + 7) / 8, fullGroupsY = (m_Targets.Height() + 7) / 8;

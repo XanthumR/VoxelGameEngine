@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/LaunchOptions.h"
+#include "Gameplay/BuildTool.h"
 #include "Gameplay/DebugEditTool.h"
 #include "Gameplay/FreeFlyCamera.h"
 #include "Gameplay/Picking.h"
@@ -77,6 +78,7 @@ private:
     // Game simulation (fixed 10 Hz steps)
     GameClock m_Clock;
     Simulation m_Simulation;
+    BuildTool m_BuildTool; // Strategy camera: place and demolish buildings
 
     // Rendering
     RenderSettings m_Settings;

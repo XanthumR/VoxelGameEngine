@@ -57,6 +57,9 @@
     <ClCompile Include="src\Core\Screenshot.cpp">
       <Filter>src\Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Gameplay\BuildTool.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
@@ -93,6 +96,9 @@
     <ClCompile Include="src\Rendering\VoxelRenderer.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Simulation\BuildingLook.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
     <ClCompile Include="src\Simulation\GameClock.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
@@ -103,6 +109,9 @@
       <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation\OccupancyGrid.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation\Placement.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation\Simulation.cpp">
@@ -220,6 +229,9 @@
     <ClInclude Include="src\Core\Screenshot.h">
       <Filter>src\Core</Filter>
     </ClInclude>
+    <ClInclude Include="src\Gameplay\BuildTool.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
     <ClInclude Include="src\Gameplay\Camera.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
@@ -234,6 +246,9 @@
     </ClInclude>
     <ClInclude Include="src\Gameplay\StrategyCamera.h">
       <Filter>src\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\BuildPreview.h">
+      <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\GpuChunkCache.h">
       <Filter>src\Rendering</Filter>
@@ -262,6 +277,12 @@
     <ClInclude Include="src\Rendering\VoxelRenderer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Simulation\BuildingLook.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\BuildingTypes.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
     <ClInclude Include="src\Simulation\GameClock.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
@@ -272,6 +293,9 @@
       <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\OccupancyGrid.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\Placement.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\Simulation.h">

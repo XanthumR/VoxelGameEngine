@@ -9,8 +9,14 @@
 
 WorldEditor::WorldEditor(VoxelWorld& world, ChunkStreamer& streamer) : m_World(world), m_Streamer(streamer) {}
 
+// Each touched chunk is re-uploaded once per edit, not once per voxel
+void WorldEditor::RefreshTouched() {
+    for (uint64_t key : m_Touched) m_Streamer.RefreshChunk(key);
+    if (!m_Touched.empty()) m_TerrainChanged = true;
+    m_Touched.clear();
+}
+
 void WorldEditor::FillSphere(glm::ivec3 center, int radius, uint8_t id) {
-    std::vector<uint64_t> touched;
     for (int dz = -radius; dz <= radius; dz++) {
         for (int dy = -radius; dy <= radius; dy++) {
             for (int dx = -radius; dx <= radius; dx++) {
@@ -20,14 +26,37 @@ void WorldEditor::FillSphere(glm::ivec3 center, int radius, uint8_t id) {
                 int pz = center.z + dz;
                 if (m_World.SetVoxel(px, py, pz, id)) {
                     uint64_t key = ChunkKey(px >> 5, py >> 5, pz >> 5);
-                    if (std::find(touched.begin(), touched.end(), key) == touched.end()) touched.push_back(key);
+                    if (std::find(m_Touched.begin(), m_Touched.end(), key) == m_Touched.end()) m_Touched.push_back(key);
                 }
             }
         }
     }
-    // One upload per touched chunk instead of one per voxel
-    for (uint64_t key : touched) m_Streamer.RefreshChunk(key);
-    if (!touched.empty()) m_TerrainChanged = true;
+    RefreshTouched();
+}
+
+void WorldEditor::WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const std::vector<uint8_t>& ids) {
+    if (ids.size() < (size_t)size.x * size.y * size.z) return;
+    WriteBox(minCorner, size, ids.data(), 0);
+}
+
+void WorldEditor::FillBox(glm::ivec3 minCorner, glm::ivec3 size, uint8_t id) {
+    WriteBox(minCorner, size, nullptr, id);
+}
+
+void WorldEditor::WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const uint8_t* ids, uint8_t fill) {
+    size_t i = 0;
+    for (int y = 0; y < size.y; y++) {
+        for (int z = 0; z < size.z; z++) {
+            for (int x = 0; x < size.x; x++, i++) {
+                glm::ivec3 p = minCorner + glm::ivec3(x, y, z);
+                if (m_World.SetVoxel(p.x, p.y, p.z, ids ? ids[i] : fill)) {
+                    uint64_t key = ChunkKey(p.x >> 5, p.y >> 5, p.z >> 5);
+                    if (std::find(m_Touched.begin(), m_Touched.end(), key) == m_Touched.end()) m_Touched.push_back(key);
+                }
+            }
+        }
+    }
+    RefreshTouched();
 }
 
 bool WorldEditor::PlaceVoxel(glm::ivec3 position, uint8_t id) {

@@ -13,6 +13,7 @@ struct GLFWwindow;
 struct RenderSettings;
 class ChunkStreamer;
 class GpuChunkCache;
+class BuildTool;
 class DebugEditTool;
 class RenderTargets;
 class Simulation;
@@ -36,6 +37,7 @@ struct OverlayContext {
     IslandId hoverIsland;
     Simulation& simulation;
     uint64_t droppedSimulationSteps;
+    const BuildTool& buildTool;
 };
 
 // The F3 debug window: engine metrics, a top-down minimap and the editor and render controls
