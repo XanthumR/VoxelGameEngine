@@ -31,7 +31,7 @@ BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& s
 }
 
 void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFree, bool keyboardFree) {
-    // Temporary hotkeys until the build menu: 1 / 2 pick a building
+    // Hotkeys (shown on the build menu buttons): 1 / 2 pick a building
     bool key1 = keyboardFree && glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS;
     bool key2 = keyboardFree && glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS;
     if (Pressed(key1, m_Key1WasPressed)) m_SelectedType = BUILDING_WAREHOUSE;

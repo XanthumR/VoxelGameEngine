@@ -122,8 +122,7 @@ void DebugOverlay::Draw(const OverlayContext& c) {
 
     ImGui::Text("--- CONTROLS & EDITOR ---");
     ImGui::Text("Strategy: WASD/edge pan, Q/E rotate, wheel zoom, middle-drag pan");
-    ImGui::Text("Build: 1 Warehouse, 2 Farmer House, R rotate, left click place,");
-    ImGui::Text("       right click demolish (or cancel)");
+    ImGui::Text("Build: menu at the bottom (1/2), R rotate, right click demolish");
     if (glfwGetInputMode(c.window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Free-fly: [TAB] frees the mouse for the UI.");
     }

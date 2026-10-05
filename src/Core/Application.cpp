@@ -1,6 +1,7 @@
 #include "Core/Application.h"
 
 #include "Core/Screenshot.h"
+#include "UI/BuildMenu.h"
 #include "UI/Hud.h"
 #include "World/BlockTypes.h"
 
@@ -263,6 +264,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover,
         m_HoverIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool };
     m_Overlay.Draw(overlay);
+    if (m_CameraMode == CameraMode::Strategy) DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
 
     if (minimized) {
         // Nothing to draw into; keep the UI frame balanced and wait for events

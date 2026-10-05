@@ -157,6 +157,7 @@
     <ClCompile Include="src\Simulation\OccupancyGrid.cpp" />
     <ClCompile Include="src\Simulation\Placement.cpp" />
     <ClCompile Include="src\Simulation\Simulation.cpp" />
+    <ClCompile Include="src\UI\BuildMenu.cpp" />
     <ClCompile Include="src\UI\DebugOverlay.cpp" />
     <ClCompile Include="src\UI\Hud.cpp" />
     <ClCompile Include="src\World\ChunkStreamer.cpp" />
@@ -222,6 +223,7 @@
     <ClInclude Include="src\Simulation\Placement.h" />
     <ClInclude Include="src\Simulation\Simulation.h" />
     <ClInclude Include="src\ThirdParty\FastNoiseLite.h" />
+    <ClInclude Include="src\UI\BuildMenu.h" />
     <ClInclude Include="src\UI\DebugOverlay.h" />
     <ClInclude Include="src\UI\Hud.h" />
     <ClInclude Include="src\World\BlockTypes.h" />

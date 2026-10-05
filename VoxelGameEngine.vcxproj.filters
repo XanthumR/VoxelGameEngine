@@ -117,6 +117,9 @@
     <ClCompile Include="src\Simulation\Simulation.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
+    <ClCompile Include="src\UI\BuildMenu.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
     <ClCompile Include="src\UI\DebugOverlay.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
@@ -303,6 +306,9 @@
     </ClInclude>
     <ClInclude Include="src\ThirdParty\FastNoiseLite.h">
       <Filter>src\ThirdParty</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI\BuildMenu.h">
+      <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\UI\DebugOverlay.h">
       <Filter>src\UI</Filter>

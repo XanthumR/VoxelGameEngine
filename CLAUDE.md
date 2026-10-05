@@ -33,7 +33,7 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 * `src/Rendering/` – GPU side: `GpuChunkCache` (pool textures, page table, brick masks), `VoxelRenderer` (trace/shadow/shade passes), `RenderTargets`, `RenderSettings`, `SkyLighting` (day-night), `OceanSimulation` (FFT waves), `ShoreMap` (coast distance field), `GrassAnimator`, `ShaderLoader` (supports `#include`), `BuildPreview` (highlight box drawn by the shade pass).
 * `src/Gameplay/` – `Camera` (`ICamera` interface), `StrategyCamera` (default Anno-style orbit camera), `FreeFlyCamera` (debug drone with collision, F1), `Picking` (cursor ray to hovered voxel), `BuildTool` (place/demolish buildings with preview, strategy camera), `DebugEditTool` (dig/place in free-fly).
 * `src/Simulation/` – deterministic game logic: `GameClock` (fixed 10 Hz step accumulator), `Simulation` (owns game systems, `FixedUpdate` per step), `IslandRegistry` (island ID per column, flood fill over 8x8-column cells), `GameObjects` (`GameObjectRegistry`: slot+generation IDs, flat component arrays), `OccupancyGrid` (build tile -> game object), `BuildingTypes` (building table, `TILE_SIZE` build grid), `BuildingLook` (procedural voxels of a building), `Placement` (`ValidatePlacement`).
-* `src/UI/` – `DebugOverlay` (F3 window + minimap), `Hud` (crosshair + hotbar).
+* `src/UI/` – `DebugOverlay` (F3 window + minimap), `Hud` (free-fly crosshair + block hotbar), `BuildMenu` (strategy build bar).
 * `src/ThirdParty/` – `FastNoiseLite.h`, `glad.c`.
 * `shaders/include/` shared GLSL (voxel lookup, scene uniforms, water, lighting, G-buffer); `shaders/render/` the three render passes; `shaders/water/` ocean FFT and shore map passes; `shaders/grass/` grass animation.
 
