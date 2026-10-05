@@ -8,7 +8,9 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 * **Build System:** Visual Studio solution built with MSBuild (no CMake). GLFW location is the `GlfwDir` property in `VoxelGameEngine.vcxproj` (override with `/p:GlfwDir=...`).
 * **Build Project (Debug):** `msbuild VoxelGameEngine.sln /p:Configuration=Debug /p:Platform=x64 /m`
 * **Build Project (Release):** `msbuild VoxelGameEngine.sln /p:Configuration=Release /p:Platform=x64 /m`
-* **Run Game Client:** `.\x64\Debug\VoxelGameEngine.exe` (run from the project root so `default.comp`, `anim.comp` and `assets\` are found)
+* **Run Game Client:** `.\x64\Debug\VoxelGameEngine.exe` (run from the project root so `shaders\` and `assets\` are found)
+* **Launch options:** `--render-distance N`, `--render-scale F`, and for reproducible runs `--fixed-time T`, `--camera X Y Z YAW PITCH`, `--screenshot FILE SECONDS` (see `src/Core/LaunchOptions.h`).
+* **Regression check:** render the same view before and after a change with those three options and compare the PPMs pixel by pixel; the scene is deterministic (only the FPS text in the overlay differs between runs).
 
 ### Testing & Profiling
 * **Run All Tests:** `.\build\bin\Debug\VoxelAnnoTests.exe`
@@ -23,6 +25,16 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 * **Compiler & Standard:** MSVC (Visual Studio 2022), targeting C++20 (`/std:c++20`).
 * **Architecture:** Custom Object-Component system. Game objects (`GameObject`) hold raw vectors of pre-allocated, flat component arrays to maintain cache locality without third-party ECS overhead.
 * **Threading:** Win32 Thread Pool / `std::jthread` for asynchronous voxel meshing and off-loop trade route updates.
+
+### Project Layout (what does which job)
+* `src/main.cpp` – entry point; builds `Application` from the launch options.
+* `src/Core/` – `Application` (window, OpenGL/ImGui setup, spawn, the frame loop in order, hotkeys), `LaunchOptions`, `Screenshot`, `SafeQueue`.
+* `src/World/` – CPU-side world: `WorldConstants`, `BlockTypes` (block IDs), `Chunk`, `VoxelWorld` (CPU chunk store), `TerrainGenerator` (islands, ocean, caves, trees, spawn search), `ChunkStreamer` (worker threads + streaming windows), `WorldEditor` (dig/place), `Raycast`, `VoxModel` (.vox loader), `GrassTufts`.
+* `src/Rendering/` – GPU side: `GpuChunkCache` (pool textures, page table, brick masks), `VoxelRenderer` (trace/shadow/shade passes), `RenderTargets`, `RenderSettings`, `SkyLighting` (day-night), `OceanSimulation` (FFT waves), `ShoreMap` (coast distance field), `GrassAnimator`, `ShaderLoader` (supports `#include`), `SceneVisuals` (tool effects passed to the renderer).
+* `src/Gameplay/` – `Player` (camera, flight, collision), `PlayerTools` (dissolver, tether, placement, flares, artifact scanner).
+* `src/UI/` – `DebugOverlay` (F3 window + minimap), `Hud` (crosshair + hotbar).
+* `src/ThirdParty/` – `FastNoiseLite.h`, `glad.c`.
+* `shaders/include/` shared GLSL (voxel lookup, scene uniforms, water, lighting, G-buffer); `shaders/render/` the three render passes; `shaders/water/` ocean FFT and shore map passes; `shaders/grass/` grass animation.
 
 ### Game Mechanics (Anno 1800 Style)
 * **Population System:** Managed per-island via an `IslandEconomy` manager. Citizen tiers are processed sequentially (Farmers -> Workers -> Artisans -> Engineers -> Investors).

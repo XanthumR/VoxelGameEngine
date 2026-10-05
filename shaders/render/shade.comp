@@ -1,0 +1,354 @@
+#version 440 core
+// Render pass 3 of 3 (VoxelRenderer): per-pixel lighting from the G-buffer (block colors, sun
+// and soft shadows, flares, water, glows), the sky, and in-world overlays (tether clump, tool
+// beam, spawn beacon). Writes the final image that is blitted to the window.
+// The crosshair and hotbar are drawn separately by ImGui (src/UI/Hud.cpp).
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+#include "include/scene.glsl"
+#include "include/voxel_data.glsl"
+#include "include/water.glsl"
+#include "include/gbuffer.glsl"
+#include "include/camera.glsl"
+#include "include/lighting.glsl"
+
+layout(rgba32i, binding = 2) uniform readonly iimage2D gBuffer;
+layout(r32f, binding = 3) uniform readonly image2D shadowValue;
+layout(rgba32i, binding = 4) uniform readonly iimage2D shadowKey;
+layout(rgba32f, binding = 0) uniform writeonly image2D imgOutput;
+
+// Generates a pseudo-random float between 0.0 and 1.0 based on pixel coordinates
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec3 getFalseColor(float level) {
+    float t = clamp(level / 15.0, 0.0, 1.0);
+    vec3 c = vec3(0.0);
+    if (t < 0.25) {
+        c = mix(vec3(0.2, 0.0, 0.3), vec3(0.0, 0.0, 1.0), t / 0.25);
+    } else if (t < 0.5) {
+        c = mix(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), (t - 0.25) / 0.25);
+    } else if (t < 0.75) {
+        c = mix(vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0), (t - 0.5) / 0.25);
+    } else {
+        c = mix(vec3(1.0, 1.0, 0.0), vec3(1.0, 0.0, 0.0), (t - 0.75) / 0.25);
+    }
+    return c;
+}
+
+// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette)
+vec3 getAlbedo(int voxelID, ivec3 mapPos) {
+    vec3 albedo = vec3(1.0);
+    if (voxelID == 1) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000); // Grass
+    else if (voxelID == 2) albedo = vec3(0.180, 0.110, 0.050); // Dirt
+    else if (voxelID == 3) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.42, 0.42, 0.40) : vec3(0.36, 0.36, 0.35); // Stone
+    else if (voxelID == 4) albedo = hash(vec2(mapPos.xz)) >= 0.5 ? vec3(0.80, 0.72, 0.48) : vec3(0.74, 0.66, 0.43); // Sand
+    else if (voxelID == 5) albedo = vec3(0.157, 0.341, 0.016); // color_5
+    else if (voxelID == 6) albedo = vec3(0.137, 0.306, 0.016); // color_6
+    else if (voxelID == 7) albedo = vec3(0.106, 0.227, 0.008); // color_7
+    else if (voxelID == 8) albedo = vec3(0.043, 0.106, 0.004); // color_8
+    else if (voxelID == 9) albedo = vec3(0.086, 0.075, 0.004); // color_9
+    else if (voxelID == 10) albedo = vec3(0.125, 0.278, 0.012); // color_10
+    else if (voxelID == 11) albedo = vec3(0.075, 0.176, 0.004); // color_11
+    else if (voxelID == 12) albedo = vec3(0.204, 0.439, 0.020); // color_12
+    else if (voxelID == 13) albedo = vec3(0.259, 0.557, 0.027); // color_13
+    else if (voxelID == 14) albedo = vec3(0.180, 0.400, 0.020); // color_14
+    else if (voxelID == 15) albedo = vec3(0.153, 0.475, 0.055); // color_15
+    else if (voxelID == 16) albedo = vec3(0.165, 0.278, 0.031); // color_16
+    else if (voxelID == 17) albedo = vec3(0.125, 0.110, 0.008); // color_17
+    else if (voxelID == 18) albedo = vec3(0.216, 0.188, 0.012); // color_18
+    else if (voxelID == 19) albedo = vec3(0.220, 0.486, 0.027); // color_19
+    else if (voxelID == 20) albedo = vec3(0.235, 0.631, 0.157); // color_20
+    else if (voxelID == 21) albedo = vec3(0.086, 0.302, 0.043); // color_21
+    else if (voxelID == 22) albedo = vec3(0.145, 0.561, 0.090); // color_22
+    else if (voxelID == 23) albedo = vec3(0.180, 0.149, 0.012); // color_23
+    else if (voxelID == 24) albedo = vec3(0.114, 0.357, 0.047); // color_24
+    else if (voxelID == 25) albedo = vec3(0.216, 0.588, 0.078); // color_25
+    else if (voxelID == 26) albedo = vec3(0.145, 0.427, 0.059); // color_26
+    else if (voxelID == 27) albedo = vec3(0.188, 0.525, 0.071); // color_27
+    else if (voxelID == 28) albedo = vec3(0.196, 0.612, 0.192); // color_28
+    else if (voxelID == 29) albedo = vec3(0.161, 0.216, 0.012); // color_29
+    else if (voxelID == 30) albedo = vec3(0.0, 0.8, 0.6); // Bioluminescent cavern
+    else if (voxelID == 31) albedo = vec3(0.149, 0.698, 0.165); // color_31
+    else if (voxelID == 32) albedo = vec3(0.9, 0.0, 0.9); // Artifact
+    else if (voxelID == 33) albedo = vec3(0.000, 0.000, 0.000); // color_33
+    // Tree palette colors 1-4, moved off the terrain IDs by the .vox loader
+    else if (voxelID == 36) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000);
+    else if (voxelID == 37) albedo = vec3(0.090, 0.204, 0.008);
+    else if (voxelID == 38) albedo = vec3(0.078, 0.114, 0.004);
+    else if (voxelID == 39) albedo = vec3(0.031, 0.071, 0.000);
+    else if (voxelID == 35) albedo = vec3(0.04, 0.22, 0.32); // Water (ocean; waves applied in trace.comp)
+    else if (voxelID == 34) albedo = mix(vec3(0.12, 0.55, 0.05), vec3(0.30, 0.85, 0.12), hash(vec2(mapPos.xz) + float(mapPos.y) * 7.0)); // Grass tuft
+    return albedo;
+}
+
+// Shadow for a hit face: reuses a half-resolution sample from this pixel's own quad or the
+// 3 neighbouring quads when one was computed for the same face plane (same normal, same
+// plane offset, within 2 voxels). Shadows are constant per voxel face, so this only moves
+// shadow edges by at most a render pixel. Falls back to tracing its own rays otherwise.
+float lookupShadow(ivec2 pixel, ivec3 mapPos, int normalIndex, vec3 normal) {
+    if (dot(normal, lightDir) <= 0.0) return 0.3; // Back face, same shortcut as softShadow
+    if (halfResShadows == 0) return softShadow(mapPos, normal);
+
+    ivec2 quadDims = (renderSize + 1) / 2;
+    ivec2 quad = pixel / 2;
+    ivec2 toward = ivec2((pixel.x & 1) == 0 ? -1 : 1, (pixel.y & 1) == 0 ? -1 : 1);
+    ivec2 candidates[4] = ivec2[](quad, quad + ivec2(toward.x, 0), quad + ivec2(0, toward.y), quad + toward);
+
+    int axis = normalIndex >> 1;
+    for (int i = 0; i < 4; i++) {
+        ivec2 q = candidates[i];
+        if (q.x < 0 || q.y < 0 || q.x >= quadDims.x || q.y >= quadDims.y) continue;
+        ivec4 key = imageLoad(shadowKey, q);
+        if (key.w != normalIndex) continue;
+        if (key[axis] != mapPos[axis]) continue; // Different plane (e.g. a step up)
+        ivec3 d = abs(key.xyz - mapPos);
+        if (max(d.x, max(d.y, d.z)) > 2) continue;
+        return imageLoad(shadowValue, q).r;
+    }
+    return softShadow(mapPos, normal);
+}
+
+void main() {
+    ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dims = renderSize;
+    if (pixel_coords.x >= dims.x || pixel_coords.y >= dims.y) return;
+
+    Ray ray = cameraRay(pixel_coords, dims);
+
+    // Sky, Sun & Moon Logic
+    float sunDot = max(dot(ray.dir, sunDir), 0.0);
+    float moonDot = max(dot(ray.dir, moonDir), 0.0);
+    float horizonMask = smoothstep(-0.2, 0.1, ray.dir.y); // Prevents sun/moon glow through ground
+
+    vec3 sunDisk = vec3(1.0, 0.95, 0.85) * pow(sunDot, 800.0);
+    vec3 sunGlow = vec3(1.0, 0.6, 0.25) * pow(sunDot, 32.0) * 0.5;
+
+    vec3 moonDisk = vec3(0.85, 0.9, 1.0) * pow(moonDot, 1200.0);
+    vec3 moonGlow = vec3(0.4, 0.5, 0.65) * pow(moonDot, 32.0) * 0.25;
+
+    vec3 finalSky = skyColor + (sunDisk + sunGlow) * horizonMask + (moonDisk + moonGlow) * horizonMask;
+    vec4 colorResult = vec4(finalSky, 1.0);
+
+    // Unpack what the trace pass hit
+    ivec4 g = imageLoad(gBuffer, pixel_coords);
+    ivec3 mapPos = g.xyz;
+    int normalIndex = g.w & 7;
+    int voxelID = (g.w >> 3) & 255;
+    float gridFactor = float((g.w >> 11) & 255) / 255.0;
+    bool hit = normalIndex != NO_HIT;
+
+    if (hit) {
+        vec3 normal = indexToNormal(normalIndex);
+        vec3 albedo = getAlbedo(voxelID, mapPos);
+        if (voxelID == SAND_ID) {
+            // Wet sand near the waterline is darker
+            float distanceInland = -sampleShore(vec2(mapPos.xz) + 0.5).x;
+            albedo *= 1.0 - 0.4 * smoothstep(8.0, 1.0, distanceInland) * step(0.0, distanceInland);
+        }
+
+        // Diffuse Lighting
+        float diff = max(dot(normal, lightDir), 0.0);
+        float shadow = lookupShadow(pixel_coords, mapPos, normalIndex, normal);
+
+        // Specular (Blinn-Phong)
+        vec3 viewDir = normalize(cameraPos - (vec3(mapPos) / float(dimX)));
+        vec3 halfwayDir = normalize(lightDir + viewDir);
+        float spec = pow(max(dot(normal, halfwayDir), 0.0), 1.0);
+        vec3 specular = lightColor * spec * shadow * 0.1;
+
+        // Ambient Occlusion
+        float ao = 1.0;
+        if (getVoxelVal(mapPos + ivec3(normal)) > 0.0) ao = 0.5;
+
+        vec3 diffuseComponent = albedo * diff * lightColor * shadow;
+        vec3 ambientComponent = albedo * ambient;
+        vec3 lighting = (diffuseComponent + ambientComponent) * ao + specular;
+
+        // --- FLARES LIGHTING ---
+        vec3 flareLighting = vec3(0.0);
+        vec3 hitWorldPos = vec3(mapPos) / float(dimX);
+        for (int f = 0; f < numFlares; f++) {
+            float flareDist = distance(flares[f].pos, hitWorldPos);
+            if (flareDist < 0.05) {
+                vec3 fDir = normalize(flares[f].pos - hitWorldPos);
+                float fShadow = getShadow(hitWorldPos + normal * 0.001, fDir);
+                float fAtten = clamp(1.0 - (flareDist / 0.05), 0.0, 1.0);
+                fAtten = fAtten * fAtten; // Quadratic falloff
+                float fDiff = max(dot(normal, fDir), 0.0);
+                flareLighting += flares[f].color * albedo * fDiff * fAtten * fShadow * flares[f].intensity * 3.0;
+            }
+        }
+        lighting += flareLighting;
+
+        // --- WATER: rippling surface, sky reflection and glints ---
+        if (voxelID == WATER_ID) {
+            // Exact hit point on the face (in voxels), so ripples are smooth inside a voxel
+            vec3 originVox = cameraPos * float(dimX);
+            int axis = normalIndex >> 1;
+            float plane = float(mapPos[axis]) + (normal[axis] > 0.0 ? 1.0 : 0.0);
+            vec2 p = (originVox + ray.dir * ((plane - originVox[axis]) / ray.dir[axis])).xz;
+
+            // Surface normal from the FFT slopes (top faces; side faces of wave steps keep
+            // their voxel normal), and foam where the choppy displacement folds the surface
+            // (Jacobian of the horizontal displacement below ~0.85)
+            vec3 n = normal;
+            float foam = 0.0;
+            if (normalIndex == 2) {
+                vec4 slope = sampleOcean(oceanSlope, p);
+                vec4 displacement = sampleOcean(oceanDisplacement, p);
+                vec4 shore = sampleShore(p);
+                float openSea = openSeaFactor(shore);
+                float strength = surfStrength(p);
+
+                // Breaker slope along the inland direction (the distance to land falls inland)
+                float surfSlope = (surfHeight(shore.x + 0.5, strength) - surfHeight(shore.x - 0.5, strength));
+                vec2 shadingSlope = sampleOceanSlopeForShading(p).xy * openSea - shore.zw * surfSlope;
+                n = normalize(vec3(-shadingSlope.x, 1.0, -shadingSlope.y));
+                float jxx = 1.0 + oceanChoppiness * slope.z;
+                float jzz = 1.0 + oceanChoppiness * slope.w;
+                float jxz = oceanChoppiness * displacement.w;
+                float jacobian = jxx * jzz - jxz * jxz;
+                foam = clamp((0.85 - jacobian) * 2.5, 0.0, 1.0) * openSea;
+                foam = max(foam, smoothstep(1.3, 2.2, displacement.z * openSea) * 0.6); // Whitecaps on the highest crests
+
+                // Surf: breaking crests, a churning line at the waterline, and the swash itself
+                foam = max(foam, smoothstep(14.0, 3.0, shore.x) * clamp(surfHeight(shore.x, strength), 0.0, 1.0));
+                float churn = valueNoise(p * 0.5 + vec2(time * 0.8, -time * 0.6));
+                foam = max(foam, smoothstep(3.0, 0.5, shore.x) * (0.45 + 0.45 * churn));
+                if (shore.x < 0.0) foam = max(foam, 0.75);
+            }
+
+            // More reflection at grazing angles (Fresnel), with a glint of the sun or moon
+            float fresnel = 0.15 + 0.85 * pow(1.0 - max(dot(n, -ray.dir), 0.0), 4.0);
+            vec3 reflected = reflect(ray.dir, n);
+            vec3 reflection = skyColor + lightColor * pow(max(dot(reflected, lightDir), 0.0), 200.0) * 3.0 * shadow;
+
+            // Body color, brighter on wave crests (light through thin water)
+            float crest = clamp(oceanHeight(p) * 0.5 + 0.5, 0.0, 1.0);
+            vec3 body = albedo * (0.8 + 0.5 * crest) * (ambient + max(dot(n, lightDir), 0.0) * lightColor * shadow * 0.8);
+
+            vec3 water = mix(body, reflection, fresnel);
+            vec3 foamColor = vec3(0.85, 0.9, 0.92) * (ambient + lightColor * shadow * 0.8);
+            lighting = mix(water, foamColor, foam) + flareLighting;
+        }
+
+        // --- BIOLUMINESCENT & ARTIFACT GLOW ---
+        if (voxelID == 30) {
+            lighting = mix(lighting, vec3(0.0, 1.0, 0.8), 0.75); // Cyan emission
+        } else if (voxelID == 32) {
+            lighting = mix(lighting, vec3(1.0, 0.0, 1.0), 0.85); // Magenta emission
+        }
+
+        if (lightVisualizerEnabled == 1) {
+            float intensity = clamp((diff * shadow * 0.8 + ambient * ao), 0.0, 1.0);
+            float level = floor(intensity * 15.0);
+            colorResult.rgb = getFalseColor(level);
+        } else {
+            colorResult.rgb = lighting;
+        }
+    }
+
+    // Blend wireframe chunk edges if enabled
+    if (chunkViewerEnabled == 1) {
+        colorResult.rgb = mix(colorResult.rgb, vec3(0.0, 1.0, 0.1), gridFactor);
+    }
+
+    // --- Draw overlays (Held Clump, Laser Beam, Spawn Beacon) ---
+    float hitDist = hit ? distance(cameraPos, vec3(mapPos) / float(dimX)) : 1e9;
+
+    // --- Render Held Clump as glowing sphere ---
+    if (heldClumpActive == 1) {
+        vec3 oc = ray.origin - heldClumpPos;
+        float sphereRadius = heldClumpRadius / float(dimX);
+        float a = dot(ray.dir, ray.dir);
+        float b = 2.0 * dot(oc, ray.dir);
+        float c = dot(oc, oc) - sphereRadius * sphereRadius;
+        float disc = b * b - 4.0 * a * c;
+        if (disc > 0.0) {
+            float t = (-b - sqrt(disc)) / (2.0 * a);
+            float sphereHitDist = t;
+            if (t > 0.0 && sphereHitDist < hitDist) {
+                vec3 hitP = ray.origin + t * ray.dir;
+                vec3 sphereNormal = normalize(hitP - heldClumpPos);
+                float diff = max(dot(sphereNormal, lightDir), 0.0);
+                vec3 clumpColor;
+                if (heldClumpIsArtifact == 1) {
+                    clumpColor = vec3(0.8, 0.1, 1.0); // Magenta artifact glow
+                } else {
+                    clumpColor = vec3(0.5, 0.45, 0.35); // Rocky debris
+                }
+                // Pulsing glow effect
+                float pulse = 0.8 + 0.2 * sin(time * 4.0);
+                colorResult.rgb = clumpColor * (diff * 0.6 + 0.4) * pulse;
+                hitDist = sphereHitDist; // Update hitDist so laser renders behind
+            }
+        }
+    }
+
+    // Volumetric Laser Beam Glow
+    if (laserBeamActive == 1) {
+        vec3 u = ray.dir;
+        vec3 v = laserBeamEnd - laserBeamStart;
+        vec3 w = ray.origin - laserBeamStart;
+        float a = dot(u, u);
+        float b = dot(u, v);
+        float c = dot(v, v);
+        float d = dot(u, w);
+        float e = dot(v, w);
+        float denom = a * c - b * b;
+        float t = 0.0;
+        if (abs(denom) > 0.0001) {
+            t = clamp((e - b * d) / denom, 0.0, 1.0);
+        }
+        float s = max((t * b - d) / a, 0.0);
+
+        if (s < hitDist) {
+            vec3 pRay = ray.origin + s * ray.dir;
+            vec3 pSeg = laserBeamStart + t * (laserBeamEnd - laserBeamStart);
+            float dist = length(pRay - pSeg);
+            if (dist < 0.003) {
+                float glow = clamp(1.0 - (dist / 0.003), 0.0, 1.0);
+                colorResult.rgb = mix(colorResult.rgb, laserBeamColor, glow * glow * 0.9);
+            }
+        }
+    }
+
+    // Green Spawn Beacon Column
+    {
+        vec3 beaconStart = vec3(beaconPos.x, 0.0, beaconPos.z);
+        vec3 beaconEnd = vec3(beaconPos.x, 0.15, beaconPos.z);
+        vec3 u = ray.dir;
+        vec3 v = beaconEnd - beaconStart;
+        vec3 w = ray.origin - beaconStart;
+        float a = dot(u, u);
+        float b = dot(u, v);
+        float c = dot(v, v);
+        float d = dot(u, w);
+        float e = dot(v, w);
+        float denom = a * c - b * b;
+        float t = 0.0;
+        if (abs(denom) > 0.0001) {
+            t = clamp((e - b * d) / denom, 0.0, 1.0);
+        }
+        float s = max((t * b - d) / a, 0.0);
+
+        if (s < hitDist) {
+            vec3 pRay = ray.origin + s * ray.dir;
+            vec3 pSeg = beaconStart + t * (beaconEnd - beaconStart);
+            float dist = length(pRay - pSeg);
+            float beaconRadius = 0.008; // ~10 voxels wide glowing column
+            if (dist < beaconRadius) {
+                float glow = clamp(1.0 - (dist / beaconRadius), 0.0, 1.0);
+                // Fade out when the camera is at the beacon (e.g. at spawn), so it does not tint the whole view
+                float cameraDist = length(cameraPos.xz - beaconPos.xz);
+                glow *= smoothstep(beaconRadius, beaconRadius * 3.0, cameraDist);
+                colorResult.rgb = mix(colorResult.rgb, vec3(0.1, 1.0, 0.4), glow * glow * 0.8);
+            }
+        }
+    }
+
+    imageStore(imgOutput, pixel_coords, colorResult);
+}

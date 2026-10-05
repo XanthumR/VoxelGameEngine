@@ -1,0 +1,40 @@
+#version 440 core
+// Render pass 2 of 3 (VoxelRenderer): soft shadows at half resolution. One invocation per 2x2
+// pixel quad picks the first pixel of the quad that hit a face which can see the light,
+// computes its soft shadow once, and records which voxel/face it is for. shade.comp reuses it.
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+#include "include/scene.glsl"
+#include "include/gbuffer.glsl"
+#include "include/lighting.glsl"
+
+layout(rgba32i, binding = 2) uniform readonly iimage2D gBuffer;
+layout(r32f, binding = 3) uniform writeonly image2D shadowValue;
+layout(rgba32i, binding = 4) uniform writeonly iimage2D shadowKey;
+
+void main() {
+    ivec2 quad = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 quadDims = (renderSize + 1) / 2;
+    if (quad.x >= quadDims.x || quad.y >= quadDims.y) return;
+
+    ivec4 key = ivec4(0, 0, 0, NO_HIT);
+    float shadow = 1.0;
+
+    for (int i = 0; i < 4; i++) {
+        ivec2 p = quad * 2 + ivec2(i & 1, i >> 1);
+        if (p.x >= renderSize.x || p.y >= renderSize.y) continue;
+        ivec4 g = imageLoad(gBuffer, p);
+        int normalIndex = g.w & 7;
+        if (normalIndex == NO_HIT) continue;
+        // Back faces never need rays (see softShadow), so prefer a face that does
+        if (dot(indexToNormal(normalIndex), lightDir) <= 0.0) continue;
+
+        key = ivec4(g.xyz, normalIndex);
+        shadow = softShadow(g.xyz, indexToNormal(normalIndex));
+        break;
+    }
+
+    imageStore(shadowValue, quad, vec4(shadow));
+    imageStore(shadowKey, quad, key);
+}

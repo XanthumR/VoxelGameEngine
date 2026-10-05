@@ -1,0 +1,31 @@
+#version 440 core
+// Shore map pass 1 of 3 (ShoreMap, src/Rendering/ShoreMap.cpp): classify columns as land or water at sea level.
+
+#include "include/scene.glsl"
+#include "include/voxel_data.glsl"
+#include "include/water.glsl"
+
+// Classifies each column at sea level: land seeds the "nearest land" channel, water seeds the
+// "nearest water" channel and records how deep it is
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba32i, binding = 5) uniform writeonly iimage2D seeds; // xy = nearest land, zw = nearest water
+layout(r32f, binding = 6) uniform writeonly image2D depthMap;
+
+const int NO_SEED = -1000000;
+const int MAX_DEPTH = 24;
+
+void main() {
+    ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 column = shoreOrigin + texel;
+    bool water = int(getVoxelVal(ivec3(column.x, seaLevel, column.y)) * 255.0 + 0.5) == WATER_ID;
+
+    float depth = 0.0;
+    if (water) {
+        int y = seaLevel - 1;
+        while (y > seaLevel - MAX_DEPTH && int(getVoxelVal(ivec3(column.x, y, column.y)) * 255.0 + 0.5) == WATER_ID) y--;
+        depth = float(seaLevel - y);
+    }
+
+    imageStore(seeds, texel, water ? ivec4(NO_SEED, NO_SEED, texel) : ivec4(texel, NO_SEED, NO_SEED));
+    imageStore(depthMap, texel, vec4(depth));
+}

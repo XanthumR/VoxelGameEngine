@@ -1,0 +1,45 @@
+#version 440 core
+// FFT ocean pass 1 (OceanSimulation): evolves the initial spectrum h0(k) to time t and builds the
+// spectra of every field the renderer needs. See include/ocean_fft_common.glsl.
+
+#include "include/ocean_fft_common.glsl"
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// h0 = (h0(k).re, h0(k).im, conj(h0(-k)).re, conj(h0(-k)).im), built once on the CPU
+layout(rgba32f, binding = 0) uniform readonly image2DArray initialSpectrum;
+layout(rgba32f, binding = 2) uniform writeonly image2DArray spectrumA;
+layout(rgba32f, binding = 3) uniform writeonly image2DArray spectrumB;
+
+uniform float time;
+uniform vec3 tileSizes; // Tile size of each cascade, in voxels
+
+void main() {
+    ivec3 id = ivec3(gl_GlobalInvocationID);
+    vec2 k = 2.0 * PI * (vec2(id.xy) - float(N / 2)) / tileSizes[id.z];
+    float kLength = length(k);
+    if (kLength < 1e-6) {
+        imageStore(spectrumA, id, vec4(0.0));
+        imageStore(spectrumB, id, vec4(0.0));
+        return;
+    }
+
+    // Deep-water dispersion: each wave travels at its own speed
+    vec4 h0 = imageLoad(initialSpectrum, id);
+    float phase = sqrt(GRAVITY * kLength) * time;
+    vec2 rotation = vec2(cos(phase), sin(phase));
+    vec2 h = cmul(h0.xy, rotation) + cmul(h0.zw, vec2(rotation.x, -rotation.y));
+    vec2 ih = vec2(-h.y, h.x); // i * h
+
+    vec2 dx = -(k.x / kLength) * ih;     // Choppy displacement
+    vec2 dz = -(k.y / kLength) * ih;
+    vec2 slopeX = k.x * ih;              // Height slope
+    vec2 slopeZ = k.y * ih;
+    vec2 dxdx = (k.x * k.x / kLength) * h; // Displacement derivatives (Jacobian, for foam)
+    vec2 dzdz = (k.y * k.y / kLength) * h;
+    vec2 dxdz = (k.x * k.y / kLength) * h;
+
+    // Pack X + iY
+    imageStore(spectrumA, id, vec4(dx.x - dz.y, dx.y + dz.x, h.x - dxdz.y, h.y + dxdz.x));
+    imageStore(spectrumB, id, vec4(slopeX.x - slopeZ.y, slopeX.y + slopeZ.x, dxdx.x - dzdz.y, dxdx.y + dzdz.x));
+}

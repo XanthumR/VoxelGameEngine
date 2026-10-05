@@ -1,71 +1,302 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{fcfcb359-4810-594e-83ed-54a91b8afeda}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="imgui\backends">
+      <UniqueIdentifier>{63720821-f313-55e5-857f-e52f873cee5e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{f549d99a-3747-5e76-9ed7-bf12235bb284}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\shaders">
-      <UniqueIdentifier>{d3fedf14-3181-4698-80cf-b42741a00890}</UniqueIdentifier>
+    <Filter Include="shaders\grass">
+      <UniqueIdentifier>{e471e728-2a0a-571d-82b6-184a32bcac98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\include">
+      <UniqueIdentifier>{1dc10a21-a394-5850-9c07-08c639a33e7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\render">
+      <UniqueIdentifier>{e97c6b7b-9330-57db-83fe-1a79c4a9b610}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\water">
+      <UniqueIdentifier>{eeab1a89-44b9-5aae-8f2b-76e2a74a8db6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{34ef91a0-2e99-5173-b93b-60637269e146}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Core">
+      <UniqueIdentifier>{e4fe4682-6de8-5ac2-bd17-7596e011a28a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Gameplay">
+      <UniqueIdentifier>{7f1373df-057d-55df-a097-8cdaf2211d03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Rendering">
+      <UniqueIdentifier>{87246072-1d5b-52ed-8b5f-6eeaa266ebad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ThirdParty">
+      <UniqueIdentifier>{d7bc550f-0846-53cf-a861-662a129e6851}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\UI">
+      <UniqueIdentifier>{962e928c-89cb-55dc-b395-6372a4dae49c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\World">
+      <UniqueIdentifier>{a80bd6d6-2e29-50cc-8cb5-04f0acae4eb7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\Core\Application.cpp">
+      <Filter>src\Core</Filter>
     </ClCompile>
-    <ClCompile Include="glad.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\Core\LaunchOptions.cpp">
+      <Filter>src\Core</Filter>
     </ClCompile>
-    <ClCompile Include="rayCast.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\Core\Screenshot.cpp">
+      <Filter>src\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Ocean.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\Gameplay\Player.cpp">
+      <Filter>src\Gameplay</Filter>
     </ClCompile>
-    <ClCompile Include="Shore.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\Gameplay\PlayerTools.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\GpuChunkCache.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\GrassAnimator.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\OceanSimulation.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\RenderTargets.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\ShaderLoader.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\ShoreMap.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\SkyLighting.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\VoxelRenderer.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI\DebugOverlay.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI\Hud.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\World\ChunkStreamer.cpp">
+      <Filter>src\World</Filter>
+    </ClCompile>
+    <ClCompile Include="src\World\Raycast.cpp">
+      <Filter>src\World</Filter>
+    </ClCompile>
+    <ClCompile Include="src\World\TerrainGenerator.cpp">
+      <Filter>src\World</Filter>
+    </ClCompile>
+    <ClCompile Include="src\World\VoxModel.cpp">
+      <Filter>src\World</Filter>
+    </ClCompile>
+    <ClCompile Include="src\World\VoxelWorld.cpp">
+      <Filter>src\World</Filter>
+    </ClCompile>
+    <ClCompile Include="src\World\WorldEditor.cpp">
+      <Filter>src\World</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ThirdParty\glad.c">
+      <Filter>src\ThirdParty</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_tables.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\backends\imgui_impl_glfw.cpp">
+      <Filter>imgui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\backends\imgui_impl_opengl3.cpp">
+      <Filter>imgui\backends</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="default.comp">
-      <Filter>Source Files\shaders</Filter>
+    <None Include="shaders\grass\grass_animate.comp">
+      <Filter>shaders\grass</Filter>
     </None>
-    <None Include="anim.comp">
-      <Filter>Source Files\shaders</Filter>
+    <None Include="shaders\render\shade.comp">
+      <Filter>shaders\render</Filter>
     </None>
-    <None Include="ocean.comp">
-      <Filter>Source Files\shaders</Filter>
+    <None Include="shaders\render\shadow.comp">
+      <Filter>shaders\render</Filter>
+    </None>
+    <None Include="shaders\render\trace.comp">
+      <Filter>shaders\render</Filter>
+    </None>
+    <None Include="shaders\water\ocean_fft.comp">
+      <Filter>shaders\water</Filter>
+    </None>
+    <None Include="shaders\water\ocean_spectrum.comp">
+      <Filter>shaders\water</Filter>
+    </None>
+    <None Include="shaders\water\shore_final.comp">
+      <Filter>shaders\water</Filter>
+    </None>
+    <None Include="shaders\water\shore_jump_flood.comp">
+      <Filter>shaders\water</Filter>
+    </None>
+    <None Include="shaders\water\shore_seed.comp">
+      <Filter>shaders\water</Filter>
+    </None>
+    <None Include="shaders\include\camera.glsl">
+      <Filter>shaders\include</Filter>
+    </None>
+    <None Include="shaders\include\gbuffer.glsl">
+      <Filter>shaders\include</Filter>
+    </None>
+    <None Include="shaders\include\lighting.glsl">
+      <Filter>shaders\include</Filter>
+    </None>
+    <None Include="shaders\include\ocean_fft_common.glsl">
+      <Filter>shaders\include</Filter>
+    </None>
+    <None Include="shaders\include\scene.glsl">
+      <Filter>shaders\include</Filter>
+    </None>
+    <None Include="shaders\include\voxel_data.glsl">
+      <Filter>shaders\include</Filter>
+    </None>
+    <None Include="shaders\include\water.glsl">
+      <Filter>shaders\include</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FastNoiseLite.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="src\Core\Application.h">
+      <Filter>src\Core</Filter>
     </ClInclude>
-    <ClInclude Include="rayCast.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="src\Core\LaunchOptions.h">
+      <Filter>src\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Ocean.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="src\Core\SafeQueue.h">
+      <Filter>src\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Shore.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="src\Core\Screenshot.h">
+      <Filter>src\Core</Filter>
     </ClInclude>
-    <ClInclude Include="chunk.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="src\Gameplay\Player.h">
+      <Filter>src\Gameplay</Filter>
     </ClInclude>
-    <ClInclude Include="animation.hpp">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="src\Gameplay\PlayerTools.h">
+      <Filter>src\Gameplay</Filter>
     </ClInclude>
-    <ClInclude Include="modelLoader.hpp">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="src\Rendering\GpuChunkCache.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\GrassAnimator.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\OceanSimulation.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\RenderSettings.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\RenderTargets.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\SceneVisuals.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\ShaderLoader.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\ShoreMap.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\SkyLighting.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\VoxelRenderer.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ThirdParty\FastNoiseLite.h">
+      <Filter>src\ThirdParty</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI\DebugOverlay.h">
+      <Filter>src\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI\Hud.h">
+      <Filter>src\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\BlockTypes.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\Chunk.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\ChunkStreamer.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\GrassTufts.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\Raycast.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\TerrainGenerator.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\VoxModel.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\VoxelWorld.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\WorldConstants.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World\WorldEditor.h">
+      <Filter>src\World</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imstb_rectpack.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imstb_textedit.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imstb_truetype.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\backends\imgui_impl_glfw.h">
+      <Filter>imgui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\backends\imgui_impl_opengl3.h">
+      <Filter>imgui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\backends\imgui_impl_opengl3_loader.h">
+      <Filter>imgui\backends</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

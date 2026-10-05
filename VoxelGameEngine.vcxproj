@@ -105,7 +105,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(GlfwDir)\include;imgui;imgui/backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;$(GlfwDir)\include;imgui;imgui/backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -123,7 +123,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(GlfwDir)\include;imgui;imgui/backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;$(GlfwDir)\include;imgui;imgui/backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -134,11 +134,29 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="glad.c" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="rayCast.cpp" />
-    <ClCompile Include="Ocean.cpp" />
-    <ClCompile Include="Shore.cpp" />
+    <ClCompile Include="src\Core\Application.cpp" />
+    <ClCompile Include="src\Core\LaunchOptions.cpp" />
+    <ClCompile Include="src\Core\Screenshot.cpp" />
+    <ClCompile Include="src\Gameplay\Player.cpp" />
+    <ClCompile Include="src\Gameplay\PlayerTools.cpp" />
+    <ClCompile Include="src\Rendering\GpuChunkCache.cpp" />
+    <ClCompile Include="src\Rendering\GrassAnimator.cpp" />
+    <ClCompile Include="src\Rendering\OceanSimulation.cpp" />
+    <ClCompile Include="src\Rendering\RenderTargets.cpp" />
+    <ClCompile Include="src\Rendering\ShaderLoader.cpp" />
+    <ClCompile Include="src\Rendering\ShoreMap.cpp" />
+    <ClCompile Include="src\Rendering\SkyLighting.cpp" />
+    <ClCompile Include="src\Rendering\VoxelRenderer.cpp" />
+    <ClCompile Include="src\UI\DebugOverlay.cpp" />
+    <ClCompile Include="src\UI\Hud.cpp" />
+    <ClCompile Include="src\World\ChunkStreamer.cpp" />
+    <ClCompile Include="src\World\Raycast.cpp" />
+    <ClCompile Include="src\World\TerrainGenerator.cpp" />
+    <ClCompile Include="src\World\VoxModel.cpp" />
+    <ClCompile Include="src\World\VoxelWorld.cpp" />
+    <ClCompile Include="src\World\WorldEditor.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\ThirdParty\glad.c" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_draw.cpp" />
     <ClCompile Include="imgui\imgui_tables.cpp" />
@@ -147,18 +165,53 @@
     <ClCompile Include="imgui\backends\imgui_impl_opengl3.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="anim.comp" />
-    <None Include="ocean.comp" />
-    <None Include="default.comp" />
+    <None Include="shaders\grass\grass_animate.comp" />
+    <None Include="shaders\render\shade.comp" />
+    <None Include="shaders\render\shadow.comp" />
+    <None Include="shaders\render\trace.comp" />
+    <None Include="shaders\water\ocean_fft.comp" />
+    <None Include="shaders\water\ocean_spectrum.comp" />
+    <None Include="shaders\water\shore_final.comp" />
+    <None Include="shaders\water\shore_jump_flood.comp" />
+    <None Include="shaders\water\shore_seed.comp" />
+    <None Include="shaders\include\camera.glsl" />
+    <None Include="shaders\include\gbuffer.glsl" />
+    <None Include="shaders\include\lighting.glsl" />
+    <None Include="shaders\include\ocean_fft_common.glsl" />
+    <None Include="shaders\include\scene.glsl" />
+    <None Include="shaders\include\voxel_data.glsl" />
+    <None Include="shaders\include\water.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="chunk.h" />
-    <ClInclude Include="FastNoiseLite.h" />
-    <ClInclude Include="animation.hpp" />
-    <ClInclude Include="modelLoader.hpp" />
-    <ClInclude Include="rayCast.h" />
-    <ClInclude Include="Ocean.h" />
-    <ClInclude Include="Shore.h" />
+    <ClInclude Include="src\Core\Application.h" />
+    <ClInclude Include="src\Core\LaunchOptions.h" />
+    <ClInclude Include="src\Core\SafeQueue.h" />
+    <ClInclude Include="src\Core\Screenshot.h" />
+    <ClInclude Include="src\Gameplay\Player.h" />
+    <ClInclude Include="src\Gameplay\PlayerTools.h" />
+    <ClInclude Include="src\Rendering\GpuChunkCache.h" />
+    <ClInclude Include="src\Rendering\GrassAnimator.h" />
+    <ClInclude Include="src\Rendering\OceanSimulation.h" />
+    <ClInclude Include="src\Rendering\RenderSettings.h" />
+    <ClInclude Include="src\Rendering\RenderTargets.h" />
+    <ClInclude Include="src\Rendering\SceneVisuals.h" />
+    <ClInclude Include="src\Rendering\ShaderLoader.h" />
+    <ClInclude Include="src\Rendering\ShoreMap.h" />
+    <ClInclude Include="src\Rendering\SkyLighting.h" />
+    <ClInclude Include="src\Rendering\VoxelRenderer.h" />
+    <ClInclude Include="src\ThirdParty\FastNoiseLite.h" />
+    <ClInclude Include="src\UI\DebugOverlay.h" />
+    <ClInclude Include="src\UI\Hud.h" />
+    <ClInclude Include="src\World\BlockTypes.h" />
+    <ClInclude Include="src\World\Chunk.h" />
+    <ClInclude Include="src\World\ChunkStreamer.h" />
+    <ClInclude Include="src\World\GrassTufts.h" />
+    <ClInclude Include="src\World\Raycast.h" />
+    <ClInclude Include="src\World\TerrainGenerator.h" />
+    <ClInclude Include="src\World\VoxModel.h" />
+    <ClInclude Include="src\World\VoxelWorld.h" />
+    <ClInclude Include="src\World\WorldConstants.h" />
+    <ClInclude Include="src\World\WorldEditor.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_internal.h" />

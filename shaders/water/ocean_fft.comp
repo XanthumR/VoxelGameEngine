@@ -1,0 +1,59 @@
+#version 440 core
+// FFT ocean pass 2 (OceanSimulation): one radix-2 inverse FFT along every row, then (second
+// dispatch) every column, of every cascade. See include/ocean_fft_common.glsl.
+
+#include "include/ocean_fft_common.glsl"
+
+layout(local_size_x = N) in; // One thread per element of a line; one workgroup per line
+
+layout(rgba32f, binding = 0) uniform readonly image2DArray inputA;
+layout(rgba32f, binding = 1) uniform readonly image2DArray inputB;
+layout(rgba32f, binding = 2) uniform writeonly image2DArray outputA;
+layout(rgba32f, binding = 3) uniform writeonly image2DArray outputB;
+
+uniform int horizontal; // 1 = transform rows, 0 = columns
+uniform int finalPass;  // 1 = apply the (-1)^(x+z) sign from the centered spectrum
+
+shared vec4 lineA[N];
+shared vec4 lineB[N];
+
+void main() {
+    uint i = gl_LocalInvocationID.x;
+    int line = int(gl_WorkGroupID.x);
+    int layer = int(gl_WorkGroupID.y);
+
+    // Load in bit-reversed order, then iterative radix-2 butterflies in place
+    int source = int(bitfieldReverse(i) >> (32 - LOG_N));
+    ivec3 src = horizontal == 1 ? ivec3(source, line, layer) : ivec3(line, source, layer);
+    lineA[i] = imageLoad(inputA, src);
+    lineB[i] = imageLoad(inputB, src);
+    barrier();
+
+    for (int stage = 1; stage <= LOG_N; stage++) {
+        uint halfSize = 1u << (stage - 1);
+        if (i < uint(N / 2)) {
+            uint k = i % halfSize;
+            uint top = (i / halfSize) * (halfSize * 2u) + k;
+            uint bottom = top + halfSize;
+            float angle = 2.0 * PI * float(k) / float(halfSize * 2u); // + sign: inverse FFT
+            vec2 w = vec2(cos(angle), sin(angle));
+
+            vec4 a = lineA[top], b = lineA[bottom];
+            vec4 bw = vec4(cmul(b.xy, w), cmul(b.zw, w));
+            lineA[top] = a + bw;
+            lineA[bottom] = a - bw;
+
+            a = lineB[top]; b = lineB[bottom];
+            bw = vec4(cmul(b.xy, w), cmul(b.zw, w));
+            lineB[top] = a + bw;
+            lineB[bottom] = a - bw;
+        }
+        barrier();
+    }
+
+    ivec3 dst = horizontal == 1 ? ivec3(int(i), line, layer) : ivec3(line, int(i), layer);
+    float sign = 1.0;
+    if (finalPass == 1 && ((dst.x + dst.y) & 1) == 1) sign = -1.0;
+    imageStore(outputA, dst, lineA[i] * sign);
+    imageStore(outputB, dst, lineB[i] * sign);
+}

@@ -1,0 +1,40 @@
+#version 440 core
+// Shore map pass 2 of 3 (ShoreMap, src/Rendering/ShoreMap.cpp): jump flooding, run once per step size.
+
+#include "include/scene.glsl"
+#include "include/voxel_data.glsl"
+#include "include/water.glsl"
+
+// One jump flooding step: keep the nearest land and nearest water seed among the 3x3
+// neighbours jumpStep texels away
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba32i, binding = 5) uniform readonly iimage2D seedsIn;
+layout(rgba32i, binding = 7) uniform writeonly iimage2D seedsOut;
+uniform int jumpStep;
+
+const int NO_SEED = -1000000;
+
+void main() {
+    ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 bestLand = ivec2(NO_SEED), bestWater = ivec2(NO_SEED);
+    float landDist = 1e20, waterDist = 1e20;
+
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            ivec2 q = texel + ivec2(dx, dy) * jumpStep;
+            if (q.x < 0 || q.y < 0 || q.x >= SHORE_MAP_SIZE || q.y >= SHORE_MAP_SIZE) continue;
+            ivec4 candidate = imageLoad(seedsIn, q);
+            if (candidate.x != NO_SEED) {
+                vec2 d = vec2(candidate.xy - texel);
+                float dd = dot(d, d);
+                if (dd < landDist) { landDist = dd; bestLand = candidate.xy; }
+            }
+            if (candidate.z != NO_SEED) {
+                vec2 d = vec2(candidate.zw - texel);
+                float dd = dot(d, d);
+                if (dd < waterDist) { waterDist = dd; bestWater = candidate.zw; }
+            }
+        }
+    }
+    imageStore(seedsOut, texel, ivec4(bestLand, bestWater));
+}

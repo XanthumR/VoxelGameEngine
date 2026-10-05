@@ -1,0 +1,42 @@
+#version 440 core
+// Shore map pass 3 of 3 (ShoreMap, src/Rendering/ShoreMap.cpp): signed distance to the coast, depth and inland direction.
+
+#include "include/scene.glsl"
+#include "include/voxel_data.glsl"
+#include "include/water.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba32i, binding = 5) uniform readonly iimage2D seeds;
+layout(r32f, binding = 6) uniform readonly image2D depthMap;
+layout(rgba16f, binding = 7) uniform writeonly image2D shoreOut;
+
+const int NO_SEED = -1000000;
+
+void main() {
+    ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
+    ivec4 nearest = imageLoad(seeds, texel);
+    float depth = imageLoad(depthMap, texel).r;
+    bool water = nearest.z == texel.x && nearest.w == texel.y; // Its own nearest water seed
+
+    float signedDistance;
+    vec2 inland = vec2(0.0);
+    if (water) {
+        if (nearest.x == NO_SEED) {
+            signedDistance = 1000.0; // No land in the map
+        } else {
+            vec2 toLand = vec2(nearest.xy - texel);
+            signedDistance = length(toLand);
+            inland = toLand / max(signedDistance, 1e-4);
+        }
+    } else {
+        if (nearest.z == NO_SEED) {
+            signedDistance = -1000.0;
+        } else {
+            vec2 fromWater = vec2(texel - nearest.zw);
+            float d = length(fromWater);
+            signedDistance = -d;
+            inland = fromWater / max(d, 1e-4);
+        }
+    }
+    imageStore(shoreOut, texel, vec4(signedDistance, depth, inland));
+}

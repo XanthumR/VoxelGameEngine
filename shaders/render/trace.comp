@@ -1,0 +1,163 @@
+#version 440 core
+// Render pass 1 of 3 (VoxelRenderer): one camera ray per pixel, marched through the voxel grid.
+// Writes what it hit into the G-buffer; lighting happens in shade.comp.
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+#include "include/scene.glsl"
+#include "include/voxel_data.glsl"
+#include "include/water.glsl"
+#include "include/gbuffer.glsl"
+#include "include/camera.glsl"
+
+layout(rgba32i, binding = 2) uniform writeonly iimage2D gBuffer;
+
+bool isOnChunkEdge(ivec3 p) {
+    int lx = p.x % 32; if (lx < 0) lx += 32;
+    int ly = p.y % 32; if (ly < 0) ly += 32;
+    int lz = p.z % 32; if (lz < 0) lz += 32;
+    bool ex = (lx == 0 || lx == 31);
+    bool ey = (ly == 0 || ly == 31);
+    bool ez = (lz == 0 || lz == 31);
+    return (ex && ey) || (ey && ez) || (ex && ez);
+}
+
+void main() {
+    ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dims = renderSize;
+    if (pixel_coords.x >= dims.x || pixel_coords.y >= dims.y) return;
+
+    Ray ray = cameraRay(pixel_coords, dims);
+    ivec4 result = ivec4(0, 0, 0, packHitInfo(NO_HIT, 0, 0.0));
+
+    // Y-Slab Grid Setup (Infinite horizontally, bounded Y in [0, 128] voxels = [0.0, 0.1] world space)
+    float tNear = -1.0;
+    float tFar = 1e9;
+
+    if (abs(ray.dir.y) > 0.0001) {
+        float t1 = (0.0 - ray.origin.y) / ray.dir.y;
+        float t2 = (0.1 - ray.origin.y) / ray.dir.y;
+        tNear = max(tNear, min(t1, t2));
+        tFar = min(tFar, max(t1, t2));
+    } else if (ray.origin.y < 0.0 || ray.origin.y > 0.1) {
+        // Horizontal ray outside the Y boundary sees only sky
+        imageStore(gBuffer, pixel_coords, result);
+        return;
+    }
+
+    if (tNear > tFar || tFar < 0.0) {
+        imageStore(gBuffer, pixel_coords, result);
+        return;
+    }
+
+    // DDA Initialization
+    float tStart = (ray.origin.y >= 0.0 && ray.origin.y <= 0.1) ? 0.0 : tNear;
+    vec3 entryPos = ray.origin + ray.dir * (tStart + 0.0001);
+    vec3 rayPos = entryPos * float(dimX);
+    ivec3 mapPos = ivec3(floor(rayPos));
+
+    vec3 deltaDist = abs(1.0 / ray.dir);
+    ivec3 stepDir = ivec3(sign(ray.dir));
+    vec3 sideDist = (sign(ray.dir) * (vec3(mapPos) - rayPos) + (sign(ray.dir) * 0.5) + 0.5) * deltaDist;
+
+    vec3 normal = vec3(0.0);
+    int maxSteps = renderDistanceVoxels + 32; // 640 at the default render distance
+    ivec2 cameraVoxelXZ = ivec2(floor(cameraPos.xz * float(dimX)));
+    float gridFactor = 0.0;
+
+    // Empty-chunk skipping would hide the wireframe of air chunks, so the
+    // chunk viewer keeps the plain per-voxel march
+    bool allowChunkSkip = chunkViewerEnabled == 0;
+    ivec3 cachedChunk = ivec3(0x7fffffff);
+    int cachedSlot = -1;
+    ivec3 cachedBrick = ivec3(0x7fffffff);
+    bool cachedBrickEmpty = false;
+
+    // DDA Loop
+    for (int i = 0; i < maxSteps; i++) {
+        // Break early if we march past the active rendering distance (render distance + 1 chunk, in voxels)
+        ivec2 distXZ = abs(mapPos.xz - cameraVoxelXZ);
+        if (max(distXZ.x, distXZ.y) > renderDistanceVoxels) break;
+
+        if (chunkViewerEnabled == 1 && isOnChunkEdge(mapPos)) {
+            float distAttenuation = clamp(1.0 - (float(i) / 300.0), 0.0, 1.0);
+            gridFactor = max(gridFactor, distAttenuation * 0.7);
+        }
+
+        // Page table is only re-read when the ray enters a new chunk
+        ivec3 chunkCoord = chunkOf(mapPos);
+        if (any(notEqual(chunkCoord, cachedChunk))) {
+            cachedChunk = chunkCoord;
+            cachedSlot = getChunkSlot(chunkCoord);
+        }
+
+        if (allowChunkSkip) {
+            // Empty chunk: every voxel is air, so jump to the next chunk in one step
+            if (cachedSlot < 0) {
+                skipCell(32, stepDir, deltaDist, mapPos, sideDist, normal);
+                if (mapPos.y < 0 || mapPos.y >= dimY) break;
+                continue;
+            }
+
+            // Empty 8^3 brick inside a non-empty chunk: jump to the next brick
+            ivec3 brickCoord = mapPos >> 3;
+            if (any(notEqual(brickCoord, cachedBrick))) {
+                cachedBrick = brickCoord;
+                cachedBrickEmpty = isBrickEmpty(cachedSlot, mapPos);
+            }
+            if (cachedBrickEmpty) {
+                skipCell(8, stepDir, deltaDist, mapPos, sideDist, normal);
+                if (mapPos.y < 0 || mapPos.y >= dimY) break;
+                continue;
+            }
+        }
+
+        float voxelValue = cachedSlot < 0 ? 0.0 : sampleSlot(cachedSlot, mapPos);
+
+        // Ocean waves: water layers above the wave surface turn to air in troughs, and air
+        // layers up to the surface turn to water on crests (only over open water, checked at
+        // seaLevel). All of seaLevel +- MAX_WAVE shares a brick and chunk with seaLevel, so a
+        // raised crest is never inside a skipped empty cell.
+        if (mapPos.y >= seaLevel - MAX_WAVE + 1 && mapPos.y <= seaLevel + MAX_WAVE) {
+            int surface = seaLevel + seaWave(mapPos.xz);
+            int id = int(voxelValue * 255.0 + 0.5);
+            if (mapPos.y <= seaLevel) {
+                if (id == WATER_ID && mapPos.y > surface) voxelValue = 0.0;
+            } else if (voxelValue == 0.0 && mapPos.y <= surface && cachedSlot >= 0 &&
+                       int(sampleSlot(cachedSlot, ivec3(mapPos.x, seaLevel, mapPos.z)) * 255.0 + 0.5) == WATER_ID) {
+                voxelValue = float(WATER_ID) / 255.0;
+            } else if (id == SAND_ID && cachedSlot >= 0 && sampleSlot(cachedSlot, mapPos + ivec3(0, 1, 0)) == 0.0) {
+                // Swash: a wave that ran up the beach covers the top sand voxel
+                vec2 column = vec2(mapPos.xz) + 0.5;
+                vec4 shore = sampleShore(column);
+                if (shore.x < 0.0 && -shore.x < swashReach(surfStrength(column))) voxelValue = float(WATER_ID) / 255.0;
+            }
+        }
+
+        if (voxelValue > 0.0) {
+            int voxelID = int(voxelValue * 255.0 + 0.5);
+            result = ivec4(mapPos, packHitInfo(normalToIndex(normal), voxelID, gridFactor));
+            imageStore(gBuffer, pixel_coords, result);
+            return;
+        }
+
+        // Step
+        if (sideDist.x < sideDist.y && sideDist.x < sideDist.z) {
+            sideDist.x += deltaDist.x; mapPos.x += stepDir.x;
+            normal = vec3(-stepDir.x, 0, 0);
+        } else if (sideDist.y < sideDist.z) {
+            sideDist.y += deltaDist.y; mapPos.y += stepDir.y;
+            normal = vec3(0, -stepDir.y, 0);
+        } else {
+            sideDist.z += deltaDist.z; mapPos.z += stepDir.z;
+            normal = vec3(0, 0, -stepDir.z);
+        }
+
+        // Vertical Bounds Check
+        if (mapPos.y < 0 || mapPos.y >= dimY) break;
+    }
+
+    // No hit: keep the grid factor so the chunk viewer can still draw edges in the air
+    result.w = packHitInfo(NO_HIT, 0, gridFactor);
+    imageStore(gBuffer, pixel_coords, result);
+}
