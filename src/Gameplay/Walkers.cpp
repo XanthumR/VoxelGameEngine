@@ -67,7 +67,10 @@ bool WalkerSystem::Spawn(IslandId island, const GameObjectRegistry& objects, con
         auto lane = [this]() { return (Random() & 1) ? TILE_SIZE / 4 : TILE_SIZE - 1 - TILE_SIZE / 4; };
         walker.lane = glm::ivec2(lane(), lane());
         walker.progress = 0.0f;
+        walker.walked = 0.0f;
         walker.tier = type.tier;
+        walker.direction = 0;
+        walker.variant = (uint8_t)(Random() & 7);
         walker.next = ChooseNext(walker, roads);
         m_Walkers.push_back(walker); // Within the reserve: callers check MAX_WALKERS
         m_SpawnCursor = slot + 1;    // The next walker comes from another house
@@ -105,6 +108,7 @@ void WalkerSystem::Update(float deltaTime, const GameObjectRegistry& objects, co
             continue;
         }
         walker.progress += deltaTime * TILES_PER_SECOND;
+        if (walker.next != walker.tile) walker.walked += deltaTime * TILES_PER_SECOND * TILE_SIZE;
         while (walker.progress >= 1.0f) {
             walker.progress -= 1.0f;
             walker.previous = walker.tile;
@@ -137,12 +141,21 @@ void WalkerSystem::Update(float deltaTime, const GameObjectRegistry& objects, co
         }
     }
 
-    // Voxel figures: feet on the road, moving through the lane column of each tile
+    // Voxel figures: feet on the road, moving through the lane column of each tile, facing the
+    // way they walk, legs and arms following the walk cycle
     m_Figures.clear();
-    for (const Walker& walker : m_Walkers) {
+    for (Walker& walker : m_Walkers) {
+        glm::ivec2 step = walker.next - walker.tile;
+        if (step.x > 0) walker.direction = 0;
+        else if (step.x < 0) walker.direction = 1;
+        else if (step.y > 0) walker.direction = 2;
+        else if (step.y < 0) walker.direction = 3;
+
         glm::vec2 from = glm::vec2(walker.tile * TILE_SIZE + walker.lane);
         glm::vec2 to = glm::vec2(walker.next * TILE_SIZE + walker.lane);
         glm::ivec2 column = glm::ivec2(glm::floor(glm::mix(from, to, walker.progress) + 0.5f));
-        m_Figures.push_back({ glm::ivec4(column.x, BUILD_GROUND_Y, column.y, walker.tier) });
+        int frame = (int)(walker.walked / STRIDE) & 3;
+        int look = WalkerFigure::Pack(walker.tier, walker.direction, frame, walker.variant);
+        m_Figures.push_back({ glm::ivec4(column.x, BUILD_GROUND_Y, column.y, look) });
     }
 }

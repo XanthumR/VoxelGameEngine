@@ -30,6 +30,14 @@ constexpr uint8_t PERSON_SKIN = 47;
 constexpr uint8_t PERSON_TROUSERS = 48;
 constexpr uint8_t PERSON_SHIRT_FARMER = 49;
 constexpr uint8_t PERSON_SHIRT_WORKER = 50;
+constexpr uint8_t PERSON_SKIN_DARK = 51;
+constexpr uint8_t PERSON_TROUSERS_BLUE = 52;
+constexpr uint8_t PERSON_SHIRT_FARMER_GREEN = 53;
+constexpr uint8_t PERSON_SHIRT_WORKER_GREY = 54;
+constexpr uint8_t PERSON_STRAW_HAT = 55;
+constexpr uint8_t PERSON_CAP = 56;
+constexpr uint8_t PERSON_SHOES = 57;
+constexpr uint8_t PERSON_FIRST = PERSON_SKIN, PERSON_LAST = PERSON_SHOES;
 
 // Building materials of the .vox building models (assets/buildings): palette index = block ID, so
 // the colors in MagicaVoxel are the colors in the game (table in shaders/render/shade.comp)

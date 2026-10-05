@@ -63,7 +63,7 @@ vec3 getFalseColor(float level) {
     return c;
 }
 
-// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 and 46 building materials, 44-45 road, 47-50 walkers)
+// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 and 46 building materials, 44-45 road, 47-57 walkers)
 // Building model materials, block IDs 60-95 (src/World/BlockTypes.h, and the .vox palette written
 // by tools/building_models/generate.py: keep the three in step)
 const int MODEL_MATERIALS_FIRST = 60;
@@ -162,6 +162,13 @@ vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     else if (voxelID == 48) albedo = vec3(0.22, 0.18, 0.15); // Walker trousers
     else if (voxelID == 49) albedo = vec3(0.62, 0.42, 0.20); // Farmer shirt
     else if (voxelID == 50) albedo = vec3(0.18, 0.36, 0.72); // Worker shirt
+    else if (voxelID == 51) albedo = vec3(0.55, 0.36, 0.24); // Walker skin, darker
+    else if (voxelID == 52) albedo = vec3(0.20, 0.27, 0.42); // Walker trousers, blue
+    else if (voxelID == 53) albedo = vec3(0.32, 0.46, 0.22); // Farmer shirt, green
+    else if (voxelID == 54) albedo = vec3(0.48, 0.50, 0.52); // Worker shirt, grey
+    else if (voxelID == 55) albedo = vec3(0.86, 0.74, 0.40); // Straw hat
+    else if (voxelID == 56) albedo = vec3(0.18, 0.20, 0.30); // Worker cap
+    else if (voxelID == 57) albedo = vec3(0.16, 0.10, 0.06); // Shoes
     else if (voxelID == 45) albedo = hash(vec2(mapPos.xz) * 1.3) >= 0.5 ? vec3(0.50, 0.48, 0.44) : vec3(0.42, 0.40, 0.37); // Road kerb stones
     else if (voxelID == 44) albedo = mix(vec3(0.36, 0.27, 0.17), vec3(0.44, 0.33, 0.21), hash(vec2(mapPos.xz) * 0.73)); // Dirt road
     else if (voxelID == 43) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.70, 0.66, 0.58) : vec3(0.62, 0.58, 0.51); // Masonry

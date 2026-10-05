@@ -1,8 +1,9 @@
 #version 440 core
-// Residents walking the roads (WalkerSystem / WalkerRenderer in src/). Each walker is a column of
-// three voxels standing on the road: trousers, a shirt in its tier's color, and a head. Runs twice
-// per frame:
-//   mode 0 (erase): last frame's figures are removed (only voxels that still hold a walker)
+// Residents walking the roads (WalkerSystem / WalkerRenderer in src/). Each walker is a little
+// voxel person about 11 voxels tall, facing the way it walks: shoes and legs, hips, a torso with
+// sleeved arms and hands, a head, and a straw hat (Farmers) or a cap with a visor (Workers). Legs
+// and arms swing against each other through a 4-frame walk cycle. Runs twice per frame:
+//   mode 0 (erase): last frame's figures are removed (only voxels that still hold a person)
 //   mode 1 (draw):  this frame's figures are drawn (only into air)
 // so the world is never damaged, and figures wiped by a chunk re-upload come back the next frame.
 layout(local_size_x = 64) in;
@@ -14,16 +15,27 @@ const int PERSON_SKIN = 47;
 const int PERSON_TROUSERS = 48;
 const int PERSON_SHIRT_FARMER = 49;
 const int PERSON_SHIRT_WORKER = 50;
+const int PERSON_SKIN_DARK = 51;
+const int PERSON_TROUSERS_BLUE = 52;
+const int PERSON_SHIRT_FARMER_GREEN = 53;
+const int PERSON_SHIRT_WORKER_GREY = 54;
+const int PERSON_STRAW_HAT = 55;
+const int PERSON_CAP = 56;
+const int PERSON_SHOES = 57;
+const int PERSON_FIRST = PERSON_SKIN;
+const int PERSON_LAST = PERSON_SHOES;
 
 layout(std430, binding = 4) buffer FigureBuffer {
-    ivec4 figures[]; // xyz = feet voxel, w = population tier
+    // xyz = feet voxel (the ground below the figure's middle); w packs (see WalkerFigure):
+    // bits 0-1 tier, 2-3 direction (+x, -x, +z, -z), 4-5 walk frame, 6 skin, 7 shirt, 8 trousers
+    ivec4 figures[];
 };
 
 uniform int numFigures;
 uniform int mode; // 0 = erase, 1 = draw
 
-bool isWalker(int id) {
-    return id >= PERSON_SKIN && id <= PERSON_SHIRT_WORKER;
+bool isPerson(int id) {
+    return id >= PERSON_FIRST && id <= PERSON_LAST;
 }
 
 void drawVoxel(ivec3 p, int id) {
@@ -31,7 +43,7 @@ void drawVoxel(ivec3 p, int id) {
     int pool = locateVoxel(p, c, b);
     if (pool < 0) return;
     int current = voxelId(loadVoxel(pool, c));
-    if (current != 0 && !isWalker(current)) return; // Something is in the way
+    if (current != 0 && !isPerson(current)) return; // Something is in the way
     storeVoxel(pool, c, float(id) / 255.0);
     markBrick(pool, b);
 }
@@ -40,20 +52,97 @@ void eraseVoxel(ivec3 p) {
     ivec3 c, b;
     int pool = locateVoxel(p, c, b);
     if (pool < 0) return;
-    if (isWalker(voxelId(loadVoxel(pool, c)))) storeVoxel(pool, c, 0.0);
+    if (isPerson(voxelId(loadVoxel(pool, c)))) storeVoxel(pool, c, 0.0);
+}
+
+// The figure's frame: forward along its direction, side to its right
+ivec3 feet;
+ivec2 forward, side;
+
+// A voxel of the figure at (s to the side, t forward, y up)
+void put(int s, int t, int y, int id) {
+    ivec2 xz = feet.xz + side * s + forward * t;
+    drawVoxel(ivec3(xz.x, feet.y + y, xz.y), id);
 }
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
     if (index >= uint(numFigures)) return;
-    ivec3 feet = figures[index].xyz;
+    feet = figures[index].xyz;
 
     if (mode == 0) {
-        for (int y = 0; y < 3; y++) eraseVoxel(feet + ivec3(0, y, 0));
+        // Everything a figure can cover, in any direction
+        for (int y = 0; y <= 10; y++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dx = -2; dx <= 2; dx++) eraseVoxel(feet + ivec3(dx, y, dz));
+            }
+        }
+        return;
+    }
+
+    int packed = figures[index].w;
+    int tier = packed & 3;
+    int direction = (packed >> 2) & 3;
+    int frame = (packed >> 4) & 3;
+    forward = direction == 0 ? ivec2(1, 0) : direction == 1 ? ivec2(-1, 0) : direction == 2 ? ivec2(0, 1) : ivec2(0, -1);
+    side = ivec2(-forward.y, forward.x);
+
+    int skin = (packed & 64) != 0 ? PERSON_SKIN_DARK : PERSON_SKIN;
+    int shirt = tier == 0 ? ((packed & 128) != 0 ? PERSON_SHIRT_FARMER_GREEN : PERSON_SHIRT_FARMER)
+                          : ((packed & 128) != 0 ? PERSON_SHIRT_WORKER_GREY : PERSON_SHIRT_WORKER);
+    int trousers = (packed & 256) != 0 ? PERSON_TROUSERS_BLUE : PERSON_TROUSERS;
+
+    // Walk cycle: 0 = left leg forward, 1 and 3 = passing, 2 = right leg forward. The lower leg
+    // swings, the knee stays under the hips; arms swing the other way.
+    int swing = frame == 0 ? 1 : frame == 2 ? -1 : 0;
+
+    // Legs (left at s = -1, right at s = +1) with shoes
+    for (int leg = -1; leg <= 1; leg += 2) {
+        int legSwing = leg < 0 ? swing : -swing;
+        put(leg, legSwing, 0, PERSON_SHOES);
+        put(leg, legSwing, 1, trousers);
+        put(leg, 0, 2, trousers);
+        put(leg, 0, 3, trousers);
+    }
+
+    // Hips and torso, two deep
+    for (int s = -1; s <= 1; s++) {
+        put(s, 0, 4, trousers);
+        for (int y = 5; y <= 7; y++) {
+            put(s, 0, y, shirt);
+            put(s, -1, y, shirt);
+        }
+    }
+
+    // Arms: sleeves at the shoulders, hands swinging against the legs on the same side
+    for (int arm = -2; arm <= 2; arm += 4) {
+        int armSwing = arm < 0 ? -swing : swing;
+        put(arm, 0, 7, shirt);
+        put(arm, 0, 6, shirt);
+        put(arm, armSwing, 5, skin);
+    }
+
+    // Head
+    for (int s = -1; s <= 1; s++) {
+        put(s, 0, 8, skin);
+        put(s, -1, 8, skin);
+    }
+
+    if (tier == 0) {
+        // Straw hat: a wide brim and a crown
+        for (int s = -2; s <= 2; s++) {
+            for (int t = -2; t <= 1; t++) put(s, t, 9, PERSON_STRAW_HAT);
+        }
+        for (int s = -1; s <= 1; s++) {
+            put(s, 0, 10, PERSON_STRAW_HAT);
+            put(s, -1, 10, PERSON_STRAW_HAT);
+        }
     } else {
-        int shirt = figures[index].w == 0 ? PERSON_SHIRT_FARMER : PERSON_SHIRT_WORKER;
-        drawVoxel(feet, PERSON_TROUSERS);
-        drawVoxel(feet + ivec3(0, 1, 0), shirt);
-        drawVoxel(feet + ivec3(0, 2, 0), PERSON_SKIN);
+        // Cap with a visor over the face
+        for (int s = -1; s <= 1; s++) {
+            put(s, 0, 9, PERSON_CAP);
+            put(s, -1, 9, PERSON_CAP);
+            put(s, 1, 9, PERSON_CAP);
+        }
     }
 }

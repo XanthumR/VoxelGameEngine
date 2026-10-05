@@ -13,7 +13,12 @@ class RoadNetwork;
 
 // One drawn walker, 16 bytes to match the std430 layout in shaders/people/walkers.comp
 struct WalkerFigure {
-    glm::ivec4 feet; // xyz = voxel of the feet, w = population tier (shirt color)
+    glm::ivec4 feet; // xyz = voxel of the feet, w = packed look (see Pack)
+
+    // bits 0-1 tier, 2-3 direction (0 +x, 1 -x, 2 +z, 3 -z), 4-5 walk frame, 6-8 look variant
+    static int Pack(int tier, int direction, int frame, int variant) {
+        return (tier & 3) | ((direction & 3) << 2) | ((frame & 3) << 4) | ((variant & 7) << 6);
+    }
 };
 
 // Residents walking the roads. Purely visual (not part of the deterministic simulation): every
@@ -26,6 +31,7 @@ public:
     static constexpr int RESIDENTS_PER_WALKER = 5;
     static constexpr float TILES_PER_SECOND = 5.0f / TILE_SIZE; // About 5 voxels per second
     static constexpr float SPAWN_INTERVAL = 0.3f;   // Seconds between walkers leaving houses, per island
+    static constexpr float STRIDE = 2.5f;           // Voxels walked per frame of the walk cycle
 
     WalkerSystem();
 
@@ -46,7 +52,10 @@ private:
         glm::ivec2 previous; // Where it came from (avoids turning back unless at a dead end)
         glm::ivec2 lane;     // Column inside a tile (one of two lanes on each axis), so walkers pass each other
         float progress;      // 0..1 from tile to next
+        float walked;        // Voxels walked, drives the walk cycle
         uint8_t tier;
+        uint8_t direction;   // Facing (0 +x, 1 -x, 2 +z, 3 -z); kept while standing still
+        uint8_t variant;     // Skin, shirt and trousers choice (3 bits)
     };
 
     bool Spawn(IslandId island, const GameObjectRegistry& objects, const RoadNetwork& roads);
