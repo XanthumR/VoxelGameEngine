@@ -34,6 +34,7 @@ BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& s
         largest = std::max(largest, (size_t)columns.x * columns.y * BuildingVolumeHeight(type));
     }
     m_LookBuffer.reserve(largest);
+    m_GhostBuffer.reserve(largest);
     m_RestoreBuffer.reserve(largest);
     m_ChunkScratch.reserve(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
     m_LocationTiles.reserve(1024);
@@ -157,6 +158,14 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         m_Preview.state = m_LastCheck.error == PlacementError::None ? BuildPreview::VALID : BuildPreview::INVALID;
         m_Preview.min = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y - type.belowGround, minTile.y * TILE_SIZE);
         m_Preview.max = m_Preview.min + glm::ivec3(tiles.x * TILE_SIZE, BuildingVolumeHeight(type), tiles.y * TILE_SIZE);
+        if (m_GhostType != m_SelectedType || m_GhostRotation != m_Rotation) {
+            m_GhostType = m_SelectedType;
+            m_GhostRotation = m_Rotation;
+            m_Models.BuildVoxels((uint16_t)m_SelectedType, 0, m_Rotation, m_GhostBuffer);
+            m_GhostRevision++;
+        }
+        m_Preview.ghost = &m_GhostBuffer;
+        m_Preview.ghostRevision = m_GhostRevision;
     } else if (m_HoveredBuilding != INVALID_GAME_OBJECT) {
         const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(m_HoveredBuilding);
         const BuildingType& type = BUILDING_TYPES[m_Simulation.Objects().Building(m_HoveredBuilding).type];

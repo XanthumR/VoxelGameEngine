@@ -45,6 +45,7 @@ void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     previewState = loc("previewState");
     previewMin = loc("previewMin");
     previewMax = loc("previewMax");
+    previewGhost = loc("previewGhost");
     overlayOrigin = loc("overlayOrigin");
     overlayGroundY = loc("overlayGroundY");
     overlayTileSize = loc("overlayTileSize");
@@ -96,6 +97,21 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     glActiveTexture(GL_TEXTURE11);
     glBindTexture(GL_TEXTURE_2D_ARRAY, ocean.SlopeTexture());
 
+    // The placement preview's model on unit 14, uploaded when it changes
+    glActiveTexture(GL_TEXTURE14);
+    bool ghost = frame.preview.ghost != nullptr;
+    if (ghost && frame.preview.ghostRevision != m_GhostRevision) {
+        if (m_GhostTexture == 0) glGenTextures(1, &m_GhostTexture);
+        glm::ivec3 size = frame.preview.max - frame.preview.min;
+        glBindTexture(GL_TEXTURE_3D, m_GhostTexture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, size.x, size.z, size.y, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, frame.preview.ghost->data());
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        m_GhostRevision = frame.preview.ghostRevision;
+    }
+    glBindTexture(GL_TEXTURE_3D, m_GhostTexture);
+
     // Tile highlights on unit 13
     glActiveTexture(GL_TEXTURE13);
     glBindTexture(GL_TEXTURE_2D, frame.overlay ? frame.overlay->Texture() : 0);
@@ -146,6 +162,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glUniform1i(u.previewState, frame.preview.state);
         glUniform3iv(u.previewMin, 1, &frame.preview.min[0]);
         glUniform3iv(u.previewMax, 1, &frame.preview.max[0]);
+        glUniform1i(u.previewGhost, ghost && m_GhostTexture != 0 ? 1 : 0);
         glUniform2i(u.overlayOrigin, overlayOrigin.x, overlayOrigin.y);
         // Buildings and roads stand on SEA_LEVEL + ISLAND_HEIGHT; no overlay draws below the world
         glUniform1i(u.overlayGroundY, frame.overlay ? SEA_LEVEL + ISLAND_HEIGHT : -1000);

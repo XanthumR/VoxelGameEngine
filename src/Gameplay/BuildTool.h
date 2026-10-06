@@ -114,6 +114,10 @@ private:
     std::vector<glm::ivec2> m_LocationTiles;
     uint32_t m_LocationRevision = 0;
     std::vector<uint8_t> m_LookBuffer; // Reused for every placement
+    std::vector<uint8_t> m_GhostBuffer; // The selected type's model, for the placement preview
+    int m_GhostType = -1;
+    uint8_t m_GhostRotation = 0;
+    uint32_t m_GhostRevision = 0;
 
     bool m_LeftWasPressed = false, m_RightWasPressed = false, m_RWasPressed = false;
     std::array<bool, 9> m_NumberWasPressed = {}; // Keys 1-9

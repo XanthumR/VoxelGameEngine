@@ -50,7 +50,7 @@ private:
         GLint seaLevel, oceanTileSizes, oceanChoppiness, shoreOrigin, renderDistanceVoxels;
         GLint dimX, dimY, dimZ, cameraPos, inverseView, inverseProj, time;
         GLint sunDir, moonDir, lightDir, lightColor, skyColor, ambient;
-        GLint previewState, previewMin, previewMax;
+        GLint previewState, previewMin, previewMax, previewGhost;
         GLint overlayOrigin, overlayGroundY, overlayTileSize;
 
         void Locate(GLuint program);
@@ -64,5 +64,7 @@ private:
     bool LoadPass(Pass& pass, const char* path);
 
     Pass m_TracePass, m_ShadowPass, m_ShadePass;
+    GLuint m_GhostTexture = 0;     // The placement preview's model (R8UI, x, z, y)
+    uint32_t m_GhostRevision = 0;
     RenderTargets m_Targets;
 };
