@@ -21,6 +21,8 @@ const char* PlacementErrorText(PlacementError error) {
     case PlacementError::TwoIslands: return "spans two islands";
     case PlacementError::NeedsCoast: return "must be at the coast";
     case PlacementError::DockNotOverWater: return "the dock must reach over the water (R turns it)";
+    case PlacementError::NotEnoughCoins: return "not enough coins";
+    case PlacementError::NotEnoughPlanks: return "not enough planks on this island";
     }
     return "?";
 }

@@ -108,6 +108,8 @@ void DebugOverlay::Draw(const OverlayContext& c) {
         c.simulation.Production().CartsOnRoad());
     ImGui::Text("Population: %d | Walkers: %zu | Upgrades: %u | Downgrades: %u", population, c.walkers,
         c.simulation.Population().Upgrades(), c.simulation.Population().Downgrades());
+    const Treasury& coins = c.simulation.Coins();
+    ImGui::Text("Coins: %lld | Taxes: %d / min | Upkeep: %d / min", (long long)coins.Coins(), coins.IncomePerMinute(), coins.UpkeepPerMinute());
     // Debug: goods for the island shown in the island panel (only a settled island has storage)
     const int DEBUG_GOODS = 10;
     bool settled = c.simulation.Economy().Find(c.panelIsland) != nullptr;

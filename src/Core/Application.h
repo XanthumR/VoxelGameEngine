@@ -125,4 +125,8 @@ private:
     bool m_EscapeWasPressed = false, m_TabWasPressed = false, m_F1WasPressed = false, m_F3WasPressed = false;
     bool m_CWasPressed = false, m_LWasPressed = false;
     bool m_PageUpWasPressed = false, m_PageDownWasPressed = false;
+    bool m_PWasPressed = false, m_PlusWasPressed = false, m_MinusWasPressed = false;
+
+    int m_GameSpeed = 1;  // 0 = paused, 1, 2, 4
+    int m_SpeedBeforePause = 1;
 };

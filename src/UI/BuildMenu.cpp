@@ -2,6 +2,7 @@
 
 #include "Gameplay/BuildTool.h"
 #include "Economy/ProductionChains.h"
+#include "Economy/Treasury.h"
 #include "Simulation/BuildingTypes.h"
 
 #include "imgui.h"
@@ -56,7 +57,12 @@ void DrawBuildMenu(BuildTool& tool, uint32_t buildingCount) {
             std::snprintf(label, sizeof(label), "Road\n1x1  [%d]", i + 1);
         } else {
             const BuildingType& building = BUILDING_TYPES[entry];
-            std::snprintf(label, sizeof(label), "%s\n%dx%d  [%d]", building.name, building.footprintWidth, building.footprintDepth, i + 1);
+            const BuildingCost& cost = BUILDING_COSTS[entry];
+            if (cost.planks > 0) {
+                std::snprintf(label, sizeof(label), "%s\n%dc, %d planks  [%d]", building.name, cost.coins, cost.planks, i + 1);
+            } else {
+                std::snprintf(label, sizeof(label), "%s\n%dc  [%d]", building.name, cost.coins, i + 1);
+            }
         }
         SelectButton(tool, entry, label);
     }

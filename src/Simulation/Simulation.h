@@ -3,6 +3,7 @@
 #include "Economy/IslandEconomy.h"
 #include "Economy/PopulationSystem.h"
 #include "Economy/Production.h"
+#include "Economy/Treasury.h"
 #include "Simulation/GameObjects.h"
 #include "Simulation/IslandRegistry.h"
 #include "Simulation/Logistics.h"
@@ -41,6 +42,8 @@ public:
     PopulationSystem& Population() { return m_Population; }
     TreeRegistry& Trees() { return m_Trees; }
     ProductionSystem& Production() { return m_Production; }
+    Treasury& Coins() { return m_Treasury; }
+    const Treasury& Coins() const { return m_Treasury; }
     const ProductionSystem& Production() const { return m_Production; }
     const PopulationSystem& Population() const { return m_Population; }
 
@@ -61,6 +64,7 @@ private:
     PopulationSystem m_Population;
     TreeRegistry m_Trees;
     ProductionSystem m_Production;
+    Treasury m_Treasury;
 
     uint64_t m_TickCount = 0;
     double m_SimulationSeconds = 0.0;

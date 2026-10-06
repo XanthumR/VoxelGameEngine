@@ -12,6 +12,8 @@ void Simulation::FixedUpdate(float tickSeconds) {
     // Producers: workforce, location, cycles. Their location factors follow buildings, roads and trees.
     uint32_t worldRevision = m_BuildingsRevision * 2654435761u + m_Roads.Revision() * 40503u + m_Trees.Revision();
     m_Production.Update(m_Objects, m_Economy, m_Islands, m_Occupancy, m_Roads, m_Trees, worldRevision, m_TickCount);
+    // Taxes in, upkeep out
+    m_Treasury.Update(m_Objects);
 
     m_TickCount++;
     m_SimulationSeconds += tickSeconds;

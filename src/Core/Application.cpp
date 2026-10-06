@@ -6,6 +6,7 @@
 #include "UI/BuildingInfo.h"
 #include "UI/BuildingMarkers.h"
 #include "UI/IslandPanel.h"
+#include "UI/TopBar.h"
 #include "UI/Hud.h"
 #include "World/BlockTypes.h"
 
@@ -214,6 +215,17 @@ void Application::HandleKeys(float deltaTime) {
     }
 
     if (KeyPressed(GLFW_KEY_F3, m_F3WasPressed)) m_Overlay.Visible() = !m_Overlay.Visible();
+    // Game speed: P pauses, + and - step through 1x, 2x, 4x
+    bool plus = glfwGetKey(m_Window, GLFW_KEY_EQUAL) == GLFW_PRESS || glfwGetKey(m_Window, GLFW_KEY_KP_ADD) == GLFW_PRESS;
+    bool minus = glfwGetKey(m_Window, GLFW_KEY_MINUS) == GLFW_PRESS || glfwGetKey(m_Window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS;
+    if (KeyPressed(GLFW_KEY_P, m_PWasPressed)) {
+        if (m_GameSpeed > 0) m_SpeedBeforePause = m_GameSpeed;
+        m_GameSpeed = m_GameSpeed > 0 ? 0 : m_SpeedBeforePause;
+    }
+    if (plus && !m_PlusWasPressed) m_GameSpeed = m_GameSpeed == 0 ? 1 : std::min(4, m_GameSpeed * 2);
+    if (minus && !m_MinusWasPressed) m_GameSpeed = m_GameSpeed <= 1 ? 1 : m_GameSpeed / 2;
+    m_PlusWasPressed = plus;
+    m_MinusWasPressed = minus;
     if (KeyPressed(GLFW_KEY_C, m_CWasPressed)) m_Settings.chunkViewer = !m_Settings.chunkViewer;
     if (KeyPressed(GLFW_KEY_L, m_LWasPressed)) m_Settings.lightVisualizer = !m_Settings.lightVisualizer;
 
@@ -359,7 +371,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     }
 
     // --- Game simulation: fixed steps, independent of the frame rate ---
-    int steps = m_Clock.StepsToRun(frameSeconds);
+    int steps = m_Clock.StepsToRun(frameSeconds, m_GameSpeed);
     for (int i = 0; i < steps; i++) m_Simulation.FixedUpdate((float)GameClock::TICK_SECONDS);
     // Houses that upgraded or downgraded get their new look
     for (GameObjectId id : m_Simulation.Population().LookChanges()) m_BuildTool.RefreshLook(id);
@@ -377,6 +389,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_CameraMode == CameraMode::Strategy) {
         DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
         DrawIslandPanel(m_PanelIsland, m_Simulation.Economy());
+        DrawTopBar(m_Simulation.Coins(), m_GameSpeed);
         if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && !ImGui::GetIO().WantCaptureMouse &&
             m_BuildTool.HoveredBuilding() != m_BuildTool.InspectedBuilding()) {
             DrawBuildingInfo(m_BuildTool.HoveredBuilding(), m_Simulation.Objects(), m_Simulation.Economy());
@@ -404,10 +417,11 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_Ocean.Update(animationTime);
     m_Grass.Animate(animationTime, m_Cache);
     // Figures: walkers, chimney smoke and fishing boats, drawn into the voxels on the GPU
-    m_Walkers.Update(deltaTime, m_Simulation.Objects(), m_Simulation.Roads(), m_Simulation.Economy());
+    float gameDelta = deltaTime * (float)m_GameSpeed; // Paused or sped up with the simulation
+    m_Walkers.Update(gameDelta, m_Simulation.Objects(), m_Simulation.Roads(), m_Simulation.Economy());
     glm::vec3 focus = ActiveCamera().FocusPoint() * VOXELS_PER_UNIT;
-    m_Smoke.Update(deltaTime, m_Simulation.Objects(), m_BuildingModels, glm::vec2(focus.x, focus.z), SMOKE_DISTANCE);
-    m_Boats.Update(deltaTime, m_Simulation.Objects(), m_BuildingModels, m_Terrain);
+    m_Smoke.Update(gameDelta, m_Simulation.Objects(), m_BuildingModels, glm::vec2(focus.x, focus.z), SMOKE_DISTANCE);
+    m_Boats.Update(gameDelta, m_Simulation.Objects(), m_BuildingModels, m_Terrain);
     m_Figures.clear();
     m_Figures.insert(m_Figures.end(), m_Walkers.Figures().begin(), m_Walkers.Figures().end());
     m_Smoke.AppendFigures(m_Figures);

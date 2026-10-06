@@ -43,3 +43,22 @@ TEST(SimulationTest, FixedUpdateCountsTicks) {
     EXPECT_EQ(simulation.TickCount(), 25u);
     EXPECT_NEAR(simulation.SimulationSeconds(), 2.5, 1e-5);
 }
+
+TEST(GameClockTest, SpeedScalesTheSteps) {
+    GameClock normal, fast, paused;
+    int normalSteps = 0, fastSteps = 0, pausedSteps = 0;
+    for (int i = 0; i < 600; i++) { // 10 s at 60 FPS
+        normalSteps += normal.StepsToRun(1.0 / 60.0, 1);
+        fastSteps += fast.StepsToRun(1.0 / 60.0, 4);
+        pausedSteps += paused.StepsToRun(1.0 / 60.0, 0);
+    }
+    EXPECT_NEAR(normalSteps, 100, 1);
+    EXPECT_NEAR(fastSteps, 400, 1);
+    EXPECT_EQ(pausedSteps, 0);
+    EXPECT_EQ(fast.DroppedSteps(), 0u);
+}
+
+TEST(GameClockTest, StepCapGrowsWithSpeed) {
+    GameClock clock;
+    EXPECT_EQ(clock.StepsToRun(1.0, 4), GameClock::MAX_STEPS_PER_FRAME * 4); // 40 steps were due
+}

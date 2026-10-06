@@ -11,8 +11,9 @@ public:
     static constexpr double TICK_SECONDS = 1.0 / TICK_RATE;
     static constexpr int MAX_STEPS_PER_FRAME = 5; // A long stall drops time instead of spiralling
 
-    // Adds the frame's elapsed time and returns how many simulation steps to run now
-    int StepsToRun(double frameDelta);
+    // Adds the frame's elapsed time times the game speed (0 = paused, 1, 2, 4) and returns how
+    // many simulation steps to run now; the step cap grows with the speed
+    int StepsToRun(double frameDelta, int speed = 1);
 
     // How far (0..1) the clock is between the last step and the next; for interpolating visuals
     float Alpha() const { return (float)(m_Accumulator / TICK_SECONDS); }

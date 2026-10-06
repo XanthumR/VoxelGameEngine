@@ -26,6 +26,8 @@ enum class PlacementError {
     TwoIslands, // The footprint spans more than one island
     NeedsCoast, // A producer that must stand by the sea (fishery)
     DockNotOverWater, // The dock part of a coastal building is over land
+    NotEnoughCoins,   // Not placement itself: the treasury can't pay (Treasury::Check)
+    NotEnoughPlanks,  // ...or the island's storage lacks the planks
 };
 
 const char* PlacementErrorText(PlacementError error);

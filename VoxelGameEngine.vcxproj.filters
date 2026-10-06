@@ -75,6 +75,12 @@
     <ClCompile Include="src\Economy\Production.cpp">
       <Filter>src\Economy</Filter>
     </ClCompile>
+    <ClCompile Include="src\Economy\Treasury.cpp">
+      <Filter>src\Economy</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI\TopBar.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\BuildTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
@@ -315,6 +321,12 @@
     </ClInclude>
     <ClInclude Include="src\Economy\Production.h">
       <Filter>src\Economy</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Economy\Treasury.h">
+      <Filter>src\Economy</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI\TopBar.h">
+      <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\Economy\ProductionChains.h">
       <Filter>src\Economy</Filter>

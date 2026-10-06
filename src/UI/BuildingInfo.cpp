@@ -3,6 +3,7 @@
 #include "Economy/IslandEconomy.h"
 #include "Economy/PopulationSystem.h"
 #include "Economy/ProductionChains.h"
+#include "Economy/Treasury.h"
 #include "Simulation/BuildingTypes.h"
 
 #include "imgui.h"
@@ -169,6 +170,19 @@ void BuildingDetails(GameObjectId building, const GameObjectRegistry& objects, c
     case BuildingRole::Storage: WarehouseInfo(building, objects, economy); break;
     case BuildingRole::Producer: ProducerInfo(building, objects, economy); break;
     }
+
+    // Money
+    uint16_t typeIndex = objects.Building(building).type;
+    const BuildingCost& cost = BUILDING_COSTS[typeIndex];
+    ImGui::Separator();
+    if (type.role == BuildingRole::Residence) {
+        int64_t tax = Treasury::HouseTaxMilli(objects, building);
+        ImGui::Text("Taxes: %lld.%lld coins / min", (long long)(tax / 1000), (long long)(tax % 1000 / 100));
+    } else {
+        ImGui::Text("Upkeep: %d coins / min", cost.upkeep);
+    }
+    if (cost.planks / 2 > 0) ImGui::TextDisabled("Demolish refunds %dc, %d planks", cost.coins / 2, cost.planks / 2);
+    else if (cost.coins > 0) ImGui::TextDisabled("Demolish refunds %dc", cost.coins / 2);
 }
 
 } // namespace

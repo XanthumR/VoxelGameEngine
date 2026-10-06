@@ -10,7 +10,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 2 (done) | Roads & warehouses | Paint roads; buildings only work when connected by road to a warehouse; each warehouse reaches a set distance along its roads; storage per island |
 | 3 (done) | Housing & population | Farmer residences; needs (fish, work clothes) with supply %; population per island; houses upgrade or shrink |
 | 4 (done) | Production chains | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
-| 5 | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
+| 5 (done) | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
 | 6 | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
 | 7 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
 | 8 | Persistence & polish | Save/load (edited chunks + game objects), notifications, sound, balancing |
@@ -597,3 +597,19 @@ Islands are made of whole build tiles, like the blocky islands of Anno 1800, so 
 - **Markers:** red no road, grey no workers or bad location, amber missing input or no marketplace, green ready-to-upgrade arrow on houses.
 - **F3:** producers working / total and carts on the road; the debug goods button moved here from the island panel (it adds to the island shown in the panel).
 - **Tests:** production cycles and workforce, inputs and the output limit, carts (route, trip, waiting, fetching, cut road, full warehouse, placement), locations and trees, coastal placement, and the tile-aligned terrain.
+
+## Milestone 5, in detail (done)
+
+Coins belong to the player; planks come from the island a building stands on.
+
+- **`Treasury`** (`src/Economy/Treasury.h/.cpp`, owned by `Simulation`, updated every tick after production):
+  - **Taxes:** each house pays `TAX_PER_TEN_RESIDENTS` (Farmers 10, Workers 25 coins per minute per ten residents) times its residents, scaled by the average of its needs' supply. An unsupplied house pays nothing.
+  - **Upkeep:** every building's `upkeep` from `BUILDING_COSTS` (warehouse 5, marketplace 15, producers 5-30 coins per minute; houses none).
+  - **Integer math:** thousandths of a coin per minute; whole coins move once the remainder holds them.
+  - **Debt:** the balance may go negative; then nothing can be built (`Check` fails), nothing else stops.
+- **Build costs** (`BUILDING_COSTS`): coins and planks, e.g. farmer house 50c + 2 planks, sawmill 150c + 4 planks, warehouse 300c (no planks: it creates the storage). Roads are free. Starting coins: 3000.
+  - The build preview turns red with "not enough coins" or "not enough planks on this island" (`PlacementError::NotEnoughCoins/NotEnoughPlanks`).
+  - `BuildTool::Place` pays; `Demolish` refunds half of the coins and planks.
+- **Game speed:** `GameClock::StepsToRun(frameDelta, speed)` with speed 0 (paused), 1, 2 or 4; the step cap grows with the speed. Walkers, smoke and boats follow the game speed; day and night stay on real time. Keys: P pauses, + and - step the speed.
+- **UI:** the top bar shows coins and the net income per minute (taxes and upkeep on hover) and the speed buttons; build buttons show the cost; building tooltips show taxes or upkeep and the demolish refund; F3 shows coins, taxes and upkeep.
+- **Tests:** `TreasuryTests` (tax at full and half supply, empty houses, upkeep into debt, `Check`, pay and refund) and `GameClockTests` (speed scales the steps, pause runs none, the cap grows).

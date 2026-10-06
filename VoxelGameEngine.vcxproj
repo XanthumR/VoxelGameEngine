@@ -141,6 +141,8 @@
     <ClCompile Include="src\Economy\PopulationNeeds.cpp" />
     <ClCompile Include="src\Economy\PopulationSystem.cpp" />
     <ClCompile Include="src\Economy\Production.cpp" />
+    <ClCompile Include="src\Economy\Treasury.cpp" />
+    <ClCompile Include="src\UI\TopBar.cpp" />
     <ClCompile Include="src\Gameplay\BuildTool.cpp" />
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp" />
     <ClCompile Include="src\Gameplay\Carts.cpp" />
@@ -224,6 +226,8 @@
     <ClInclude Include="src\Economy\PopulationNeeds.h" />
     <ClInclude Include="src\Economy\PopulationSystem.h" />
     <ClInclude Include="src\Economy\Production.h" />
+    <ClInclude Include="src\Economy\Treasury.h" />
+    <ClInclude Include="src\UI\TopBar.h" />
     <ClInclude Include="src\Economy\ProductionChains.h" />
     <ClInclude Include="src\Gameplay\BuildTool.h" />
     <ClInclude Include="src\Gameplay\Camera.h" />
