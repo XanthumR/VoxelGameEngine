@@ -42,6 +42,17 @@ constexpr uint8_t SMOKE_LIGHT = 58; // Smoke puffs, and sails
 constexpr uint8_t BOAT_WOOD = 59;
 constexpr uint8_t FIGURE_FIRST = PERSON_SKIN, FIGURE_LAST = BOAT_WOOD;
 
+// Horse carts, drawn on the GPU like the other figures (shaders/people/figures.comp); the cargo
+// blocks follow ItemType order. 100 and 101 are building model markers, never in the world.
+constexpr uint8_t HORSE_COAT = 102;
+constexpr uint8_t HORSE_DARK = 103;  // Mane, tail, hooves
+constexpr uint8_t HARNESS = 104;     // Collar, saddle pad, reins
+constexpr uint8_t WAGON_WOOD = 105;
+constexpr uint8_t WHEEL_IRON = 106;
+constexpr uint8_t CARGO_FIRST = 107; // + (int)ItemType: wood, planks, fish, wool, work clothes, bricks, sausages, pigs
+constexpr uint8_t CARGO_LAST = 114;
+constexpr uint8_t CART_FIRST = HORSE_COAT, CART_LAST = CARGO_LAST;
+
 // Building materials of the .vox building models (assets/buildings): palette index = block ID, so
 // the colors in MagicaVoxel are the colors in the game (table in shaders/render/shade.comp)
 constexpr uint8_t MODEL_MATERIALS_FIRST = 60;

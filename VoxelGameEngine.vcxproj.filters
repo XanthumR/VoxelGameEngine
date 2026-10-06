@@ -81,6 +81,9 @@
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
+    <ClCompile Include="src\Gameplay\Carts.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\FishingBoats.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
@@ -326,6 +329,9 @@
       <Filter>src\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="src\Gameplay\Figure.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Gameplay\Carts.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="src\Gameplay\FishingBoats.h">

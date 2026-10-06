@@ -59,7 +59,18 @@ enum class ProducerStatus : uint8_t {
     OutputFull,   // The output buffer is full (waiting for a cart)
 };
 
-// A producer (BuildingRole::Producer): its cycle, buffers and how fast it runs (ProductionSystem)
+// Where a producer's cart is
+enum class CartState : uint8_t {
+    Idle,        // At home (not drawn), waiting for a load
+    ToWarehouse, // Driving the output to the warehouse
+    Unloading,   // At the warehouse: unloading the output, loading inputs
+    ToProducer,  // Driving back with the inputs
+};
+
+constexpr int CART_PATH_MAX = 32; // Road tiles of a cart's route; more than the warehouse road range
+
+// A producer (BuildingRole::Producer): its cycle, buffers and how fast it runs, and its cart
+// (ProductionSystem)
 struct ProductionComponent {
     int32_t progress = 0;                // Productivity per mille, summed per tick; a cycle is cycleTicks * 1000
     std::array<uint8_t, 2> inputs = {};  // Goods waiting to be used, in the chain's input order
@@ -68,6 +79,14 @@ struct ProductionComponent {
     int16_t productivity = 0;            // Per mille: workforce share x location factor
     ProducerStatus status = ProducerStatus::NoRoad;
     uint32_t cycles = 0;                 // Goods made so far
+
+    CartState cartState = CartState::Idle;
+    uint8_t cartPathLength = 0;              // Road tiles in cartPath
+    uint8_t cartOutput = 0;                  // Output goods on board
+    std::array<uint8_t, 2> cartInputs = {};  // Input goods on board, in the chain's input order
+    uint16_t cartWaitTicks = 0;              // Idle: ticks waited for a fuller load; Unloading: ticks at the warehouse
+    int32_t cartPosition = 0;                // Along cartPath in thousandths of a tile; 0 = the road tile next to the producer
+    std::array<glm::ivec2, CART_PATH_MAX> cartPath = {}; // From the producer's road tile down to the one touching the warehouse
 };
 
 // Owns every game object. Components live in flat arrays indexed by slot, all allocated up front,

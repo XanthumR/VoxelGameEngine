@@ -3,9 +3,10 @@
 #include <glm/glm.hpp>
 
 // One thing drawn into the voxel world every frame by FigureRenderer (shaders/people/figures.comp):
-// a walking person, a smoke puff or a boat. 16 bytes, the std430 layout of the shader's buffer.
+// a walking person, a smoke puff, a boat or a horse cart. 16 bytes, the std430 layout of the
+// shader's buffer.
 struct Figure {
-    enum Kind { PERSON = 0, PUFF = 1, BOAT = 2 };
+    enum Kind { PERSON = 0, PUFF = 1, BOAT = 2, CART = 3 };
 
     glm::ivec4 position; // xyz = anchor voxel (a person's feet, a puff's center, a boat's waterline center), w = packed look
 
@@ -20,6 +21,12 @@ struct Figure {
     // Boat: bits 2-3 direction, 4 sail set
     static int PackBoat(int direction, bool sailSet) {
         return ((direction & 3) << 2) | ((sailSet ? 1 : 0) << 4) | (BOAT << 9);
+    }
+    // Cart: bits 2-3 direction, 4-5 trot frame, 6-8 cargo amount (0-4), 11-14 cargo item
+    // (ItemType), 15 moving, 16-18 driver look variant
+    static int PackCart(int direction, int frame, bool moving, int cargoItem, int cargoAmount, int driverVariant) {
+        return ((direction & 3) << 2) | ((frame & 3) << 4) | ((cargoAmount & 7) << 6) | (CART << 9) | ((cargoItem & 15) << 11) |
+            ((moving ? 1 : 0) << 15) | ((driverVariant & 7) << 16);
     }
     static int KindOf(int packed) { return (packed >> 9) & 3; }
 };

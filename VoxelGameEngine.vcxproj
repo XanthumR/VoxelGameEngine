@@ -143,6 +143,7 @@
     <ClCompile Include="src\Economy\Production.cpp" />
     <ClCompile Include="src\Gameplay\BuildTool.cpp" />
     <ClCompile Include="src\Gameplay\DebugEditTool.cpp" />
+    <ClCompile Include="src\Gameplay\Carts.cpp" />
     <ClCompile Include="src\Gameplay\FishingBoats.cpp" />
     <ClCompile Include="src\Gameplay\FreeFlyCamera.cpp" />
     <ClCompile Include="src\Gameplay\Picking.cpp" />
@@ -228,6 +229,7 @@
     <ClInclude Include="src\Gameplay\Camera.h" />
     <ClInclude Include="src\Gameplay\DebugEditTool.h" />
     <ClInclude Include="src\Gameplay\Figure.h" />
+    <ClInclude Include="src\Gameplay\Carts.h" />
     <ClInclude Include="src\Gameplay\FishingBoats.h" />
     <ClInclude Include="src\Gameplay\FreeFlyCamera.h" />
     <ClInclude Include="src\Gameplay\Picking.h" />

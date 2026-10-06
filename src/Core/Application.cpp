@@ -412,6 +412,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_Figures.insert(m_Figures.end(), m_Walkers.Figures().begin(), m_Walkers.Figures().end());
     m_Smoke.AppendFigures(m_Figures);
     m_Boats.AppendFigures(m_Figures);
+    AppendCartFigures(m_Simulation.Objects(), m_Clock.Alpha(), m_Figures);
     m_FigureRenderer.Draw(m_Figures, m_Cache, SEA_LEVEL);
 
     // --- Render ---

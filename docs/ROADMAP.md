@@ -567,3 +567,13 @@ These are pure functions over the terrain noise, `IslandRegistry`, `OccupancyGri
 - A full house with every need met for 10 s is **ready to upgrade**: a green arrow marker shows above it.
 - With no build entry selected, left-clicking a building opens its panel on the right (Escape or clicking open ground closes it). For a ready house the panel has an **Upgrade** button, which costs 2 planks. The upgrade happens on the next tick, and only if the house is still ready and the planks are there.
 - Downgrades stay automatic.
+
+### Carts (step 6, done)
+
+- **Simulation** (`ProductionSystem::UpdateCart`, state in `ProductionComponent`): one cart per producer, in integer thousandths of a road tile at 0.6 tiles a second.
+  - **Leaving:** with a full load (4 goods); at once when an input ran out and the island has it; otherwise after waiting 20 s with something to carry.
+  - **Route:** downhill on the warehouse road distance from the producer's best road tile (`FindCartPath`), at most 30 tiles.
+  - **At the warehouse:** 2 s, then it unloads into island storage (waiting while storage is full) and loads up to 4 of each input the producer lacks.
+  - **Cut road:** the cart turns around at the gap and brings its cargo home; with the way home cut it is home at once.
+- **Drawing** (`src/Gameplay/Carts`): placed between ticks with `GameClock::Alpha`, in the right-hand lane, easing over to the new side after a turn. `figures.comp` draws the cart kind, about 23 voxels long: a trotting horse with mane, tail, collar, saddle pad and reins; shafts; a wagon on four turning wheels; a driver in a straw hat; one row of cargo per good, colored by the good. Block IDs 102-114 (`CART_FIRST`..`CART_LAST`) are figure blocks too.
+- **F3:** `ProductionSystem::CartsOnRoad()` is ready for the overlay (step 7).

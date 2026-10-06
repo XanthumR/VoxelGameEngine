@@ -64,7 +64,7 @@ vec3 getFalseColor(float level) {
     return c;
 }
 
-// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 and 46 building materials, 44-45 road, 47-59 figures: people, smoke, boats)
+// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 and 46 building materials, 44-45 road, 47-59 figures: people, smoke, boats; 102-114 horse carts)
 // Building model materials, block IDs 60-99 (src/World/BlockTypes.h, and the .vox palette written
 // by tools/building_models/generate.py: keep the three in step)
 const int MODEL_MATERIALS_FIRST = 60;
@@ -113,6 +113,25 @@ const vec3 MODEL_PALETTE[40] = vec3[](
     vec3(0.28, 0.20, 0.13)  // 99 mud
 );
 
+// Horse carts, block IDs 102-114 (src/World/BlockTypes.h); the cargo follows ItemType order
+const int CART_FIRST = 102;
+const int CART_LAST = 114;
+const vec3 CART_PALETTE[13] = vec3[](
+    vec3(0.46, 0.29, 0.16), // 102 horse coat
+    vec3(0.12, 0.08, 0.06), // 103 horse mane, tail, hooves
+    vec3(0.34, 0.17, 0.09), // 104 harness leather
+    vec3(0.56, 0.39, 0.21), // 105 wagon wood
+    vec3(0.20, 0.20, 0.22), // 106 wheel iron
+    vec3(0.40, 0.27, 0.14), // 107 cargo: wood (logs)
+    vec3(0.80, 0.64, 0.42), // 108 cargo: planks
+    vec3(0.70, 0.74, 0.78), // 109 cargo: fish
+    vec3(0.93, 0.92, 0.87), // 110 cargo: wool
+    vec3(0.22, 0.32, 0.56), // 111 cargo: work clothes
+    vec3(0.68, 0.30, 0.20), // 112 cargo: bricks
+    vec3(0.58, 0.22, 0.16), // 113 cargo: sausages
+    vec3(0.90, 0.62, 0.60)  // 114 cargo: pigs
+);
+
 vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     vec3 albedo = vec3(1.0);
     if (voxelID >= MODEL_MATERIALS_FIRST && voxelID <= MODEL_MATERIALS_LAST) {
@@ -120,6 +139,7 @@ vec3 getAlbedo(int voxelID, ivec3 mapPos) {
         float variation = 0.93 + 0.07 * hash(vec2(mapPos.xz) * 0.91 + float(mapPos.y) * 3.7);
         return MODEL_PALETTE[voxelID - MODEL_MATERIALS_FIRST] * variation;
     }
+    if (voxelID >= CART_FIRST && voxelID <= CART_LAST) return CART_PALETTE[voxelID - CART_FIRST];
     if (voxelID == 1) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000); // Grass
     else if (voxelID == 2) albedo = vec3(0.180, 0.110, 0.050); // Dirt
     else if (voxelID == 3) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.42, 0.42, 0.40) : vec3(0.36, 0.36, 0.35); // Stone

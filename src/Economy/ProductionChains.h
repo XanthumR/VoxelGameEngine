@@ -40,4 +40,8 @@ constexpr std::array<ProductionChain, 7> PRODUCTION_CHAINS = { {
 } };
 
 constexpr int PRODUCER_BUFFER = 4; // Goods a producer holds of its output and of each input
-constexpr int CART_CAPACITY = 4;   // Goods a cart carries per trip
+constexpr int CART_CAPACITY = 4;   // Goods a cart carries per trip, of each good
+constexpr int CART_TILE = 1000;    // Cart positions are in thousandths of a road tile
+constexpr int CART_SPEED = 60;     // Thousandths of a tile per tick: 0.6 tiles (about 7 voxels) a second
+constexpr int CART_MAX_WAIT_TICKS = 200; // With something to carry, a cart waits at most 20 s for a full load
+constexpr int CART_UNLOAD_TICKS = 20;    // Time at the warehouse before it unloads (2 s)

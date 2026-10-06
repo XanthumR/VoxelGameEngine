@@ -3,6 +3,7 @@
 #include "Core/LaunchOptions.h"
 #include "Gameplay/BuildTool.h"
 #include "Gameplay/RoadTool.h"
+#include "Gameplay/Carts.h"
 #include "Gameplay/FishingBoats.h"
 #include "Gameplay/Smoke.h"
 #include "Gameplay/Walkers.h"
