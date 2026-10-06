@@ -59,6 +59,7 @@ void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     previewGhost = loc("previewGhost");
     numObjects = loc("numObjects");
     objectTilesX = loc("objectTilesX");
+    shadowGridOrigin = loc("shadowGridOrigin");
     overlayOrigin = loc("overlayOrigin");
     overlayGroundY = loc("overlayGroundY");
     overlayTileSize = loc("overlayTileSize");
@@ -82,6 +83,10 @@ bool VoxelRenderer::Init() {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_ObjectBuffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, MAX_OBJECTS * sizeof(GpuObject), nullptr, GL_DYNAMIC_DRAW);
     glGenBuffers(1, &m_TileBuffer);
+    m_ShadowGrid.assign((size_t)SHADOW_GRID * SHADOW_GRID * (1 + OBJECTS_PER_SHADOW_CELL), 0);
+    glGenBuffers(1, &m_ShadowGridBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_ShadowGridBuffer);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, m_ShadowGrid.size() * sizeof(uint32_t), nullptr, GL_DYNAMIC_DRAW);
     m_GpuObjects.reserve(MAX_OBJECTS * sizeof(GpuObject));
     m_ObjectModels.reserve(256);
     m_ObjectSlots.reserve(256);
@@ -177,6 +182,13 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     }
     for (size_t tile = 0; tile < (size_t)tilesX * tilesY; tile++) m_TileData[tile * tileStride] = 0;
 
+    // ...and into the cells of the world shadow grid its shadow can fall on
+    const size_t cellStride = 1 + OBJECTS_PER_SHADOW_CELL;
+    for (size_t cell = 0; cell < (size_t)SHADOW_GRID * SHADOW_GRID; cell++) m_ShadowGrid[cell * cellStride] = 0;
+    glm::vec3 objectLight = SkyLighting::At(frame.time).lightDir;
+    glm::ivec2 focusCell = glm::ivec2(glm::floor(glm::vec2(frame.focusPoint.x, frame.focusPoint.z) * VOXELS_PER_UNIT / (float)SHADOW_CELL));
+    glm::ivec2 shadowOrigin = focusCell - SHADOW_GRID / 2;
+
     int objectCount = 0;
     m_GpuObjects.clear();
     if (frame.objects && m_ObjectAtlas != 0) {
@@ -205,20 +217,35 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
                 low = glm::min(low, pixel);
                 high = glm::max(high, pixel);
             }
-            if (!inFront) continue;
+            // Shadow cells first: an object off screen can still shadow what is on screen
+            glm::vec2 shadowLow, shadowHigh;
+            ObjectShadowFootprint(object.position, glm::vec3(rotation[0]), glm::vec3(rotation[1]), glm::vec3(rotation[2]), slot.size, objectLight,
+                (float)(SEA_LEVEL - 2), SHADOW_MAX_PUSH, shadowLow, shadowHigh);
+            glm::ivec2 cellLow = glm::max(glm::ivec2(glm::floor(shadowLow / (float)SHADOW_CELL)) - shadowOrigin, glm::ivec2(0));
+            glm::ivec2 cellHigh = glm::min(glm::ivec2(glm::floor(shadowHigh / (float)SHADOW_CELL)) - shadowOrigin, glm::ivec2(SHADOW_GRID - 1));
+            bool casts = cellLow.x <= cellHigh.x && cellLow.y <= cellHigh.y;
+            if (!inFront && !casts) continue;
+
             glm::ivec2 tileLow = behind ? glm::ivec2(0) : glm::ivec2(glm::floor(low)) / OBJECT_TILE;
             glm::ivec2 tileHigh = behind ? glm::ivec2(tilesX - 1, tilesY - 1) : glm::ivec2(glm::floor(high)) / OBJECT_TILE;
             tileLow = glm::max(tileLow, glm::ivec2(0));
             tileHigh = glm::min(tileHigh, glm::ivec2(tilesX - 1, tilesY - 1));
-            if (tileLow.x > tileHigh.x || tileLow.y > tileHigh.y) continue; // Off screen
+            bool onScreen = inFront && tileLow.x <= tileHigh.x && tileLow.y <= tileHigh.y;
+            if (!onScreen && !casts) continue;
 
             GpuObject gpu = { glm::vec4(object.position, 0.0f), rotation[0], rotation[1], rotation[2], glm::ivec4(slot.atlasX, slot.size) };
             const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&gpu);
             m_GpuObjects.insert(m_GpuObjects.end(), bytes, bytes + sizeof(GpuObject)); // Within the reserve
-            for (int ty = tileLow.y; ty <= tileHigh.y; ty++) {
+            for (int ty = tileLow.y; onScreen && ty <= tileHigh.y; ty++) {
                 for (int tx = tileLow.x; tx <= tileHigh.x; tx++) {
                     uint32_t* list = &m_TileData[((size_t)ty * tilesX + tx) * tileStride];
                     if (list[0] < (uint32_t)OBJECTS_PER_TILE) list[1 + list[0]++] = (uint32_t)objectCount;
+                }
+            }
+            for (int cz = cellLow.y; casts && cz <= cellHigh.y; cz++) {
+                for (int cx = cellLow.x; cx <= cellHigh.x; cx++) {
+                    uint32_t* list = &m_ShadowGrid[((size_t)cz * SHADOW_GRID + cx) * cellStride];
+                    if (list[0] < (uint32_t)OBJECTS_PER_SHADOW_CELL) list[1 + list[0]++] = (uint32_t)objectCount;
                 }
             }
             objectCount++;
@@ -230,6 +257,9 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_TileData.size() * sizeof(uint32_t), m_TileData.data());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, m_ObjectBuffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, m_TileBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_ShadowGridBuffer);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_ShadowGrid.size() * sizeof(uint32_t), m_ShadowGrid.data());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, m_ShadowGridBuffer);
 
     // Tile highlights on unit 13
     glActiveTexture(GL_TEXTURE13);
@@ -284,6 +314,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glUniform1i(u.previewGhost, ghost && m_GhostTexture != 0 ? 1 : 0);
         glUniform1i(u.numObjects, objectCount);
         glUniform1i(u.objectTilesX, tilesX);
+        glUniform2i(u.shadowGridOrigin, shadowOrigin.x, shadowOrigin.y);
         glUniform2i(u.overlayOrigin, overlayOrigin.x, overlayOrigin.y);
         // Buildings and roads stand on SEA_LEVEL + ISLAND_HEIGHT; no overlay draws below the world
         glUniform1i(u.overlayGroundY, frame.overlay ? SEA_LEVEL + ISLAND_HEIGHT : -1000);

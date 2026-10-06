@@ -37,8 +37,15 @@ struct VoxelObjectData {
 layout(std430, binding = 6) readonly buffer VoxelObjects { VoxelObjectData objects[]; };
 // Per 16 x 16 pixel tile: the number of objects whose box covers it, then their indices (32 each)
 layout(std430, binding = 7) readonly buffer ObjectTiles { uint objectTiles[]; };
+// Per world shadow cell (16 x 16 columns, 128 across from shadowGridOrigin): the number of objects
+// whose shadow can fall there, then their indices (16 each)
+layout(std430, binding = 8) readonly buffer ObjectShadowGrid { uint shadowGrid[]; };
 uniform int numObjects;
 uniform int objectTilesX;
+uniform ivec2 shadowGridOrigin; // In cells
+const int SHADOW_CELL = 16;
+const int SHADOW_GRID = 128;
+const int SHADOW_CELL_STRIDE = 16;
 const int OBJECT_TILE = 16;
 const int OBJECT_TILE_STRIDE = 32;
 layout(binding = 15) uniform usampler3D objectAtlas; // Block IDs at (atlas x, z, y)
@@ -58,49 +65,78 @@ bool insideObject(vec3 p, ivec2 pixel) {
 
 // The nearest voxel object along the ray closer than maxT (voxels); 0 = none. The axes are unit
 // length, so distances in a model's frame are distances in the world.
+// One object along a ray: the distance to its first voxel closer than maxT (else maxT)
+float traceObject(VoxelObjectData object, vec3 origin, vec3 dir, float maxT, out uint hitId, out vec3 hitNormal) {
+    hitId = 0u;
+    hitNormal = vec3(0.0, 1.0, 0.0);
+    ivec3 size = object.model.yzw;
+    vec3 rel = origin - object.position.xyz;
+    vec3 lo = vec3(dot(rel, object.axisX.xyz), dot(rel, object.axisY.xyz), dot(rel, object.axisZ.xyz)) + vec3(size.x, 0, size.z) * 0.5;
+    vec3 ld = vec3(dot(dir, object.axisX.xyz), dot(dir, object.axisY.xyz), dot(dir, object.axisZ.xyz));
+    vec3 inv = 1.0 / ld;
+    vec3 t0 = -lo * inv, t1 = (vec3(size) - lo) * inv;
+    vec3 tNear = min(t0, t1), tFar = max(t0, t1);
+    float tEnter = max(max(tNear.x, tNear.y), tNear.z);
+    float tExit = min(min(tFar.x, tFar.y), tFar.z);
+    float t = max(tEnter, 0.0);
+    if (tExit <= t || t >= maxT) return maxT;
+
+    ivec3 cell = clamp(ivec3(floor(lo + ld * (t + 1e-4))), ivec3(0), size - 1);
+    ivec3 stepDir = ivec3(sign(ld));
+    vec3 tDelta = abs(inv);
+    vec3 tNext = (vec3(cell) + max(vec3(stepDir), vec3(0.0)) - lo) * inv;
+    int axis = tNear.x >= tNear.y && tNear.x >= tNear.z ? 0 : (tNear.y >= tNear.z ? 1 : 2);
+    for (int i = 0; i < size.x + size.y + size.z; i++) {
+        uint id = texelFetch(objectAtlas, ivec3(object.model.x + cell.x, cell.z, cell.y), 0).r;
+        if (id != 0u) {
+            hitId = id;
+            vec3 n = vec3(0.0);
+            n[axis] = -float(stepDir[axis]);
+            hitNormal = n.x * object.axisX.xyz + n.y * object.axisY.xyz + n.z * object.axisZ.xyz;
+            return t;
+        }
+        axis = tNext.x < tNext.y && tNext.x < tNext.z ? 0 : (tNext.y < tNext.z ? 1 : 2);
+        t = tNext[axis];
+        if (t >= maxT) break;
+        cell[axis] += stepDir[axis];
+        tNext[axis] += tDelta[axis];
+        if (cell[axis] < 0 || cell[axis] >= size[axis]) break;
+    }
+    return maxT;
+}
+
+// The nearest object on this pixel's screen tile closer than maxT
 float traceObjects(vec3 origin, vec3 dir, float maxT, ivec2 pixel, out uint hitId, out vec3 hitNormal) {
     float best = maxT;
     hitId = 0u;
     hitNormal = vec3(0.0, 1.0, 0.0);
     uint base = uint(((pixel.y / OBJECT_TILE) * objectTilesX + pixel.x / OBJECT_TILE) * OBJECT_TILE_STRIDE);
     for (uint k = 0u; k < objectTiles[base]; k++) {
-        VoxelObjectData object = objects[objectTiles[base + 1u + k]];
-        ivec3 size = object.model.yzw;
-        vec3 rel = origin - object.position.xyz;
-        vec3 lo = vec3(dot(rel, object.axisX.xyz), dot(rel, object.axisY.xyz), dot(rel, object.axisZ.xyz)) + vec3(size.x, 0, size.z) * 0.5;
-        vec3 ld = vec3(dot(dir, object.axisX.xyz), dot(dir, object.axisY.xyz), dot(dir, object.axisZ.xyz));
-        vec3 inv = 1.0 / ld;
-        vec3 t0 = -lo * inv, t1 = (vec3(size) - lo) * inv;
-        vec3 tNear = min(t0, t1), tFar = max(t0, t1);
-        float tEnter = max(max(tNear.x, tNear.y), tNear.z);
-        float tExit = min(min(tFar.x, tFar.y), tFar.z);
-        float t = max(tEnter, 0.0);
-        if (tExit <= t || t >= best) continue;
-
-        ivec3 cell = clamp(ivec3(floor(lo + ld * (t + 1e-4))), ivec3(0), size - 1);
-        ivec3 stepDir = ivec3(sign(ld));
-        vec3 tDelta = abs(inv);
-        vec3 tNext = (vec3(cell) + max(vec3(stepDir), vec3(0.0)) - lo) * inv;
-        int axis = tNear.x >= tNear.y && tNear.x >= tNear.z ? 0 : (tNear.y >= tNear.z ? 1 : 2);
-        for (int i = 0; i < size.x + size.y + size.z; i++) {
-            uint id = texelFetch(objectAtlas, ivec3(object.model.x + cell.x, cell.z, cell.y), 0).r;
-            if (id != 0u) {
-                best = t;
-                hitId = id;
-                vec3 n = vec3(0.0);
-                n[axis] = -float(stepDir[axis]);
-                hitNormal = n.x * object.axisX.xyz + n.y * object.axisY.xyz + n.z * object.axisZ.xyz;
-                break;
-            }
-            axis = tNext.x < tNext.y && tNext.x < tNext.z ? 0 : (tNext.y < tNext.z ? 1 : 2);
-            t = tNext[axis];
-            if (t >= best) break;
-            cell[axis] += stepDir[axis];
-            tNext[axis] += tDelta[axis];
-            if (cell[axis] < 0 || cell[axis] >= size[axis]) break;
+        uint id;
+        vec3 n;
+        float t = traceObject(objects[objectTiles[base + 1u + k]], origin, dir, best, id, n);
+        if (id != 0u) {
+            best = t;
+            hitId = id;
+            hitNormal = n;
         }
     }
     return best;
+}
+
+// Shadow of the objects at a world point (voxels): 0.3 (as the world's shadows) when an object
+// of its shadow grid cell is in the way of the light, 1.0 otherwise
+float objectShadow(vec3 start) {
+    ivec2 cell = ivec2(floor(start.xz / float(SHADOW_CELL))) - shadowGridOrigin;
+    if (any(lessThan(cell, ivec2(0))) || any(greaterThanEqual(cell, ivec2(SHADOW_GRID)))) return 1.0;
+    uint base = uint((cell.y * SHADOW_GRID + cell.x) * SHADOW_CELL_STRIDE);
+    for (uint k = 0u; k < shadowGrid[base]; k++) {
+        uint id;
+        vec3 n;
+        traceObject(objects[shadowGrid[base + 1u + k]], start, lightDir, 1e30, id, n);
+        if (id != 0u) return 0.3;
+    }
+    return 1.0;
 }
 
 // Per build tile ground highlights (TileOverlay in src/Rendering/TileOverlay.h)
@@ -351,6 +387,7 @@ void main() {
         // Diffuse Lighting
         float diff = max(dot(normal, lightDir), 0.0);
         float shadow = lookupShadow(pixel_coords, mapPos, normalIndex, normal);
+        if (diff > 0.0 && numObjects > 0) shadow = min(shadow, objectShadow(vec3(mapPos) + 0.5 + normal * 0.6)); // Boats, carts, people
 
         // Specular (Blinn-Phong)
         vec3 viewDir = normalize(cameraPos - (vec3(mapPos) / float(dimX)));
@@ -457,7 +494,7 @@ void main() {
             vec3 p = originVoxels + ray.dir * objectT;
             vec3 albedo = getAlbedo(int(objectId), ivec3(floor(p - objectNormal * 0.25)));
             float diff = max(dot(objectNormal, lightDir), 0.0);
-            float shadow = diff > 0.0 ? softShadow(ivec3(floor(p - objectNormal * 0.25)), objectNormal) : 0.3;
+            float shadow = diff > 0.0 ? min(softShadow(ivec3(floor(p - objectNormal * 0.25)), objectNormal), objectShadow(p + objectNormal * 0.5)) : 0.3;
             colorResult.rgb = albedo * (diff * lightColor * shadow + ambient);
         }
     }

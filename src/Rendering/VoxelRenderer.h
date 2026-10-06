@@ -40,6 +40,12 @@ public:
     static constexpr int MAX_OBJECTS = 1024;
     static constexpr int OBJECT_TILE = 16;      // Pixels per side of a screen tile for object culling
     static constexpr int OBJECTS_PER_TILE = 31; // ponytail: extra objects in a crowded tile are not drawn there
+    // Shadow grid: which objects can shadow a world column (cells of SHADOW_CELL x SHADOW_CELL
+    // columns, SHADOW_GRID cells across, around the camera's focus)
+    static constexpr int SHADOW_CELL = 16;
+    static constexpr int SHADOW_GRID = 128;
+    static constexpr int OBJECTS_PER_SHADOW_CELL = 15; // ponytail: extra objects in a crowded cell cast no shadow there
+    static constexpr float SHADOW_MAX_PUSH = 96.0f;     // Voxels a shadow may reach from its object (low sun)
 
     bool Init();
 
@@ -61,7 +67,7 @@ private:
         GLint seaLevel, oceanTileSizes, oceanChoppiness, shoreOrigin, renderDistanceVoxels;
         GLint dimX, dimY, dimZ, cameraPos, inverseView, inverseProj, time;
         GLint sunDir, moonDir, lightDir, lightColor, skyColor, ambient;
-        GLint previewState, previewMin, previewMax, previewGhost, numObjects, objectTilesX;
+        GLint previewState, previewMin, previewMax, previewGhost, numObjects, objectTilesX, shadowGridOrigin;
         GLint overlayOrigin, overlayGroundY, overlayTileSize;
 
         void Locate(GLuint program);
@@ -91,6 +97,8 @@ private:
     GLuint m_TileBuffer = 0;
     std::vector<uint32_t> m_TileData;
     std::vector<uint8_t> m_GpuObjects; // This frame's GpuObjects, reserved at Init
+    GLuint m_ShadowGridBuffer = 0;
+    std::vector<uint32_t> m_ShadowGrid; // Per cell: a count, then object indices; sized at Init
     bool m_AtlasDirty = false;
     uint32_t m_GhostRevision = 0;
     RenderTargets m_Targets;

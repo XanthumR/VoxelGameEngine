@@ -1,5 +1,6 @@
 #include "Gameplay/FishingBoats.h"
 #include "Gameplay/Smoke.h"
+#include "Rendering/VoxelObject.h"
 #include "Simulation/BuildingLook.h"
 #include "Simulation/BuildingModels.h"
 #include "Simulation/IslandRegistry.h"
@@ -194,4 +195,28 @@ TEST(FishingBoatTest, ModelHasAHullAndASail) {
     auto count = [](const VoxelObjectModel& model) { return std::count_if(model.ids.begin(), model.ids.end(), [](uint8_t id) { return id != 0; }); };
     EXPECT_GT(count(moored), 200);
     EXPECT_GT(count(sailing), count(moored)); // The set sail adds voxels
+}
+
+TEST(ObjectShadowTest, FootprintFollowsTheLight) {
+    const glm::vec3 x(1, 0, 0), y(0, 1, 0), z(0, 0, 1);
+    const glm::ivec3 size(4, 10, 6);
+    glm::vec2 low, high;
+    // Light from straight above: only the box itself
+    ObjectShadowFootprint(glm::vec3(100, 50, 200), x, y, z, size, glm::vec3(0, 1, 0), 40.0f, 96.0f, low, high);
+    EXPECT_NEAR(low.x, 98.0f, 1e-4f);
+    EXPECT_NEAR(high.x, 102.0f, 1e-4f);
+    EXPECT_NEAR(low.y, 197.0f, 1e-4f);
+    EXPECT_NEAR(high.y, 203.0f, 1e-4f);
+
+    // Light from +x at 45 degrees: the shadow reaches toward -x, down to the receivers 10 below the
+    // bottom (20 below the top)
+    glm::vec3 slanted = glm::normalize(glm::vec3(1, 1, 0));
+    ObjectShadowFootprint(glm::vec3(100, 50, 200), x, y, z, size, slanted, 40.0f, 96.0f, low, high);
+    EXPECT_NEAR(low.x, 98.0f - 20.0f, 1e-3f);
+    EXPECT_NEAR(high.x, 102.0f, 1e-3f);
+
+    // Low sun: the push stops at the cap
+    glm::vec3 low_sun = glm::normalize(glm::vec3(1, 0.02f, 0));
+    ObjectShadowFootprint(glm::vec3(100, 50, 200), x, y, z, size, low_sun, 40.0f, 96.0f, low, high);
+    EXPECT_GE(low.x, 98.0f - 96.0f - 1e-3f);
 }

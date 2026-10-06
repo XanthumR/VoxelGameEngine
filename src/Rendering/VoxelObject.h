@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <vector>
 
@@ -16,6 +17,24 @@ struct VoxelObject {
     float pitch = 0.0f;         // Nose up
     float roll = 0.0f;          // Right side down
 };
+
+// Where an object's shadow can fall: the xz rectangle (low, high) of its box and of the box pushed
+// along -lightDir down to receiverY (the lowest surface that can be shadowed), at most maxPush
+// voxels. axisX/Y/Z are the object's local axes in the world, position the middle of its bottom.
+inline void ObjectShadowFootprint(glm::vec3 position, glm::vec3 axisX, glm::vec3 axisY, glm::vec3 axisZ, glm::ivec3 size,
+    glm::vec3 lightDir, float receiverY, float maxPush, glm::vec2& low, glm::vec2& high) {
+    low = glm::vec2(1e9f);
+    high = glm::vec2(-1e9f);
+    for (int corner = 0; corner < 8; corner++) {
+        glm::vec3 local((corner & 1) ? 0.5f : -0.5f, (corner & 2) ? 1.0f : 0.0f, (corner & 4) ? 0.5f : -0.5f);
+        local *= glm::vec3(size);
+        glm::vec3 world = position + axisX * local.x + axisY * local.y + axisZ * local.z;
+        float push = lightDir.y > 0.01f ? std::min((world.y - receiverY) / lightDir.y, maxPush) : maxPush;
+        glm::vec2 shadow = glm::vec2(world.x, world.z) - glm::vec2(lightDir.x, lightDir.z) * std::max(push, 0.0f);
+        low = glm::min(low, glm::min(glm::vec2(world.x, world.z), shadow));
+        high = glm::max(high, glm::max(glm::vec2(world.x, world.z), shadow));
+    }
+}
 
 // Block IDs filling size, x fastest, then z, then y (the order building models use); 0 = empty
 struct VoxelObjectModel {
