@@ -8,7 +8,6 @@
 
 namespace {
 
-const int DEBUG_GOODS = 10;
 
 // A labelled bar from red (0) to green (1000 per mille)
 void SupplyBar(const char* name, int perMille) {
@@ -23,7 +22,7 @@ void SupplyBar(const char* name, int perMille) {
 
 } // namespace
 
-void DrawIslandPanel(IslandId island, IslandEconomyManager& economy) {
+void DrawIslandPanel(IslandId island, const IslandEconomyManager& economy) {
     if (island == NO_ISLAND) return;
 
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -35,7 +34,7 @@ void DrawIslandPanel(IslandId island, IslandEconomyManager& economy) {
 
     ImGui::Text("Island #%u", island);
     ImGui::Separator();
-    IslandStorage* storage = economy.Find(island);
+    const IslandStorage* storage = economy.Find(island);
     if (!storage || storage->warehouseCount == 0) {
         ImGui::TextDisabled("Not settled: build a warehouse");
         ImGui::End();
@@ -73,6 +72,5 @@ void DrawIslandPanel(IslandId island, IslandEconomyManager& economy) {
         }
         ImGui::EndTable();
     }
-    if (ImGui::SmallButton("+10 all goods (debug)")) economy.AddAll(island, DEBUG_GOODS);
     ImGui::End();
 }

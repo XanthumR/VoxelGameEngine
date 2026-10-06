@@ -85,6 +85,44 @@ const char* StatusText(ProducerStatus status) {
 }
 
 // What the producer makes, how well it is doing, and why not
+// Where the producer's cart is and what it carries
+void CartInfo(const ProductionChain& chain, const ProductionComponent& production) {
+    // The inputs it brings back, e.g. "3 Wood"
+    char inputs[64] = "nothing";
+    int written = 0;
+    for (int i = 0; i < chain.inputCount; i++) {
+        if (production.cartInputs[i] == 0) continue;
+        written += std::snprintf(inputs + written, sizeof(inputs) - written, "%s%d %s", written > 0 ? ", " : "", production.cartInputs[i],
+            ItemName(chain.inputs[i]));
+    }
+
+    switch (production.cartState) {
+    case CartState::Idle:
+        if (production.cartWaitTicks > 0) {
+            int left = (CART_MAX_WAIT_TICKS - production.cartWaitTicks + 9) / 10;
+            ImGui::Text("Cart: at home, sets out in %d s (or with a full load)", left);
+        } else {
+            ImGui::TextDisabled("Cart: at home");
+        }
+        break;
+    case CartState::ToWarehouse:
+        if (production.cartOutput > 0) ImGui::Text("Cart: to the warehouse with %d %s", production.cartOutput, ItemName(chain.output));
+        else ImGui::Text("Cart: to the warehouse to fetch %s", chain.inputCount > 0 ? ItemName(chain.inputs[0]) : "goods");
+        break;
+    case CartState::Unloading:
+        if (production.cartWaitTicks >= CART_UNLOAD_TICKS && production.cartOutput > 0) {
+            ImGui::TextColored(WARNING_COLOR, "Cart: waiting, the warehouse is full");
+        } else {
+            ImGui::Text("Cart: unloading at the warehouse");
+        }
+        break;
+    case CartState::ToProducer:
+        if (production.cartOutput > 0) ImGui::TextColored(WARNING_COLOR, "Cart: road cut, coming back with %d %s", production.cartOutput, ItemName(chain.output));
+        else ImGui::Text("Cart: coming back with %s", inputs);
+        break;
+    }
+}
+
 void ProducerInfo(GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
     const ProductionChain& chain = PRODUCTION_CHAINS[BUILDING_TYPES[objects.Building(id).type].chain];
     const ProductionComponent& production = objects.Production(id);
@@ -107,6 +145,7 @@ void ProducerInfo(GameObjectId id, const GameObjectRegistry& objects, const Isla
         ImGui::Text("In:  %-12s %d / %d", ItemName(chain.inputs[i]), production.inputs[i], PRODUCER_BUFFER);
     }
     ImGui::Text("Out: %-12s %d / %d   (made %u)", ItemName(chain.output), production.output, PRODUCER_BUFFER, production.cycles);
+    CartInfo(chain, production);
 }
 
 void WarehouseInfo(GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {

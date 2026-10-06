@@ -9,7 +9,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 1 (done) | Foundation & first building | Strategy camera, the island under the cursor is identified, place and demolish a building on a grid with a green/red preview, 10 Hz simulation tick, first tests |
 | 2 (done) | Roads & warehouses | Paint roads; buildings only work when connected by road to a warehouse; each warehouse reaches a set distance along its roads; storage per island |
 | 3 (done) | Housing & population | Farmer residences; needs (fish, work clothes) with supply %; population per island; houses upgrade or shrink |
-| **4** | **Production chains** | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
+| 4 (done) | Production chains | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
 | 5 | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
 | 6 | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
 | 7 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
@@ -395,7 +395,7 @@ Build tiles grow from 4 to 12 voxels (a farmer house is 36x36, roads are 12 wide
 - Step 5: play-test the people, then commit.
 - The temporary demo patch screenshots each part and is removed afterwards.
 
-## Milestone 4, in detail
+## Milestone 4, in detail (done)
 
 Producers with workforce, location rules and carts. Trees: one tree per clump of high tree noise (its peak), so a lumberjack can fell exactly one; felled trees are left out of generated chunks and grow back after 5 minutes unless a building or road covers the spot.
 
@@ -590,3 +590,10 @@ Islands are made of whole build tiles, like the blocky islands of Anno 1800, so 
 - **`TILE_SIZE`** moved to `src/World/WorldConstants.h`, since the terrain uses it too.
 - **Caches:** the island noise and each tile's kind and distance to land are cached per generator (direct-mapped), so a column's height costs a few lookups.
 - **Tests** (`tests/TerrainTests.cpp`): land tiles are flat everywhere and other tiles are below island height; coast tiles touch land and both kinds exist; beaches slope from above the sea to under it; no steps under the water away from cliffs; cliffs drop into deep water.
+
+### UI, tests and docs (steps 7-8, done)
+
+- **Producer tooltip and panel:** status, productivity split into workforce and location, buffers and cycle progress (from step 5), and now the cart: at home (and when it sets out), on its way with what it carries, unloading, waiting at a full warehouse, coming back with the inputs, or back after a cut road.
+- **Markers:** red no road, grey no workers or bad location, amber missing input or no marketplace, green ready-to-upgrade arrow on houses.
+- **F3:** producers working / total and carts on the road; the debug goods button moved here from the island panel (it adds to the island shown in the panel).
+- **Tests:** production cycles and workforce, inputs and the output limit, carts (route, trip, waiting, fetching, cut road, full warehouse, placement), locations and trees, coastal placement, and the tile-aligned terrain.

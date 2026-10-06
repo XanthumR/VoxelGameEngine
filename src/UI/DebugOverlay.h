@@ -35,6 +35,7 @@ struct OverlayContext {
     const char* cameraMode;
     PickResult hover;
     IslandId hoverIsland;
+    IslandId panelIsland; // The island in the island panel (the debug goods button adds to it)
     Simulation& simulation;
     uint64_t droppedSimulationSteps;
     const BuildTool& buildTool;

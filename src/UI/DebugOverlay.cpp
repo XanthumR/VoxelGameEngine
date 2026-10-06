@@ -1,5 +1,6 @@
 #include "UI/DebugOverlay.h"
 
+#include "Economy/IslandEconomy.h"
 #include "Gameplay/BuildTool.h"
 #include "Gameplay/DebugEditTool.h"
 #include "Rendering/GpuChunkCache.h"
@@ -103,9 +104,16 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     for (size_t i = 0; i < c.simulation.Economy().IslandSlotCount(); i++) {
         for (int residents : c.simulation.Economy().IslandAt(i).population) population += residents;
     }
-    ImGui::Text("Producers working: %u / %u", c.simulation.Production().Working(), c.simulation.Production().Producers());
+    ImGui::Text("Producers working: %u / %u | Carts on the road: %u", c.simulation.Production().Working(), c.simulation.Production().Producers(),
+        c.simulation.Production().CartsOnRoad());
     ImGui::Text("Population: %d | Walkers: %zu | Upgrades: %u | Downgrades: %u", population, c.walkers,
         c.simulation.Population().Upgrades(), c.simulation.Population().Downgrades());
+    // Debug: goods for the island shown in the island panel (only a settled island has storage)
+    const int DEBUG_GOODS = 10;
+    bool settled = c.simulation.Economy().Find(c.panelIsland) != nullptr;
+    ImGui::BeginDisabled(!settled);
+    if (ImGui::SmallButton("+10 all goods to the island in the panel")) c.simulation.Economy().AddAll(c.panelIsland, DEBUG_GOODS);
+    ImGui::EndDisabled();
     const BuildTool& build = c.buildTool;
     if (build.SelectedType() == BuildTool::ROAD) {
         ImGui::Text("Build: Road");
