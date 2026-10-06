@@ -7,6 +7,7 @@
 #include "UI/BuildingMarkers.h"
 #include "UI/IslandPanel.h"
 #include "Gameplay/FigureModels.h"
+#include "UI/ShipPanel.h"
 #include "UI/TopBar.h"
 #include "UI/Hud.h"
 #include "World/BlockTypes.h"
@@ -129,6 +130,8 @@ bool Application::Init() {
         }
     }
     m_Walkers.SetModelBase(personBase);
+    int anchoredShip = m_Renderer.AddObjectModel(ShipControl::BuildModel(false));
+    m_ShipControl.SetModels(anchoredShip, m_Renderer.AddObjectModel(ShipControl::BuildModel(true)));
     m_CartModelBase = -1;
     for (int frame = 0; frame < CART_FRAMES; frame++) {
         for (int load = 0; load < CART_LOADS; load++) {
@@ -219,6 +222,8 @@ void Application::HandleKeys(float deltaTime) {
     if (KeyPressed(GLFW_KEY_ESCAPE, m_EscapeWasPressed)) {
         if (m_CameraMode == CameraMode::Strategy && m_BuildTool.SelectedType() != BuildTool::NO_TYPE) {
             m_BuildTool.SelectType(BuildTool::NO_TYPE);
+        } else if (m_CameraMode == CameraMode::Strategy && m_ShipControl.Selected() != INVALID_SHIP) {
+            m_ShipControl.Deselect();
         } else if (m_CameraMode == CameraMode::Strategy && m_BuildTool.InspectedBuilding() != INVALID_GAME_OBJECT) {
             m_BuildTool.ClearInspection();
         } else {
@@ -390,7 +395,9 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     UpdatePicking();
     if (m_CameraMode == CameraMode::Strategy) {
         ImGuiIO& io = ImGui::GetIO();
-        m_BuildTool.Update(m_Window, m_Hover, !io.WantCaptureMouse, !io.WantCaptureKeyboard);
+        // Ships first: while one is selected, clicks are its orders, not building ones
+        m_ShipControl.Update(m_Window, m_Hover, !io.WantCaptureMouse, m_BuildTool.SelectedType() != BuildTool::NO_TYPE, m_Simulation);
+        m_BuildTool.Update(m_Window, m_Hover, !io.WantCaptureMouse && m_ShipControl.Selected() == INVALID_SHIP, !io.WantCaptureKeyboard);
         UpdateTileOverlay();
     }
 
@@ -419,12 +426,16 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
             DrawBuildingInfo(m_BuildTool.HoveredBuilding(), m_Simulation.Objects(), m_Simulation.Economy());
         }
         if (m_BuildTool.InspectedBuilding() != INVALID_GAME_OBJECT &&
-            !DrawBuildingPanel(m_BuildTool.InspectedBuilding(), m_Simulation.Objects(), m_Simulation.Economy(), m_Simulation.Population())) {
+            !DrawBuildingPanel(m_BuildTool.InspectedBuilding(), m_Simulation)) {
             m_BuildTool.ClearInspection();
         }
         int width, height;
         glfwGetWindowSize(m_Window, &width, &height);
         DrawBuildingMarkers(m_StrategyCamera, m_Simulation.Objects(), glm::ivec2(width, height));
+        if (m_ShipControl.Selected() != INVALID_SHIP &&
+            !DrawShipPanel(m_ShipControl.Selected(), m_Simulation, m_StrategyCamera, glm::ivec2(width, height), m_ShipControl.LastOrderFailed())) {
+            m_ShipControl.Deselect();
+        }
     }
 
     if (minimized) {
@@ -452,6 +463,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_Boats.AppendObjects(m_VoxelObjects);
     m_VoxelObjects.insert(m_VoxelObjects.end(), m_Walkers.Objects().begin(), m_Walkers.Objects().end());
     AppendCartObjects(m_Simulation.Objects(), m_Clock.Alpha(), m_CartModelBase, m_VoxelObjects);
+    m_ShipControl.AppendObjects(m_Simulation.Ships(), m_Clock.Alpha(), gameDelta, m_VoxelObjects);
     m_FigureRenderer.Draw(m_Figures, m_Cache, SEA_LEVEL);
 
     // --- Render ---

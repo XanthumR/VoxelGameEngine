@@ -4,6 +4,7 @@
 #include "Economy/PopulationSystem.h"
 #include "Economy/ProductionChains.h"
 #include "Economy/Treasury.h"
+#include "Simulation/Simulation.h"
 #include "Simulation/BuildingTypes.h"
 
 #include "imgui.h"
@@ -194,7 +195,9 @@ void DrawBuildingInfo(GameObjectId building, const GameObjectRegistry& objects, 
     ImGui::EndTooltip();
 }
 
-bool DrawBuildingPanel(GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy, PopulationSystem& population) {
+bool DrawBuildingPanel(GameObjectId building, Simulation& simulation) {
+    const GameObjectRegistry& objects = simulation.Objects();
+    const IslandEconomyManager& economy = simulation.Economy();
     if (!objects.IsAlive(building)) return false;
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImVec2 rightMiddle(viewport->WorkPos.x + viewport->WorkSize.x - 12.0f, viewport->WorkPos.y + viewport->WorkSize.y * 0.5f);
@@ -213,8 +216,26 @@ bool DrawBuildingPanel(GameObjectId building, const GameObjectRegistry& objects,
         ImGui::BeginDisabled(!can);
         char label[64];
         std::snprintf(label, sizeof(label), "Upgrade to %s (%d planks)", POPULATION_TIERS[type.tier + 1].name, UPGRADE_PLANKS);
-        if (ImGui::Button(label)) population.RequestUpgrade(building);
+        if (ImGui::Button(label)) simulation.Population().RequestUpgrade(building);
         ImGui::EndDisabled();
+    }
+
+    // Harbors: ships are built here
+    if (type.role == BuildingRole::Storage && type.dockRows > 0) {
+        ImGui::Separator();
+        const IslandStorage* storage = economy.Find(objects.Building(building).island);
+        bool can = storage && storage->Amount(ItemType::Planks) >= ShipSystem::SHIP_PLANKS && simulation.Coins().Coins() >= ShipSystem::SHIP_COINS;
+        ImGui::BeginDisabled(!can);
+        char label[64];
+        std::snprintf(label, sizeof(label), "Build ship (%dc, %d planks)", ShipSystem::SHIP_COINS, ShipSystem::SHIP_PLANKS);
+        if (ImGui::Button(label)) simulation.Ships().Build(building, objects, simulation.Economy(), simulation.Coins());
+        ImGui::EndDisabled();
+        int docked = 0;
+        for (int slot = 0; slot < ShipSystem::MAX_SHIPS; slot++) {
+            ShipId ship = simulation.Ships().IdAtSlot(slot);
+            if (ship != INVALID_SHIP && simulation.Ships().Get(ship).state == ShipState::Docked && simulation.Ships().Get(ship).harbor == building) docked++;
+        }
+        ImGui::Text("Ships docked here: %d", docked);
     }
     ImGui::End();
     return open;

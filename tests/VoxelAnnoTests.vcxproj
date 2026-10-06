@@ -96,6 +96,7 @@
     <ClCompile Include="..\src\Simulation\Placement.cpp" />
     <ClCompile Include="..\src\Simulation\ProducerLocation.cpp" />
     <ClCompile Include="..\src\Simulation\RoadNetwork.cpp" />
+    <ClCompile Include="..\src\Simulation\Ships.cpp" />
     <ClCompile Include="..\src\Simulation\Simulation.cpp" />
     <ClCompile Include="..\src\Simulation\TreeRegistry.cpp" />
     <ClCompile Include="..\src\World\BuildingModel.cpp" />
@@ -121,6 +122,7 @@
     <ClCompile Include="TerrainTests.cpp" />
     <ClCompile Include="TreasuryTests.cpp" />
     <ClCompile Include="RoadNetworkTests.cpp" />
+    <ClCompile Include="ShipTests.cpp" />
     <ClCompile Include="TestWorld.cpp" />
     <ClCompile Include="WalkerTests.cpp" />
   </ItemGroup>

@@ -5,6 +5,7 @@
 #include "Gameplay/RoadTool.h"
 #include "Gameplay/Carts.h"
 #include "Gameplay/FishingBoats.h"
+#include "Gameplay/ShipControl.h"
 #include "Gameplay/Smoke.h"
 #include "Gameplay/Walkers.h"
 #include "Gameplay/DebugEditTool.h"
@@ -101,6 +102,7 @@ private:
     GrassAnimator m_Grass;
     WalkerSystem m_Walkers; // Residents walking the roads (visual only)
     SmokeSystem m_Smoke;    // Chimney smoke (visual only)
+    ShipControl m_ShipControl; // Selecting ships, their orders and look
     FishingBoats m_Boats;   // Fishing boats of the fisheries (visual only)
     FigureRenderer m_FigureRenderer;
     std::vector<Figure> m_Figures; // This frame's smoke puffs, reserved at setup

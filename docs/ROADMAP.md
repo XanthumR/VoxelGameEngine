@@ -634,6 +634,8 @@ A **Harbor** building, **ships** built there that sail the open sea, direct **mo
 - Left click near a ship selects it (a ring and a ship panel); right click on the sea sends it there, on a harbor to its berth.
 - Ship panel: state, cargo, route; while docked, +10/-10 buttons move goods between the ship and that island's storage.
 
+- Steps 2 and 3 were done together (a ship has to be seen to be play-tested). The berth is two tiles past the pier's end, clear of it; a new ship faces out to sea.
+
 ### 4. Trade routes
 - Up to 16 routes of up to 4 stops; each stop is a harbor and, per good, Load / Unload / nothing.
 - At a stop the ship waits 3 s, unloads the goods marked Unload (waiting while storage is full), loads the goods marked Load until full or the storage is empty, and sails on. A stop whose harbor is gone is skipped.

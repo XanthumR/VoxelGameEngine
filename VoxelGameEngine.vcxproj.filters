@@ -93,6 +93,12 @@
     <ClCompile Include="src\Gameplay\Carts.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
+    <ClCompile Include="src\Gameplay\ShipControl.cpp">
+      <Filter>src\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI\ShipPanel.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\FishingBoats.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
@@ -169,6 +175,9 @@
       <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation\ProducerLocation.cpp">
+      <Filter>src\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation\Ships.cpp">
       <Filter>src\Simulation</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation\RoadNetwork.cpp">
@@ -352,6 +361,12 @@
     <ClInclude Include="src\Gameplay\Carts.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
+    <ClInclude Include="src\Gameplay\ShipControl.h">
+      <Filter>src\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI\ShipPanel.h">
+      <Filter>src\UI</Filter>
+    </ClInclude>
     <ClInclude Include="src\Gameplay\FishingBoats.h">
       <Filter>src\Gameplay</Filter>
     </ClInclude>
@@ -443,6 +458,9 @@
       <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\ProducerLocation.h">
+      <Filter>src\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation\Ships.h">
       <Filter>src\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation\RoadNetwork.h">

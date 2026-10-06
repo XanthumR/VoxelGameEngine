@@ -10,6 +10,7 @@
 #include "Simulation/OccupancyGrid.h"
 #include "Simulation/Placement.h"
 #include "Simulation/RoadNetwork.h"
+#include "Simulation/Ships.h"
 #include "Simulation/TreeRegistry.h"
 
 #include <cstdint>
@@ -43,6 +44,8 @@ public:
     TreeRegistry& Trees() { return m_Trees; }
     ProductionSystem& Production() { return m_Production; }
     Treasury& Coins() { return m_Treasury; }
+    ShipSystem& Ships() { return m_Ships; }
+    const ShipSystem& Ships() const { return m_Ships; }
     const Treasury& Coins() const { return m_Treasury; }
     const ProductionSystem& Production() const { return m_Production; }
     const PopulationSystem& Population() const { return m_Population; }
@@ -65,6 +68,7 @@ private:
     TreeRegistry m_Trees;
     ProductionSystem m_Production;
     Treasury m_Treasury;
+    ShipSystem m_Ships;
 
     uint64_t m_TickCount = 0;
     double m_SimulationSeconds = 0.0;

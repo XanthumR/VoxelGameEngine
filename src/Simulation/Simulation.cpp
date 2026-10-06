@@ -1,6 +1,6 @@
 #include "Simulation/Simulation.h"
 
-Simulation::Simulation(TerrainGenerator& terrain) : m_Islands(terrain), m_Trees(terrain) {}
+Simulation::Simulation(TerrainGenerator& terrain) : m_Islands(terrain), m_Trees(terrain), m_Ships(terrain) {}
 
 void Simulation::FixedUpdate(float tickSeconds) {
     // Warehouse reach and building connections, when roads or buildings changed
@@ -14,6 +14,8 @@ void Simulation::FixedUpdate(float tickSeconds) {
     m_Production.Update(m_Objects, m_Economy, m_Islands, m_Occupancy, m_Roads, m_Trees, worldRevision, m_TickCount);
     // Taxes in, upkeep out
     m_Treasury.Update(m_Objects);
+    // Ships sail on
+    m_Ships.Update(m_Objects);
 
     m_TickCount++;
     m_SimulationSeconds += tickSeconds;
