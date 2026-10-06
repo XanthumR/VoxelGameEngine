@@ -12,9 +12,10 @@ namespace {
 
 const ImVec4 WARNING_COLOR(1.0f, 0.55f, 0.2f, 1.0f);
 
-// A ring and an arrow over the ship
-void DrawMarker(const Ship& ship, const ICamera& camera, glm::ivec2 windowSize) {
-    glm::vec3 top = glm::vec3(ship.position.x * TILE_SIZE, SEA_LEVEL + 30.0f, ship.position.y * TILE_SIZE) / VOXELS_PER_UNIT;
+// A ring and an arrow over the ship, placed between ticks like the ship itself
+void DrawMarker(const Ship& ship, float alpha, const ICamera& camera, glm::ivec2 windowSize) {
+    glm::vec2 column = glm::mix(ship.previous, ship.position, glm::clamp(alpha, 0.0f, 1.0f)) * (float)TILE_SIZE;
+    glm::vec3 top = glm::vec3(column.x, SEA_LEVEL + 30.0f, column.y) / VOXELS_PER_UNIT;
     glm::vec2 screen;
     if (!WorldToScreen(camera, top, windowSize, screen)) return;
     ImDrawList* draw = ImGui::GetBackgroundDrawList();
@@ -26,11 +27,11 @@ void DrawMarker(const Ship& ship, const ICamera& camera, glm::ivec2 windowSize) 
 
 } // namespace
 
-bool DrawShipPanel(ShipId id, Simulation& simulation, const ICamera& camera, glm::ivec2 windowSize, bool orderFailed) {
+bool DrawShipPanel(ShipId id, Simulation& simulation, float alpha, const ICamera& camera, glm::ivec2 windowSize, bool orderFailed) {
     ShipSystem& ships = simulation.Ships();
     if (!ships.IsAlive(id)) return false;
     const Ship& ship = ships.Get(id);
-    DrawMarker(ship, camera, windowSize);
+    DrawMarker(ship, alpha, camera, windowSize);
 
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - 12.0f, viewport->WorkPos.y + viewport->WorkSize.y * 0.5f), ImGuiCond_Always,
