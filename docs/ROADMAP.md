@@ -577,3 +577,16 @@ These are pure functions over the terrain noise, `IslandRegistry`, `OccupancyGri
   - **Cut road:** the cart turns around at the gap and brings its cargo home; with the way home cut it is home at once.
 - **Drawing** (`src/Gameplay/Carts`): placed between ticks with `GameClock::Alpha`, in the right-hand lane, easing over to the new side after a turn. `figures.comp` draws the cart kind, about 23 voxels long: a trotting horse with mane, tail, collar, saddle pad and reins; shafts; a wagon on four turning wheels; a driver in a straw hat; one row of cargo per good, colored by the good. Block IDs 102-114 (`CART_FIRST`..`CART_LAST`) are figure blocks too.
 - **F3:** `ProductionSystem::CartsOnRoad()` is ready for the overlay (step 7).
+
+## Tile-aligned islands (done)
+
+Islands are made of whole build tiles, like the blocky islands of Anno 1800, so buildings line up with the coast.
+
+- **Tile kinds** (`TerrainGenerator::TileKindAt`):
+  - **Land:** the island noise at the tile's middle is above the land threshold, smoothed by the four neighbours (no lone tiles or one-tile spikes, no one-tile notches). Flat grass at island height.
+  - **Beach:** a non-land tile next to land, where a low-frequency coast noise is low. Sand slopes from one voxel under the grass into the water across the tile, following the square distance to the land, so corners stay square.
+  - **Cliff:** the same where the coast noise is high (about a third of the coast). The grass ends in a rock edge (stone under the grass along that side) over water at least 6 deep.
+  - **Sea:** past the beach, the floor slopes down with the distance to land (0.35 voxels per column) until it meets the deep noise floor; next to cliffs it is deep at once.
+- **`TILE_SIZE`** moved to `src/World/WorldConstants.h`, since the terrain uses it too.
+- **Caches:** the island noise and each tile's kind and distance to land are cached per generator (direct-mapped), so a column's height costs a few lookups.
+- **Tests** (`tests/TerrainTests.cpp`): land tiles are flat everywhere and other tiles are below island height; coast tiles touch land and both kinds exist; beaches slope from above the sea to under it; no steps under the water away from cliffs; cliffs drop into deep water.

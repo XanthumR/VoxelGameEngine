@@ -20,6 +20,11 @@ TerrainGenerator::TerrainGenerator(const VoxModel& trees) : m_Trees(trees) {
     m_IslandNoise.SetFractalOctaves(5);
     m_IslandNoise.SetSeed(7);
 
+    // Stretches of cliff a few dozen tiles long between beaches
+    m_CoastNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    m_CoastNoise.SetFrequency(0.0025f);
+    m_CoastNoise.SetSeed(11);
+
     m_BiomeNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
     m_BiomeNoise.SetFrequency(0.005f); // Low frequency for large scale biomes
 
@@ -37,29 +42,152 @@ float TerrainGenerator::BiomeNoise(int wx, int wz) {
     return m_BiomeNoise.GetNoise((float)wx, (float)wz);
 }
 
-// 0 = open ocean, 1 = island interior, smooth in between (the coast)
-float TerrainGenerator::IslandMask(int wx, int wz) {
-    float n = m_IslandNoise.GetNoise((float)wx, (float)wz);
-    // Land from 0.3 up; the coast is the band just below, kept narrow in noise units so beaches
-    // stay a sensible width at this low frequency
-    float t = glm::clamp((n - 0.24f) / 0.06f, 0.0f, 1.0f);
-    return t * t * (3.0f - 2.0f * t);
+namespace {
+
+constexpr float LAND_NOISE = 0.27f;   // Island noise at a tile's middle from which it is land
+constexpr float CLIFF_NOISE = 0.25f;  // Coast noise above which a coast tile is a cliff
+constexpr int BEACH_TOP = SEA_LEVEL + 3;    // First air over the sand next to the grass (one below it)
+constexpr int BEACH_BOTTOM = SEA_LEVEL - 2; // ...and at the far side of the beach tile, under water
+constexpr int CLIFF_DEPTH = 6;        // The sea at the foot of a cliff (and one tile out) is at least this deep
+constexpr int SHELF_TILES = 5;        // How far out the sea floor still slopes down from the coast
+constexpr float SHELF_SLOPE = 0.35f;  // Voxels down per column beyond the beach
+
+uint32_t TileHash(int tx, int tz) {
+    return ((uint32_t)tx * 73856093u) ^ ((uint32_t)tz * 19349663u);
 }
 
-// Blends the sea floor (~16 below sea level) into flat island ground ISLAND_HEIGHT above sea
-// level; the blend band is the coast, which slopes down through the beach
-int TerrainGenerator::TerrainHeightAt(int wx, int wz) {
+} // namespace
+
+bool TerrainGenerator::RawLand(int tx, int tz) {
+    TileSample& sample = m_TileCache[TileHash(tx, tz) & (TILE_CACHE_SIZE - 1)];
+    if (!sample.valid || sample.tx != tx || sample.tz != tz) {
+        float middle = TILE_SIZE * 0.5f;
+        float n = m_IslandNoise.GetNoise((float)tx * TILE_SIZE + middle, (float)tz * TILE_SIZE + middle);
+        sample = { tx, tz, true, n >= LAND_NOISE };
+    }
+    return sample.land;
+}
+
+// The noise decides, smoothed by the four neighbours: a tile with fewer than two land neighbours
+// is sea (no lone tiles or one-tile spikes), a sea tile with three or four is land (no notches)
+bool TerrainGenerator::IsLandTile(int tx, int tz) {
+    int neighbours = (RawLand(tx + 1, tz) ? 1 : 0) + (RawLand(tx - 1, tz) ? 1 : 0) + (RawLand(tx, tz + 1) ? 1 : 0) + (RawLand(tx, tz - 1) ? 1 : 0);
+    return RawLand(tx, tz) ? neighbours >= 2 : neighbours >= 3;
+}
+
+TerrainGenerator::TileInfo& TerrainGenerator::Info(int tx, int tz) {
+    TileInfo& info = m_InfoCache[(TileHash(tx, tz) * 2654435761u >> 20) & (TILE_CACHE_SIZE - 1)];
+    if (info.valid && info.tx == tx && info.tz == tz) return info;
+
+    TileKind kind = TileKind::Sea;
+    if (IsLandTile(tx, tz)) {
+        kind = TileKind::Land;
+    } else {
+        bool coast = false;
+        for (int dz = -1; dz <= 1 && !coast; dz++) {
+            for (int dx = -1; dx <= 1 && !coast; dx++) coast = (dx != 0 || dz != 0) && IsLandTile(tx + dx, tz + dz);
+        }
+        if (coast) {
+            float middle = TILE_SIZE * 0.5f;
+            float noise = m_CoastNoise.GetNoise((float)tx * TILE_SIZE + middle, (float)tz * TILE_SIZE + middle);
+            kind = noise > CLIFF_NOISE ? TileKind::Cliff : TileKind::Beach;
+        }
+    }
+    info = { tx, tz, true, kind, -1 };
+    return info;
+}
+
+TerrainGenerator::TileKind TerrainGenerator::TileKindAt(int tx, int tz) {
+    return Info(tx, tz).kind;
+}
+
+// Tiles (square rings) to the nearest land tile, up to SHELF_TILES + 1 for "far"
+int TerrainGenerator::LandRing(int tx, int tz) {
+    int ring = Info(tx, tz).ring;
+    if (ring >= 0) return ring;
+    ring = SHELF_TILES + 1;
+    for (int r = 0; r <= SHELF_TILES && ring > SHELF_TILES; r++) {
+        for (int dz = -r; dz <= r && ring > SHELF_TILES; dz++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (std::max(std::abs(dx), std::abs(dz)) == r && IsLandTile(tx + dx, tz + dz)) {
+                    ring = r;
+                    break;
+                }
+            }
+        }
+    }
+    Info(tx, tz).ring = (int8_t)ring; // Looked up again: the search may have reused the cache slot
+    return ring;
+}
+
+// Columns (square distance) from a column to the nearest land tile within radius tiles of its tile
+int TerrainGenerator::LandDistance(int wx, int wz, int radius) {
+    int tx = ColumnToTile(wx), tz = ColumnToTile(wz);
+    int distance = (radius + 1) * TILE_SIZE;
+    for (int dz = -radius; dz <= radius; dz++) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            if (!IsLandTile(tx + dx, tz + dz)) continue;
+            int minX = (tx + dx) * TILE_SIZE, minZ = (tz + dz) * TILE_SIZE;
+            int awayX = std::max({ 0, minX - wx, wx - (minX + TILE_SIZE - 1) });
+            int awayZ = std::max({ 0, minZ - wz, wz - (minZ + TILE_SIZE - 1) });
+            distance = std::min(distance, std::max(awayX, awayZ));
+        }
+    }
+    return distance;
+}
+
+// The sea floor: past the beach it slopes down with the distance to land until it meets the deep
+// floor (~16 below sea level); in front of cliffs it is deep at once
+int TerrainGenerator::SeaFloorHeight(int wx, int wz) {
+    int tx = ColumnToTile(wx), tz = ColumnToTile(wz);
     float heightSample = m_Noise.GetNoise((float)wx * HEIGHT_NOISE_SCALE, (float)wz * HEIGHT_NOISE_SCALE);
-    float seaFloor = SEA_LEVEL - 16.0f + heightSample * 4.0f;
-    float landTop = (float)(SEA_LEVEL + ISLAND_HEIGHT);
-    return static_cast<int>(glm::mix(seaFloor, landTop, IslandMask(wx, wz)));
+    float deep = SEA_LEVEL - 16.0f + heightSample * 4.0f;
+    int ring = LandRing(tx, tz);
+    if (ring > SHELF_TILES) return (int)deep;
+
+    int distance = LandDistance(wx, wz, ring + 1);
+    float shelf = BEACH_BOTTOM - std::max(0, distance - TILE_SIZE) * SHELF_SLOPE;
+    int height = (int)std::max(deep, std::min(shelf, (float)BEACH_BOTTOM));
+    if (ring <= 2) {
+        for (int dz = -1; dz <= 1; dz++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                if (TileKindAt(tx + dx, tz + dz) == TileKind::Cliff) return std::min(height, SEA_LEVEL - CLIFF_DEPTH);
+            }
+        }
+    }
+    return height;
 }
 
-// The sea floor, and beaches along the coast (outer part of the island mask, up to a few
-// voxels above the sea), are sand
-bool TerrainGenerator::IsSandy(int wx, int wz, int terrainHeight) {
-    if (terrainHeight <= SEA_LEVEL + 2) return true;
-    return terrainHeight <= SEA_LEVEL + 6 && IslandMask(wx, wz) < 0.3f;
+int TerrainGenerator::TerrainHeightAt(int wx, int wz) {
+    switch (TileKindAt(ColumnToTile(wx), ColumnToTile(wz))) {
+    case TileKind::Land:
+        return SEA_LEVEL + ISLAND_HEIGHT;
+    case TileKind::Beach: {
+        // Slopes down with the distance to the nearest land tile (square, so corners stay square)
+        float along = (float)(LandDistance(wx, wz, 1) - 1) / (float)(TILE_SIZE - 1);
+        return (int)std::lround(glm::mix((float)BEACH_TOP, (float)BEACH_BOTTOM, std::min(along, 1.0f)));
+    }
+    case TileKind::Cliff:
+    case TileKind::Sea:
+    default:
+        return SeaFloorHeight(wx, wz);
+    }
+}
+
+// Everything that is not land is sand: beaches and the sea floor
+bool TerrainGenerator::IsSandy(int wx, int wz) {
+    return !IsLandTile(ColumnToTile(wx), ColumnToTile(wz));
+}
+
+bool TerrainGenerator::FacesCliff(int wx, int wz) {
+    int tx = ColumnToTile(wx), tz = ColumnToTile(wz);
+    for (int dz = -1; dz <= 1; dz++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            int ntx = ColumnToTile(wx + dx), ntz = ColumnToTile(wz + dz);
+            if ((ntx != tx || ntz != tz) && TileKindAt(ntx, ntz) == TileKind::Cliff) return true;
+        }
+    }
+    return false;
 }
 
 void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t>& data) {
@@ -75,7 +203,11 @@ void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t
 
             int biome = BiomeFromNoise(BiomeNoise(wx, wz));
             int terrainHeight = TerrainHeightAt(wx, wz);
-            bool sandy = IsSandy(wx, wz, terrainHeight);
+            bool sandy = IsSandy(wx, wz);
+            // The cliff face: rock under the grass along the edge of a land tile toward a cliff
+            int localX = wx - ColumnToTile(wx) * TILE_SIZE, localZ = wz - ColumnToTile(wz) * TILE_SIZE;
+            bool onEdge = localX == 0 || localZ == 0 || localX == TILE_SIZE - 1 || localZ == TILE_SIZE - 1;
+            bool cliffFace = !sandy && onEdge && FacesCliff(wx, wz);
 
             for (int y = 0; y < CHUNK_SIZE; y++) {
                 int wy = startY + y;
@@ -93,7 +225,7 @@ void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t
                     blockID = Block::GRASS;
                 }
                 else if (wy > terrainHeight - 4) {
-                    blockID = Block::DIRT;
+                    blockID = cliffFace ? Block::STONE : Block::DIRT;
                 }
 
                 // Cave carving using abs(noise) for worm/tunnel shapes
@@ -141,7 +273,7 @@ bool TerrainGenerator::IsTreeRoot(int wx, int wz) {
             if (other > noise || (other == noise && (dx < 0 || (dx == 0 && dz < 0)))) return false;
         }
     }
-    return !IsSandy(wx, wz, TreeRootY(wx, wz) + 1); // No trees on beaches or underwater
+    return !IsSandy(wx, wz); // No trees on beaches or underwater
 }
 
 // Roots are scanned in a margin around the chunk so trees rooted in a neighbour stamp their
@@ -182,8 +314,8 @@ bool TerrainGenerator::GrassTuftInCell(int gx, int gz, GrassTuft& tuft) {
     int wz = gz * GRASS_CELL + (int)((h >> 10) & (GRASS_CELL - 1));
     if (BiomeNoise(wx, wz) < -0.2f) return false; // No tufts in the Crystalline Peaks biome
 
+    if (IsSandy(wx, wz)) return false; // Beaches and the sea floor are sand, not grass
     int terrainHeight = TerrainHeightAt(wx, wz);
-    if (IsSandy(wx, wz, terrainHeight)) return false; // Beaches and the sea floor are sand, not grass
 
     tuft.root = glm::ivec3(wx, terrainHeight, wz);
     tuft.variant = (int)((h >> 12) & 3);

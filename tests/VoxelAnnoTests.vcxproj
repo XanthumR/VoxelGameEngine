@@ -116,6 +116,7 @@
     <ClCompile Include="PopulationTests.cpp" />
     <ClCompile Include="ProducerLocationTests.cpp" />
     <ClCompile Include="ProductionTests.cpp" />
+    <ClCompile Include="TerrainTests.cpp" />
     <ClCompile Include="RoadNetworkTests.cpp" />
     <ClCompile Include="TestWorld.cpp" />
     <ClCompile Include="WalkerTests.cpp" />

@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <unordered_map>
 
-// Which game object stands on each build tile (x, z; see TILE_SIZE in BuildingTypes.h). Answers
+// Which game object stands on each build tile (x, z; see TILE_SIZE in World/WorldConstants.h). Answers
 // "is this footprint free?" for placement and "which building is here?" for demolishing.
 class OccupancyGrid {
 public:

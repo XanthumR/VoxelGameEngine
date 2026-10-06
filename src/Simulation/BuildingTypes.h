@@ -1,16 +1,13 @@
 #pragma once
 
 #include "World/BlockTypes.h"
+#include "World/WorldConstants.h"
 
 #include <array>
 #include <cstdint>
 
-// Buildings sit on a grid of build tiles, TILE_SIZE x TILE_SIZE columns each. Footprints, the
+// Buildings sit on the grid of build tiles (TILE_SIZE in World/WorldConstants.h). Footprints, the
 // occupancy grid and placement snapping all work in tiles.
-constexpr int TILE_SIZE = 12;
-
-// Floor division of a world column to its tile (also for negative columns)
-constexpr int ColumnToTile(int column) { return column >= 0 ? column / TILE_SIZE : -((-column + TILE_SIZE - 1) / TILE_SIZE); }
 
 // What a building does
 enum class BuildingRole : uint8_t {
