@@ -13,7 +13,7 @@ class Simulation;
 // The player's hand on the ships, and their look. With nothing to build selected, a left click
 // near a ship selects it (elsewhere deselects); with a ship selected, a right click on the sea
 // sends it there and a right click on a harbor sends it to the harbor's berth. Ships are voxel
-// objects: a two-masted trade ship that turns smoothly toward where it sails and bobs on the swell.
+// objects: a two-masted trade ship that turns smoothly toward where it sails and rides the ocean's waves.
 class ShipControl {
 public:
     static constexpr float SELECT_RADIUS = 1.6f; // Tiles from the clicked point to a ship's middle
@@ -36,7 +36,6 @@ private:
     bool m_OrderFailed = false;
     bool m_LeftWasDown = false, m_RightWasDown = false;
     int m_AnchoredModel = 0, m_SailingModel = 0;
-    float m_Clock = 0.0f;
     std::array<float, ShipSystem::MAX_SHIPS> m_Yaw{};
     std::array<ShipId, ShipSystem::MAX_SHIPS> m_YawOf{}; // The ship each yaw belongs to
 };

@@ -17,7 +17,7 @@ class TerrainGenerator;
 // fish, at the pace the fishery works (TRIP_SECONDS is its cycle at full productivity). When the
 // fishery stops, the boat finishes its trip and stays moored. The route is cut short where the sea
 // gets shallow, so a boat never sails onto land. Boats are voxel objects: they turn smoothly and
-// bob on the water.
+// ride the ocean's waves.
 class FishingBoats {
 public:
     static constexpr int MAX_BOATS = 64;
@@ -57,12 +57,10 @@ private:
         int routeLength;
         uint32_t trip;
         float time;           // Seconds into the current trip
-        float phase;          // Offsets its bobbing from the other boats
     };
 
     void StartTrip(Boat& boat, TerrainGenerator& terrain);
 
     std::vector<Boat> m_Boats;
-    float m_Clock = 0.0f; // Drives the bobbing
     int m_MooredModel = 0, m_SailingModel = 0;
 };

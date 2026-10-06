@@ -128,7 +128,6 @@ void ShipControl::Update(GLFWwindow* window, const PickResult& hover, bool mouse
 }
 
 void ShipControl::AppendObjects(const ShipSystem& ships, float alpha, float deltaTime, std::vector<VoxelObject>& out) {
-    m_Clock += deltaTime;
     for (int slot = 0; slot < ShipSystem::MAX_SHIPS; slot++) {
         ShipId id = ships.IdAtSlot(slot);
         if (id == INVALID_SHIP) continue;
@@ -148,13 +147,12 @@ void ShipControl::AppendObjects(const ShipSystem& ships, float alpha, float delt
         m_YawOf[slot] = id;
 
         glm::vec2 at = glm::mix(ship.previous, ship.position, std::clamp(alpha, 0.0f, 1.0f)) * (float)TILE_SIZE;
-        float c = m_Clock + (float)slot * 1.7f;
+        // It rides the waves (the GPU sets its height, pitch and roll from the ocean)
         VoxelObject object;
         object.model = ship.state == ShipState::Sailing ? m_SailingModel : m_AnchoredModel;
-        object.position = glm::vec3(at.x, SEA_LEVEL + 1.0f - WATERLINE + 0.3f * std::sin(c * 1.1f), at.y);
+        object.position = glm::vec3(at.x, SEA_LEVEL + 1.0f - WATERLINE, at.y);
         object.yaw = m_Yaw[slot];
-        object.pitch = 0.025f * std::sin(c * 1.4f);
-        object.roll = 0.04f * std::sin(c * 0.9f + 0.5f);
+        object.waterline = WATERLINE;
         out.push_back(object); // Within the caller's reserve
     }
 }

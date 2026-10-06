@@ -75,7 +75,8 @@ bool VoxelRenderer::LoadPass(Pass& pass, const char* path) {
 bool VoxelRenderer::Init() {
     if (!LoadPass(m_TracePass, "render/trace.comp") ||
         !LoadPass(m_ShadowPass, "render/shadow.comp") ||
-        !LoadPass(m_ShadePass, "render/shade.comp")) {
+        !LoadPass(m_ShadePass, "render/shade.comp") ||
+        !LoadPass(m_FloatPass, "render/float.comp")) {
         return false;
     }
     m_Targets.Init(); // Textures are allocated by the first ResizeTargets
@@ -195,18 +196,25 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glm::mat4 viewProjection = projection * view;
         for (const VoxelObject& object : *frame.objects) {
             if (objectCount == MAX_OBJECTS || object.model < 0 || object.model >= (int)m_ObjectSlots.size()) continue;
+            // Floating objects get their pitch and roll (and height) on the GPU, from the waves
+            bool floats = object.waterline > 0.0f;
             glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), object.yaw, glm::vec3(0, 1, 0));
-            rotation = glm::rotate(rotation, -object.pitch, glm::vec3(1, 0, 0));
-            rotation = glm::rotate(rotation, object.roll, glm::vec3(0, 0, 1));
+            if (!floats) {
+                rotation = glm::rotate(rotation, -object.pitch, glm::vec3(1, 0, 0));
+                rotation = glm::rotate(rotation, object.roll, glm::vec3(0, 0, 1));
+            }
             const ObjectModelSlot& slot = m_ObjectSlots[object.model];
+            glm::vec3 position = floats ? glm::vec3(object.position.x, (float)(SEA_LEVEL + 1) - object.waterline, object.position.z) : object.position;
+            // Culled with room for the sway
+            float margin = floats ? FLOAT_MARGIN : 0.0f;
 
             // The box's screen rectangle (all of the screen when a corner is behind the camera)
             glm::vec2 low(1e9f), high(-1e9f);
             bool behind = false, inFront = false;
             for (int corner = 0; corner < 8; corner++) {
                 glm::vec3 local((corner & 1) ? 0.5f : -0.5f, (corner & 2) ? 1.0f : 0.0f, (corner & 4) ? 0.5f : -0.5f);
-                local *= glm::vec3(slot.size);
-                glm::vec3 world = object.position + glm::vec3(rotation[0]) * local.x + glm::vec3(rotation[1]) * local.y + glm::vec3(rotation[2]) * local.z;
+                local = local * glm::vec3(slot.size) + glm::sign(local - glm::vec3(0.0f, 0.5f, 0.0f)) * margin;
+                glm::vec3 world = position + glm::vec3(rotation[0]) * local.x + glm::vec3(rotation[1]) * local.y + glm::vec3(rotation[2]) * local.z;
                 glm::vec4 clip = viewProjection * glm::vec4(world / VOXELS_PER_UNIT, 1.0f);
                 if (clip.w <= 0.001f) {
                     behind = true;
@@ -219,7 +227,8 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
             }
             // Shadow cells first: an object off screen can still shadow what is on screen
             glm::vec2 shadowLow, shadowHigh;
-            ObjectShadowFootprint(object.position, glm::vec3(rotation[0]), glm::vec3(rotation[1]), glm::vec3(rotation[2]), slot.size, objectLight,
+            ObjectShadowFootprint(position - glm::vec3(0.0f, margin, 0.0f), glm::vec3(rotation[0]), glm::vec3(rotation[1]), glm::vec3(rotation[2]),
+                slot.size + glm::ivec3(2 * (int)margin), objectLight,
                 (float)(SEA_LEVEL - 2), SHADOW_MAX_PUSH, shadowLow, shadowHigh);
             glm::ivec2 cellLow = glm::max(glm::ivec2(glm::floor(shadowLow / (float)SHADOW_CELL)) - shadowOrigin, glm::ivec2(0));
             glm::ivec2 cellHigh = glm::min(glm::ivec2(glm::floor(shadowHigh / (float)SHADOW_CELL)) - shadowOrigin, glm::ivec2(SHADOW_GRID - 1));
@@ -233,7 +242,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
             bool onScreen = inFront && tileLow.x <= tileHigh.x && tileLow.y <= tileHigh.y;
             if (!onScreen && !casts) continue;
 
-            GpuObject gpu = { glm::vec4(object.position, 0.0f), rotation[0], rotation[1], rotation[2], glm::ivec4(slot.atlasX, slot.size) };
+            GpuObject gpu = { glm::vec4(position, object.waterline), rotation[0], rotation[1], rotation[2], glm::ivec4(slot.atlasX, slot.size) };
             const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&gpu);
             m_GpuObjects.insert(m_GpuObjects.end(), bytes, bytes + sizeof(GpuObject)); // Within the reserve
             for (int ty = tileLow.y; onScreen && ty <= tileHigh.y; ty++) {
@@ -336,6 +345,14 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         int quadsX = (m_Targets.Width() + 1) / 2, quadsY = (m_Targets.Height() + 1) / 2;
         glDispatchCompute((quadsX + 7) / 8, (quadsY + 7) / 8, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    }
+
+    // Floating objects take their height and tilt from the waves under them
+    if (objectCount > 0) {
+        glUseProgram(m_FloatPass.program);
+        uploadUniforms(m_FloatPass.uniforms);
+        glDispatchCompute((objectCount + 63) / 64, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
     // 3. Shade: lighting and overlays into the final color image

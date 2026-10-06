@@ -46,6 +46,7 @@ public:
     static constexpr int SHADOW_GRID = 128;
     static constexpr int OBJECTS_PER_SHADOW_CELL = 15; // ponytail: extra objects in a crowded cell cast no shadow there
     static constexpr float SHADOW_MAX_PUSH = 96.0f;     // Voxels a shadow may reach from its object (low sun)
+    static constexpr float FLOAT_MARGIN = 4.0f;         // Voxels a floating object may sway beyond its box when culled
 
     bool Init();
 
@@ -81,6 +82,7 @@ private:
     bool LoadPass(Pass& pass, const char* path);
 
     Pass m_TracePass, m_ShadowPass, m_ShadePass;
+    Pass m_FloatPass; // Floats voxel objects on the waves before shading
     GLuint m_GhostTexture = 0;     // The placement preview's model (R8UI, x, z, y)
 
     // Voxel objects: every model side by side along x in one atlas (R8UI, x, z, y), and the

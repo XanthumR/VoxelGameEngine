@@ -1,0 +1,54 @@
+#version 440 core
+// Floats voxel objects on the ocean (VoxelRenderer, before the shade pass): for every object with
+// a waterline, samples the same wave height the sea is drawn with (FFT cascades and surf,
+// include/water.glsl) under its middle, bow, stern and both sides, and sets its height, pitch and
+// roll from them. The CPU gives position xz and heading; this gives the sway.
+
+layout(local_size_x = 64) in;
+
+#include "include/scene.glsl"
+#include "include/water.glsl"
+
+struct VoxelObjectData {
+    vec4 position; // Middle of the model's bottom face; w = waterline above the bottom (0: does not float)
+    vec4 axisX;
+    vec4 axisY;
+    vec4 axisZ;
+    ivec4 model;   // x: atlas x, yzw: size
+};
+layout(std430, binding = 6) buffer VoxelObjects { VoxelObjectData objects[]; };
+uniform int numObjects;
+
+const float TILT = 0.8;  // How much of the sea's slope the hull follows (heavier hulls lag behind)
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= uint(numObjects)) return;
+    VoxelObjectData object = objects[index];
+    float waterline = object.position.w;
+    if (waterline <= 0.0) return;
+
+    // Heading only (the CPU leaves pitch and roll to this pass)
+    vec3 right = object.axisX.xyz, forward = object.axisZ.xyz;
+    vec2 middle = object.position.xz;
+    float halfLength = float(object.model.w) * 0.4, halfWidth = float(object.model.y) * 0.4;
+    float bow = oceanHeight(middle + forward.xz * halfLength);
+    float stern = oceanHeight(middle - forward.xz * halfLength);
+    float port = oceanHeight(middle - right.xz * halfWidth);
+    float starboard = oceanHeight(middle + right.xz * halfWidth);
+    float heave = (2.0 * oceanHeight(middle) + bow + stern + port + starboard) / 6.0;
+    float pitch = atan((bow - stern) * TILT, 2.0 * halfLength);
+    float roll = atan((port - starboard) * TILT, 2.0 * halfWidth);
+
+    // Pitch about the right axis, then roll about the new forward axis
+    vec3 up = vec3(0.0, 1.0, 0.0);
+    vec3 pitchedForward = forward * cos(pitch) + up * sin(pitch);
+    vec3 pitchedUp = up * cos(pitch) - forward * sin(pitch);
+    vec3 rolledRight = right * cos(roll) + pitchedUp * sin(roll);
+    vec3 rolledUp = pitchedUp * cos(roll) - right * sin(roll);
+
+    objects[index].position.y = float(seaLevel) + 1.0 + heave - waterline;
+    objects[index].axisX = vec4(rolledRight, 0.0);
+    objects[index].axisY = vec4(rolledUp, 0.0);
+    objects[index].axisZ = vec4(pitchedForward, 0.0);
+}

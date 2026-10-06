@@ -16,6 +16,10 @@ struct VoxelObject {
     float yaw = 0.0f;           // Radians; 0 faces +z, a quarter turn faces +x
     float pitch = 0.0f;         // Nose up
     float roll = 0.0f;          // Right side down
+    // > 0: it floats on the ocean's waves, its bottom this many voxels below the waterline. The
+    // GPU then sets its height, pitch and roll from the waves under it (shaders/render/float.comp);
+    // position.y, pitch and roll here are ignored.
+    float waterline = 0.0f;
 };
 
 // Where an object's shadow can fall: the xz rectangle (low, high) of its box and of the box pushed

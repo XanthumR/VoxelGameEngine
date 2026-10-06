@@ -144,7 +144,6 @@ void FishingBoats::StartTrip(Boat& boat, TerrainGenerator& terrain) {
 }
 
 void FishingBoats::Update(float deltaTime, const GameObjectRegistry& objects, const BuildingModelLibrary& models, TerrainGenerator& terrain) {
-    m_Clock += deltaTime;
 
     // Boats of demolished fisheries go
     for (size_t i = 0; i < m_Boats.size();) {
@@ -197,7 +196,6 @@ void FishingBoats::Update(float deltaTime, const GameObjectRegistry& objects, co
         boat.mooredHeading = boat.dockHeading;
         boat.trip = 0;
         boat.time = 0.0f;
-        boat.phase = (float)(Hash(id) % 628) * 0.01f;
         StartTrip(boat, terrain);
         m_Boats.push_back(boat); // Within the reserve
     }
@@ -209,14 +207,12 @@ void FishingBoats::AppendObjects(std::vector<VoxelObject>& out) const {
         bool sailing = t >= MOORED_SECONDS && !(t >= MOORED_SECONDS + SAILING_SECONDS && t < MOORED_SECONDS + SAILING_SECONDS + FISHING_SECONDS);
         glm::vec2 at = boat.start + Forward(boat.tripHeading) * OffsetAt(t, boat.routeLength);
 
-        // Gentle swell: up and down, a little pitch and roll
-        float c = m_Clock + boat.phase;
+        // It rides the waves (the GPU sets its height, pitch and roll from the ocean)
         VoxelObject object;
         object.model = sailing ? m_SailingModel : m_MooredModel;
-        object.position = glm::vec3(at.x, SEA_LEVEL + 1.0f - WATERLINE + 0.25f * std::sin(c * 1.3f), at.y);
+        object.position = glm::vec3(at.x, SEA_LEVEL + 1.0f - WATERLINE, at.y);
         object.yaw = HeadingAt(t, boat.mooredHeading, boat.tripHeading);
-        object.pitch = 0.035f * std::sin(c * 1.7f);
-        object.roll = 0.05f * std::sin(c * 1.1f + 1.0f);
+        object.waterline = WATERLINE;
         out.push_back(object); // Within the caller's reserve
     }
 }
