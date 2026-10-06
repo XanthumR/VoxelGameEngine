@@ -1,6 +1,7 @@
 #include "Gameplay/Walkers.h"
 
 #include "Economy/IslandEconomy.h"
+#include "Gameplay/FigureModels.h"
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/Logistics.h"
 #include "Simulation/Placement.h"
@@ -17,7 +18,7 @@ const glm::ivec2 DIRECTIONS[4] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
 
 WalkerSystem::WalkerSystem() {
     m_Walkers.reserve(MAX_WALKERS);
-    m_Figures.reserve(MAX_WALKERS);
+    m_Objects.reserve(MAX_WALKERS);
     m_SpawnTimers.reserve(IslandEconomyManager::MAX_ISLANDS);
 }
 
@@ -69,9 +70,11 @@ bool WalkerSystem::Spawn(IslandId island, const GameObjectRegistry& objects, con
         walker.progress = 0.0f;
         walker.walked = 0.0f;
         walker.tier = type.tier;
-        walker.direction = 0;
+        walker.yaw = 0.0f;
         walker.variant = (uint8_t)(Random() & 7);
         walker.next = ChooseNext(walker, roads);
+        glm::ivec2 first = walker.next - walker.tile;
+        if (first != glm::ivec2(0)) walker.yaw = std::atan2((float)first.x, (float)first.y); // Steps out facing its way
         m_Walkers.push_back(walker); // Within the reserve: callers check MAX_WALKERS
         m_SpawnCursor = slot + 1;    // The next walker comes from another house
         return true;
@@ -141,21 +144,26 @@ void WalkerSystem::Update(float deltaTime, const GameObjectRegistry& objects, co
         }
     }
 
-    // Voxel figures: feet on the road, moving through the lane column of each tile, facing the
-    // way they walk, legs and arms following the walk cycle
-    m_Figures.clear();
+    // Voxel objects: feet on the road, moving through the lane column of each tile, turning
+    // smoothly toward the way they walk, legs and arms following the walk cycle
+    m_Objects.clear();
     for (Walker& walker : m_Walkers) {
         glm::ivec2 step = walker.next - walker.tile;
-        if (step.x > 0) walker.direction = 0;
-        else if (step.x < 0) walker.direction = 1;
-        else if (step.y > 0) walker.direction = 2;
-        else if (step.y < 0) walker.direction = 3;
+        if (step != glm::ivec2(0)) {
+            float target = std::atan2((float)step.x, (float)step.y);
+            float delta = std::remainder(target - walker.yaw, 6.28318531f);
+            float most = TURN_RATE * deltaTime;
+            walker.yaw += std::clamp(delta, -most, most);
+        }
 
         glm::vec2 from = glm::vec2(walker.tile * TILE_SIZE + walker.lane);
         glm::vec2 to = glm::vec2(walker.next * TILE_SIZE + walker.lane);
-        glm::ivec2 column = glm::ivec2(glm::floor(glm::mix(from, to, walker.progress) + 0.5f));
+        glm::vec2 column = glm::mix(from, to, walker.progress) + 0.5f;
         int frame = (int)(walker.walked / STRIDE) & 3;
-        int look = Figure::PackPerson(walker.tier, walker.direction, frame, walker.variant);
-        m_Figures.push_back({ glm::ivec4(column.x, BUILD_GROUND_Y, column.y, look) });
+        VoxelObject object;
+        object.model = m_ModelBase + PersonModelOffset(walker.tier, walker.variant, frame);
+        object.position = glm::vec3(column.x, (float)BUILD_GROUND_Y, column.y);
+        object.yaw = walker.yaw;
+        m_Objects.push_back(object); // Within the reserve
     }
 }

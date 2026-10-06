@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Gameplay/Figure.h"
+#include "Rendering/VoxelObject.h"
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/GameObjects.h"
 
@@ -15,7 +15,7 @@ class RoadNetwork;
 // Residents walking the roads. Purely visual (not part of the deterministic simulation): every
 // island has one walker per RESIDENTS_PER_WALKER residents; they step out of houses next to a road,
 // wander from road tile to road tile, and vanish again when the population drops or their road is
-// removed. Positions are turned into voxel figures (Figure::PERSON) for FigureRenderer every frame.
+// removed. They are voxel objects (FigureModels), placed off the grid and turning smoothly.
 class WalkerSystem {
 public:
     static constexpr int MAX_WALKERS = 512;
@@ -23,12 +23,15 @@ public:
     static constexpr float TILES_PER_SECOND = 5.0f / TILE_SIZE; // About 5 voxels per second
     static constexpr float SPAWN_INTERVAL = 0.3f;   // Seconds between walkers leaving houses, per island
     static constexpr float STRIDE = 2.5f;           // Voxels walked per frame of the walk cycle
+    static constexpr float TURN_RATE = 9.0f;        // Radians per second a walker turns
 
     WalkerSystem();
 
     void Update(float deltaTime, const GameObjectRegistry& objects, const RoadNetwork& roads, const IslandEconomyManager& economy);
 
-    const std::vector<Figure>& Figures() const { return m_Figures; }
+    // This frame's walkers; modelBase is the first person model (FigureModels: PersonModelOffset)
+    const std::vector<VoxelObject>& Objects() const { return m_Objects; }
+    void SetModelBase(int modelBase) { m_ModelBase = modelBase; }
     size_t Count() const { return m_Walkers.size(); }
     size_t CountOn(IslandId island) const;
 
@@ -45,7 +48,7 @@ private:
         float progress;      // 0..1 from tile to next
         float walked;        // Voxels walked, drives the walk cycle
         uint8_t tier;
-        uint8_t direction;   // Facing (0 +x, 1 -x, 2 +z, 3 -z); kept while standing still
+        float yaw;           // Facing (radians, 0 = +z); kept while standing still
         uint8_t variant;     // Skin, shirt and trousers choice (3 bits)
     };
 
@@ -54,7 +57,8 @@ private:
     uint32_t Random();
 
     std::vector<Walker> m_Walkers;
-    std::vector<Figure> m_Figures;
+    std::vector<VoxelObject> m_Objects;
+    int m_ModelBase = 0;
     std::vector<float> m_SpawnTimers;  // Per settled island (IslandEconomyManager order)
     uint32_t m_SpawnCursor = 0;        // Next object slot to look for a home in
     uint32_t m_RandomState = 0x9E3779B9u;

@@ -2,27 +2,17 @@
 
 #include <glm/glm.hpp>
 
-// One thing drawn into the voxel world every frame by FigureRenderer (shaders/people/figures.comp):
-// a walking person, a smoke puff or a horse cart (boats are voxel objects). 16 bytes, the std430 layout of the
-// shader's buffer.
+// A smoke puff drawn into the voxel world every frame by FigureRenderer (shaders/people/figures.comp).
+// People, carts and boats are voxel objects (Rendering/VoxelObject.h). 16 bytes, the std430
+// layout of the shader's buffer.
 struct Figure {
-    enum Kind { PERSON = 0, PUFF = 1, CART = 3 }; // 2 was the fishing boat
+    enum Kind { PUFF = 1 };
 
-    glm::ivec4 position; // xyz = anchor voxel (a person's feet, a puff's center, a cart's center), w = packed look
+    glm::ivec4 position; // xyz = the puff's center, w = packed look
 
-    // Person: bits 0-1 tier, 2-3 direction (0 +x, 1 -x, 2 +z, 3 -z), 4-5 walk frame, 6-8 look variant
-    static int PackPerson(int tier, int direction, int frame, int variant) {
-        return (tier & 3) | ((direction & 3) << 2) | ((frame & 3) << 4) | ((variant & 7) << 6) | (PERSON << 9);
-    }
-    // Puff: bits 0-1 size - 1 (1-3 voxels), 2-5 density (0-15, how much of the cube is filled), 11-18 seed
+    // Bits 0-1 size - 1 (1-3 voxels), 2-5 density (0-15, how much of the cube is filled), 9 kind, 11-18 seed
     static int PackPuff(int size, int density, int seed) {
         return ((size - 1) & 3) | ((density & 15) << 2) | (PUFF << 9) | ((seed & 255) << 11);
-    }
-    // Cart: bits 2-3 direction, 4-5 trot frame, 6-8 cargo amount (0-4), 11-14 cargo item
-    // (ItemType), 15 moving, 16-18 driver look variant
-    static int PackCart(int direction, int frame, bool moving, int cargoItem, int cargoAmount, int driverVariant) {
-        return ((direction & 3) << 2) | ((frame & 3) << 4) | ((cargoAmount & 7) << 6) | (CART << 9) | ((cargoItem & 15) << 11) |
-            ((moving ? 1 : 0) << 15) | ((driverVariant & 7) << 16);
     }
     static int KindOf(int packed) { return (packed >> 9) & 3; }
 };

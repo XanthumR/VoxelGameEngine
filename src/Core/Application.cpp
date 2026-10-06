@@ -6,6 +6,7 @@
 #include "UI/BuildingInfo.h"
 #include "UI/BuildingMarkers.h"
 #include "UI/IslandPanel.h"
+#include "Gameplay/FigureModels.h"
 #include "UI/TopBar.h"
 #include "UI/Hud.h"
 #include "World/BlockTypes.h"
@@ -115,8 +116,27 @@ bool Application::Init() {
         !m_FigureRenderer.Init()) {
         return false;
     }
+    // Voxel object models: boats, people (every look and walk frame), carts (every trot frame and load)
     int mooredBoat = m_Renderer.AddObjectModel(FishingBoats::BuildModel(false));
     m_Boats.SetModels(mooredBoat, m_Renderer.AddObjectModel(FishingBoats::BuildModel(true)));
+    int personBase = -1;
+    for (int tier = 0; tier < PERSON_TIERS; tier++) {
+        for (int variant = 0; variant < PERSON_VARIANTS; variant++) {
+            for (int frame = 0; frame < WALK_FRAMES; frame++) {
+                int index = m_Renderer.AddObjectModel(BuildPersonModel(tier, variant, frame));
+                if (personBase < 0) personBase = index;
+            }
+        }
+    }
+    m_Walkers.SetModelBase(personBase);
+    m_CartModelBase = -1;
+    for (int frame = 0; frame < CART_FRAMES; frame++) {
+        for (int load = 0; load < CART_LOADS; load++) {
+            int item = load == 0 ? 0 : (load - 1) / 4, amount = load == 0 ? 0 : (load - 1) % 4 + 1;
+            int index = m_Renderer.AddObjectModel(BuildCartModel(frame, item, amount));
+            if (m_CartModelBase < 0) m_CartModelBase = index;
+        }
+    }
 
     // Dear ImGui
     IMGUI_CHECKVERSION();
@@ -426,11 +446,11 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_Smoke.Update(gameDelta, m_Simulation.Objects(), m_BuildingModels, glm::vec2(focus.x, focus.z), SMOKE_DISTANCE);
     m_Boats.Update(gameDelta, m_Simulation.Objects(), m_BuildingModels, m_Terrain);
     m_Figures.clear();
-    m_Figures.insert(m_Figures.end(), m_Walkers.Figures().begin(), m_Walkers.Figures().end());
     m_Smoke.AppendFigures(m_Figures);
     m_VoxelObjects.clear();
     m_Boats.AppendObjects(m_VoxelObjects);
-    AppendCartFigures(m_Simulation.Objects(), m_Clock.Alpha(), m_Figures);
+    m_VoxelObjects.insert(m_VoxelObjects.end(), m_Walkers.Objects().begin(), m_Walkers.Objects().end());
+    AppendCartObjects(m_Simulation.Objects(), m_Clock.Alpha(), m_CartModelBase, m_VoxelObjects);
     m_FigureRenderer.Draw(m_Figures, m_Cache, SEA_LEVEL);
 
     // --- Render ---

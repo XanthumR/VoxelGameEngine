@@ -103,8 +103,9 @@ private:
     SmokeSystem m_Smoke;    // Chimney smoke (visual only)
     FishingBoats m_Boats;   // Fishing boats of the fisheries (visual only)
     FigureRenderer m_FigureRenderer;
-    std::vector<Figure> m_Figures; // This frame's walkers, puffs and carts, reserved at setup
-    std::vector<VoxelObject> m_VoxelObjects; // This frame's boats, reserved at setup
+    std::vector<Figure> m_Figures; // This frame's smoke puffs, reserved at setup
+    std::vector<VoxelObject> m_VoxelObjects; // This frame's walkers, carts and boats, reserved at setup
+    int m_CartModelBase = 0; // First cart model (FigureModels)
     DebugOverlay m_Overlay;
     TileOverlay m_TileOverlay;
 

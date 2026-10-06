@@ -1,6 +1,7 @@
 #include "Gameplay/Carts.h"
 
 #include "Economy/ProductionChains.h"
+#include "Gameplay/FigureModels.h"
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/Placement.h"
 
@@ -58,14 +59,21 @@ CartPlacement PlaceCart(const ProductionComponent& production, float alpha) {
     float into = outbound ? along : 1.0f - along;
     if (outbound && segment > 0) previousStep = from - production.cartPath[segment - 1];
     if (!outbound && segment + 2 <= last) previousStep = production.cartPath[segment + 1] - production.cartPath[segment + 2];
-    glm::vec2 right = glm::mix(RightOf(previousStep), RightOf(step), std::min(1.0f, into * 2.0f));
+    float turn = std::min(1.0f, into * 2.0f);
+    glm::vec2 right = glm::mix(RightOf(previousStep), RightOf(step), turn);
+    glm::vec2 facing = glm::mix(glm::vec2(previousStep), glm::vec2(step), turn);
 
     placement.column = glm::mix(TileMiddle(from), TileMiddle(to), along) + right * CART_LANE_OFFSET;
     placement.direction = DirectionIndex(step);
+    placement.yaw = std::atan2(facing.x, facing.y);
+    // At the warehouse it turns around on the spot while unloading, ready to drive back
+    if (production.cartState == CartState::Unloading) {
+        placement.yaw += 3.14159265f * std::min(1.0f, (float)production.cartWaitTicks / CART_UNLOAD_TICKS);
+    }
     return placement;
 }
 
-void AppendCartFigures(const GameObjectRegistry& objects, float alpha, std::vector<Figure>& out) {
+void AppendCartObjects(const GameObjectRegistry& objects, float alpha, int modelBase, std::vector<VoxelObject>& out) {
     int drawn = 0;
     for (uint32_t slot = 0; slot < objects.SlotCount() && drawn < MAX_CARTS; slot++) {
         GameObjectId id = objects.IdAtSlot(slot);
@@ -89,9 +97,11 @@ void AppendCartFigures(const GameObjectRegistry& objects, float alpha, std::vect
         }
 
         int frame = placement.moving ? (int)(placement.travelled / CART_TROT_STRIDE) & 3 : 1;
-        int look = Figure::PackCart(placement.direction, frame, placement.moving, item, std::min(amount, CART_CAPACITY), (int)(slot * 7) & 7);
-        glm::ivec2 column = glm::ivec2(glm::floor(placement.column + 0.5f));
-        out.push_back({ glm::ivec4(column.x, BUILD_GROUND_Y, column.y, look) }); // Within the renderer's reserve
+        VoxelObject object;
+        object.model = modelBase + CartModelOffset(frame, item, std::min(amount, CART_CAPACITY));
+        object.position = glm::vec3(placement.column.x + 0.5f, (float)BUILD_GROUND_Y, placement.column.y + 0.5f);
+        object.yaw = placement.yaw;
+        out.push_back(object); // Within the caller's reserve
         drawn++;
     }
 }

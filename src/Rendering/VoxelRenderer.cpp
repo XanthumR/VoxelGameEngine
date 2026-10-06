@@ -58,6 +58,7 @@ void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     previewMax = loc("previewMax");
     previewGhost = loc("previewGhost");
     numObjects = loc("numObjects");
+    objectTilesX = loc("objectTilesX");
     overlayOrigin = loc("overlayOrigin");
     overlayGroundY = loc("overlayGroundY");
     overlayTileSize = loc("overlayTileSize");
@@ -80,8 +81,10 @@ bool VoxelRenderer::Init() {
     glGenBuffers(1, &m_ObjectBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_ObjectBuffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, MAX_OBJECTS * sizeof(GpuObject), nullptr, GL_DYNAMIC_DRAW);
-    m_ObjectModels.reserve(16);
-    m_ObjectSlots.reserve(16);
+    glGenBuffers(1, &m_TileBuffer);
+    m_GpuObjects.reserve(MAX_OBJECTS * sizeof(GpuObject));
+    m_ObjectModels.reserve(256);
+    m_ObjectSlots.reserve(256);
     return true;
 }
 
@@ -163,22 +166,70 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     }
     glActiveTexture(GL_TEXTURE15);
     glBindTexture(GL_TEXTURE_3D, m_ObjectAtlas);
+    // Each object goes into the lists of the screen tiles its box covers, so a pixel only tests
+    // the few objects near it
+    int tilesX = (m_Targets.Width() + OBJECT_TILE - 1) / OBJECT_TILE, tilesY = (m_Targets.Height() + OBJECT_TILE - 1) / OBJECT_TILE;
+    const size_t tileStride = 1 + OBJECTS_PER_TILE;
+    if (m_TileData.size() != (size_t)tilesX * tilesY * tileStride) {
+        m_TileData.assign((size_t)tilesX * tilesY * tileStride, 0); // Only when the render size changes
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_TileBuffer);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, m_TileData.size() * sizeof(uint32_t), nullptr, GL_DYNAMIC_DRAW);
+    }
+    for (size_t tile = 0; tile < (size_t)tilesX * tilesY; tile++) m_TileData[tile * tileStride] = 0;
+
     int objectCount = 0;
+    m_GpuObjects.clear();
     if (frame.objects && m_ObjectAtlas != 0) {
-        GpuObject gpu[MAX_OBJECTS];
+        glm::mat4 viewProjection = projection * view;
         for (const VoxelObject& object : *frame.objects) {
             if (objectCount == MAX_OBJECTS || object.model < 0 || object.model >= (int)m_ObjectSlots.size()) continue;
             glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), object.yaw, glm::vec3(0, 1, 0));
             rotation = glm::rotate(rotation, -object.pitch, glm::vec3(1, 0, 0));
             rotation = glm::rotate(rotation, object.roll, glm::vec3(0, 0, 1));
             const ObjectModelSlot& slot = m_ObjectSlots[object.model];
-            gpu[objectCount++] = { glm::vec4(object.position, 0.0f), rotation[0], rotation[1], rotation[2],
-                glm::ivec4(slot.atlasX, slot.size) };
+
+            // The box's screen rectangle (all of the screen when a corner is behind the camera)
+            glm::vec2 low(1e9f), high(-1e9f);
+            bool behind = false, inFront = false;
+            for (int corner = 0; corner < 8; corner++) {
+                glm::vec3 local((corner & 1) ? 0.5f : -0.5f, (corner & 2) ? 1.0f : 0.0f, (corner & 4) ? 0.5f : -0.5f);
+                local *= glm::vec3(slot.size);
+                glm::vec3 world = object.position + glm::vec3(rotation[0]) * local.x + glm::vec3(rotation[1]) * local.y + glm::vec3(rotation[2]) * local.z;
+                glm::vec4 clip = viewProjection * glm::vec4(world / VOXELS_PER_UNIT, 1.0f);
+                if (clip.w <= 0.001f) {
+                    behind = true;
+                    continue;
+                }
+                inFront = true;
+                glm::vec2 pixel = (glm::vec2(clip) / clip.w * 0.5f + 0.5f) * glm::vec2(m_Targets.Width(), m_Targets.Height());
+                low = glm::min(low, pixel);
+                high = glm::max(high, pixel);
+            }
+            if (!inFront) continue;
+            glm::ivec2 tileLow = behind ? glm::ivec2(0) : glm::ivec2(glm::floor(low)) / OBJECT_TILE;
+            glm::ivec2 tileHigh = behind ? glm::ivec2(tilesX - 1, tilesY - 1) : glm::ivec2(glm::floor(high)) / OBJECT_TILE;
+            tileLow = glm::max(tileLow, glm::ivec2(0));
+            tileHigh = glm::min(tileHigh, glm::ivec2(tilesX - 1, tilesY - 1));
+            if (tileLow.x > tileHigh.x || tileLow.y > tileHigh.y) continue; // Off screen
+
+            GpuObject gpu = { glm::vec4(object.position, 0.0f), rotation[0], rotation[1], rotation[2], glm::ivec4(slot.atlasX, slot.size) };
+            const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&gpu);
+            m_GpuObjects.insert(m_GpuObjects.end(), bytes, bytes + sizeof(GpuObject)); // Within the reserve
+            for (int ty = tileLow.y; ty <= tileHigh.y; ty++) {
+                for (int tx = tileLow.x; tx <= tileHigh.x; tx++) {
+                    uint32_t* list = &m_TileData[((size_t)ty * tilesX + tx) * tileStride];
+                    if (list[0] < (uint32_t)OBJECTS_PER_TILE) list[1 + list[0]++] = (uint32_t)objectCount;
+                }
+            }
+            objectCount++;
         }
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_ObjectBuffer);
-        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, objectCount * sizeof(GpuObject), gpu);
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_GpuObjects.size(), m_GpuObjects.data());
     }
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_TileBuffer);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_TileData.size() * sizeof(uint32_t), m_TileData.data());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, m_ObjectBuffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, m_TileBuffer);
 
     // Tile highlights on unit 13
     glActiveTexture(GL_TEXTURE13);
@@ -232,6 +283,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glUniform3iv(u.previewMax, 1, &frame.preview.max[0]);
         glUniform1i(u.previewGhost, ghost && m_GhostTexture != 0 ? 1 : 0);
         glUniform1i(u.numObjects, objectCount);
+        glUniform1i(u.objectTilesX, tilesX);
         glUniform2i(u.overlayOrigin, overlayOrigin.x, overlayOrigin.y);
         // Buildings and roads stand on SEA_LEVEL + ISLAND_HEIGHT; no overlay draws below the world
         glUniform1i(u.overlayGroundY, frame.overlay ? SEA_LEVEL + ISLAND_HEIGHT : -1000);

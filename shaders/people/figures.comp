@@ -1,53 +1,23 @@
 #version 440 core
-// Figures drawn into the voxel world every frame (FigureRenderer, Figure in src/Gameplay/Figure.h):
-//  - people walking the roads: about 11 voxels tall, facing the way they walk, legs and arms
-//    swinging through a 4-frame walk cycle, a straw hat (Farmers) or a cap (Workers)
-//  - smoke puffs over chimneys: a small cube of smoke that thins out as it ages
-//  - horse carts: a trotting horse in harness pulling a four-wheeled wagon with a driver and the
-//    cargo, colored by the good
+// Smoke puffs drawn into the voxel world every frame (FigureRenderer, Figure in src/Gameplay/Figure.h):
+// a small cube of smoke over a chimney that thins out as it ages. People, carts and boats are
+// voxel objects instead (shade.comp), so they move off the grid.
 // Runs twice per frame:
-//   mode 0 (erase): last frame's figures are removed (only voxels that still hold a figure block;
-//                   water comes back below sea level, air above)
-//   mode 1 (draw):  this frame's figures are drawn (only into air, or water for hulls)
-// so the world is never damaged, and figures wiped by a chunk re-upload come back the next frame.
+//   mode 0 (erase): last frame's puffs are removed (only voxels that still hold a figure block)
+//   mode 1 (draw):  this frame's puffs are drawn (only into air)
+// so the world is never damaged, and puffs wiped by a chunk re-upload come back the next frame.
 layout(local_size_x = 64) in;
 
 #include "include/voxel_write.glsl"
 
 // Block IDs, as in src/World/BlockTypes.h (colored in render/shade.comp)
-const int PERSON_SKIN = 47;
-const int PERSON_TROUSERS = 48;
-const int PERSON_SHIRT_FARMER = 49;
-const int PERSON_SHIRT_WORKER = 50;
-const int PERSON_SKIN_DARK = 51;
-const int PERSON_TROUSERS_BLUE = 52;
-const int PERSON_SHIRT_FARMER_GREEN = 53;
-const int PERSON_SHIRT_WORKER_GREY = 54;
-const int PERSON_STRAW_HAT = 55;
-const int PERSON_CAP = 56;
-const int PERSON_SHOES = 57;
 const int SMOKE_LIGHT = 58;
-const int BOAT_WOOD = 59;
-const int FIGURE_FIRST = PERSON_SKIN;
-const int FIGURE_LAST = BOAT_WOOD;
-const int HORSE_COAT = 102;
-const int HORSE_DARK = 103;
-const int HARNESS = 104;
-const int WAGON_WOOD = 105;
-const int WHEEL_IRON = 106;
-const int CARGO_FIRST = 107; // + item (ItemType order)
-const int CART_FIRST = HORSE_COAT;
-const int CART_LAST = 114;
+const int FIGURE_FIRST = 47; // The figure blocks; only smoke is drawn now, but any left over is erased
+const int FIGURE_LAST = 59;
 const int WATER_ID = 35;
 
-const int KIND_PERSON = 0;
-const int KIND_PUFF = 1;
-const int KIND_CART = 3;
-const int ITEM_WOOD = 0;
-const int ITEM_PIGS = 7;
-
 layout(std430, binding = 4) buffer FigureBuffer {
-    ivec4 figures[]; // xyz = anchor voxel, w = packed look (see Figure in src/Gameplay/Figure.h)
+    ivec4 figures[]; // xyz = the puff's center, w = packed look (see Figure in src/Gameplay/Figure.h)
 };
 
 uniform int numFigures;
@@ -55,49 +25,7 @@ uniform int mode;     // 0 = erase, 1 = draw
 uniform int seaLevel; // Erased voxels at or below it become water again
 
 bool isFigure(int id) {
-    return (id >= FIGURE_FIRST && id <= FIGURE_LAST) || (id >= CART_FIRST && id <= CART_LAST);
-}
-
-void drawVoxel(ivec3 p, int id, bool intoWater) {
-    ivec3 c, b;
-    int pool = locateVoxel(p, c, b);
-    if (pool < 0) return;
-    int current = voxelId(loadVoxel(pool, c));
-    bool free = current == 0 || isFigure(current) || (intoWater && current == WATER_ID);
-    if (!free) return; // Something is in the way
-    storeVoxel(pool, c, float(id) / 255.0);
-    markBrick(pool, b);
-}
-
-void eraseVoxel(ivec3 p) {
-    ivec3 c, b;
-    int pool = locateVoxel(p, c, b);
-    if (pool < 0) return;
-    if (isFigure(voxelId(loadVoxel(pool, c)))) storeVoxel(pool, c, p.y <= seaLevel ? float(WATER_ID) / 255.0 : 0.0);
-}
-
-void eraseBox(ivec3 center, ivec3 low, ivec3 high) {
-    for (int y = low.y; y <= high.y; y++) {
-        for (int z = low.z; z <= high.z; z++) {
-            for (int x = low.x; x <= high.x; x++) eraseVoxel(center + ivec3(x, y, z));
-        }
-    }
-}
-
-// The figure's frame: forward along its direction, side to its right
-ivec3 anchor;
-ivec2 forward, side;
-bool intoWater = false;
-
-// A voxel of the figure at (s to the side, t forward, y up)
-void put(int s, int t, int y, int id) {
-    ivec2 xz = anchor.xz + side * s + forward * t;
-    drawVoxel(ivec3(xz.x, anchor.y + y, xz.y), id, intoWater);
-}
-
-void setDirection(int direction) {
-    forward = direction == 0 ? ivec2(1, 0) : direction == 1 ? ivec2(-1, 0) : direction == 2 ? ivec2(0, 1) : ivec2(0, -1);
-    side = ivec2(-forward.y, forward.x);
+    return id >= FIGURE_FIRST && id <= FIGURE_LAST;
 }
 
 uint hash(uint x) {
@@ -106,256 +34,33 @@ uint hash(uint x) {
     return x ^ (x >> 16);
 }
 
-void drawPerson(int packed) {
-    int tier = packed & 3;
-    int frame = (packed >> 4) & 3;
-    setDirection((packed >> 2) & 3);
-
-    int skin = (packed & 64) != 0 ? PERSON_SKIN_DARK : PERSON_SKIN;
-    int shirt = tier == 0 ? ((packed & 128) != 0 ? PERSON_SHIRT_FARMER_GREEN : PERSON_SHIRT_FARMER)
-                          : ((packed & 128) != 0 ? PERSON_SHIRT_WORKER_GREY : PERSON_SHIRT_WORKER);
-    int trousers = (packed & 256) != 0 ? PERSON_TROUSERS_BLUE : PERSON_TROUSERS;
-
-    // Walk cycle: 0 = left leg forward, 1 and 3 = passing, 2 = right leg forward. The lower leg
-    // swings, the knee stays under the hips; arms swing the other way.
-    int swing = frame == 0 ? 1 : frame == 2 ? -1 : 0;
-
-    // Legs (left at s = -1, right at s = +1) with shoes
-    for (int leg = -1; leg <= 1; leg += 2) {
-        int legSwing = leg < 0 ? swing : -swing;
-        put(leg, legSwing, 0, PERSON_SHOES);
-        put(leg, legSwing, 1, trousers);
-        put(leg, 0, 2, trousers);
-        put(leg, 0, 3, trousers);
-    }
-
-    // Hips and torso, two deep
-    for (int s = -1; s <= 1; s++) {
-        put(s, 0, 4, trousers);
-        for (int y = 5; y <= 7; y++) {
-            put(s, 0, y, shirt);
-            put(s, -1, y, shirt);
-        }
-    }
-
-    // Arms: sleeves at the shoulders, hands swinging against the legs on the same side
-    for (int arm = -2; arm <= 2; arm += 4) {
-        int armSwing = arm < 0 ? -swing : swing;
-        put(arm, 0, 7, shirt);
-        put(arm, 0, 6, shirt);
-        put(arm, armSwing, 5, skin);
-    }
-
-    // Head
-    for (int s = -1; s <= 1; s++) {
-        put(s, 0, 8, skin);
-        put(s, -1, 8, skin);
-    }
-
-    if (tier == 0) {
-        // Straw hat: a wide brim and a crown
-        for (int s = -2; s <= 2; s++) {
-            for (int t = -2; t <= 1; t++) put(s, t, 9, PERSON_STRAW_HAT);
-        }
-        for (int s = -1; s <= 1; s++) {
-            put(s, 0, 10, PERSON_STRAW_HAT);
-            put(s, -1, 10, PERSON_STRAW_HAT);
-        }
-    } else {
-        // Cap with a visor over the face
-        for (int s = -1; s <= 1; s++) {
-            put(s, 0, 9, PERSON_CAP);
-            put(s, -1, 9, PERSON_CAP);
-            put(s, 1, 9, PERSON_CAP);
-        }
-    }
-}
-
-// A cube of smoke, size 1-3, with only some of its voxels filled (density 0-15): it breaks up as
-// it ages. The seed keeps the pattern steady for one puff.
-void drawPuff(int packed) {
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= uint(numFigures)) return;
+    ivec3 center = figures[index].xyz;
+    int packed = figures[index].w;
     int size = (packed & 3) + 1;
     int density = (packed >> 2) & 15;
     uint seed = uint((packed >> 11) & 255);
     int low = -(size - 1) / 2;
+
     for (int y = low; y < low + size; y++) {
         for (int z = low; z < low + size; z++) {
             for (int x = low; x < low + size; x++) {
+                ivec3 c, b;
+                int pool = locateVoxel(center + ivec3(x, y, z), c, b);
+                if (pool < 0) continue;
+                int current = voxelId(loadVoxel(pool, c));
+                if (mode == 0) {
+                    if (isFigure(current)) storeVoxel(pool, c, center.y + y <= seaLevel ? float(WATER_ID) / 255.0 : 0.0);
+                    continue;
+                }
+                // Only some of the cube is filled (density 0-15): the puff breaks up as it ages
                 uint h = hash(seed * 7919u + uint((x + 2) + (y + 2) * 5 + (z + 2) * 25));
-                if (int(h & 15u) >= density) continue;
-                drawVoxel(anchor + ivec3(x, y, z), SMOKE_LIGHT, false);
+                if (int(h & 15u) >= density || !(current == 0 || isFigure(current))) continue;
+                storeVoxel(pool, c, float(SMOKE_LIGHT) / 255.0);
+                markBrick(pool, b);
             }
         }
     }
-}
-
-// A 4 x 4 wheel standing on the road at side s, from t0 to t0 + 3: an iron rim and two wooden
-// spokes that turn with the frame
-void drawWheel(int s, int t0, int frame) {
-    for (int y = 0; y < 4; y++) {
-        for (int t = 0; t < 4; t++) {
-            bool rimRow = y == 0 || y == 3, rimColumn = t == 0 || t == 3;
-            if (rimRow && rimColumn) continue; // Round off the corners
-            if (rimRow || rimColumn) {
-                put(s, t0 + t, y, WHEEL_IRON);
-            } else if ((frame & 1) == 0 ? t == y : t + y == 3) {
-                put(s, t0 + t, y, WAGON_WOOD);
-            }
-        }
-    }
-}
-
-// A horse cart, about 23 voxels long, centered on the anchor and facing forward:
-//   t  1..12  the horse: legs trotting in diagonal pairs, mane, tail, collar, saddle pad
-//   t -1..7   the shafts beside the horse, and the reins
-//   t -10..-2 the wagon: bed on four wheels, side boards, the driver at the front, the cargo
-//             behind him (one row of crates per good carried)
-void drawCart(int packed) {
-    setDirection((packed >> 2) & 3);
-    int frame = (packed >> 4) & 3;
-    int amount = (packed >> 6) & 7;
-    int item = (packed >> 11) & 15;
-    bool moving = (packed & (1 << 15)) != 0;
-    int variant = (packed >> 16) & 7;
-
-    // Horse legs: hind at t = 2, fore at t = 7; the lower leg swings, diagonal pairs together
-    int swing = moving ? (frame == 0 ? 1 : frame == 2 ? -1 : 0) : 0;
-    for (int leg = 0; leg < 4; leg++) {
-        int s = (leg & 1) == 0 ? -1 : 1;
-        bool fore = leg >= 2;
-        int t = fore ? 7 : 2;
-        int legSwing = ((leg == 0 || leg == 3) ? swing : -swing); // Hind-left with fore-right
-        put(s, t + legSwing, 0, HORSE_DARK); // Hoof
-        put(s, t + legSwing, 1, HORSE_COAT);
-        put(s, t, 2, HORSE_COAT);
-        put(s, t, 3, HORSE_COAT);
-    }
-    // Body, with the top edges rounded off at the rump and the chest
-    for (int t = 2; t <= 7; t++) {
-        for (int s = -1; s <= 1; s++) {
-            for (int y = 4; y <= 6; y++) {
-                if (y == 6 && s != 0 && (t == 2 || t == 7)) continue;
-                put(s, t, y, HORSE_COAT);
-            }
-        }
-    }
-    // Neck rising to the head, head with a dark muzzle, ears and mane
-    put(0, 8, 6, HORSE_COAT);
-    put(0, 8, 7, HORSE_COAT);
-    put(0, 8, 8, HORSE_COAT);
-    put(0, 9, 8, HORSE_COAT);
-    put(0, 9, 9, HORSE_COAT);
-    for (int t = 10; t <= 11; t++) {
-        put(0, t, 9, HORSE_COAT);
-        put(0, t, 8, HORSE_COAT);
-    }
-    put(0, 12, 8, HORSE_DARK);
-    put(0, 10, 10, HORSE_DARK); // Ears
-    put(0, 7, 7, HORSE_DARK);   // Mane down the neck
-    put(0, 8, 9, HORSE_DARK);
-    put(0, 9, 10, HORSE_DARK);
-    // Tail, swishing with the trot
-    int tailSide = moving ? ((frame & 2) == 0 ? -1 : 1) : 0;
-    put(0, 1, 6, HORSE_DARK);
-    put(0, 1, 5, HORSE_DARK);
-    put(tailSide, 1, 4, HORSE_DARK);
-    put(tailSide, 1, 3, HORSE_DARK);
-
-    // Harness: collar at the neck, saddle pad, a girth strap, shafts and reins
-    for (int y = 6; y <= 8; y++) {
-        put(-1, 8, y, HARNESS);
-        put(1, 8, y, HARNESS);
-    }
-    for (int s = -1; s <= 1; s++) {
-        put(s, 4, 7, HARNESS);
-        put(s, 5, 7, HARNESS);
-    }
-    for (int y = 4; y <= 6; y++) {
-        put(-1, 5, y, HARNESS);
-        put(1, 5, y, HARNESS);
-    }
-    for (int t = -1; t <= 7; t++) {
-        put(-2, t, 5, WAGON_WOOD);
-        put(2, t, 5, WAGON_WOOD);
-    }
-    for (int t = -2; t <= 7; t++) {
-        if (t == 4 || t == 5) continue; // Over the saddle pad
-        put(-1, t, 7, HARNESS);
-        put(1, t, 7, HARNESS);
-    }
-
-    // Wagon: four wheels, the bed on top, side boards and a high front board
-    drawWheel(-3, -10, frame);
-    drawWheel(3, -10, frame);
-    drawWheel(-3, -6, frame);
-    drawWheel(3, -6, frame);
-    for (int t = -10; t <= -2; t++) {
-        for (int s = -2; s <= 2; s++) put(s, t, 4, WAGON_WOOD);
-        put(-2, t, 5, WAGON_WOOD);
-        put(2, t, 5, WAGON_WOOD);
-    }
-    for (int s = -1; s <= 1; s++) {
-        put(s, -10, 5, WAGON_WOOD);
-        put(s, -2, 5, WAGON_WOOD);
-        put(s, -2, 6, WAGON_WOOD);
-    }
-
-    // The driver on the front of the bed, hands forward on the reins
-    int skin = (variant & 1) != 0 ? PERSON_SKIN_DARK : PERSON_SKIN;
-    int shirt = (variant & 2) != 0 ? PERSON_SHIRT_FARMER_GREEN : PERSON_SHIRT_FARMER;
-    for (int s = -1; s <= 1; s++) {
-        put(s, -4, 5, PERSON_TROUSERS);
-        put(s, -5, 5, PERSON_TROUSERS);
-        for (int y = 6; y <= 8; y++) {
-            put(s, -4, y, shirt);
-            put(s, -5, y, shirt);
-        }
-        put(s, -4, 9, skin);
-        put(s, -5, 9, skin);
-    }
-    put(-1, -3, 5, PERSON_TROUSERS); // Knees
-    put(1, -3, 5, PERSON_TROUSERS);
-    put(-2, -4, 7, shirt);           // Arms reaching to the reins
-    put(2, -4, 7, shirt);
-    put(-1, -3, 7, skin);
-    put(1, -3, 7, skin);
-    for (int s = -2; s <= 2; s++) {
-        for (int t = -6; t <= -3; t++) put(s, t, 10, PERSON_STRAW_HAT);
-    }
-    for (int s = -1; s <= 1; s++) {
-        put(s, -4, 11, PERSON_STRAW_HAT);
-        put(s, -5, 11, PERSON_STRAW_HAT);
-    }
-
-    // Cargo: a row of crates per good, from the driver's back; wood and pigs are piled up instead
-    int cargo = CARGO_FIRST + item;
-    for (int row = 0; row < min(amount, 4); row++) {
-        int t = -6 - row;
-        for (int s = -1; s <= 1; s++) {
-            put(s, t, 5, cargo);
-            bool pile = item == ITEM_WOOD || item == ITEM_PIGS;
-            if (!pile || s == 0) put(s, t, 6, cargo);
-            if (!pile && s == 0 && (row & 1) == 0) put(s, t, 7, cargo);
-        }
-    }
-}
-
-void main() {
-    uint index = gl_GlobalInvocationID.x;
-    if (index >= uint(numFigures)) return;
-    anchor = figures[index].xyz;
-    int packed = figures[index].w;
-    int kind = (packed >> 9) & 3;
-
-    if (mode == 0) {
-        // Everything a figure of this kind can cover, in any direction
-        if (kind == KIND_PERSON) eraseBox(anchor, ivec3(-2, 0, -2), ivec3(2, 10, 2));
-        else if (kind == KIND_PUFF) eraseBox(anchor, ivec3(-1), ivec3(1));
-        else eraseBox(anchor, ivec3(-12, 0, -12), ivec3(12, 11, 12));
-        return;
-    }
-
-    if (kind == KIND_PERSON) drawPerson(packed);
-    else if (kind == KIND_PUFF) drawPuff(packed);
-    else drawCart(packed);
 }

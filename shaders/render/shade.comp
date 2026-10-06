@@ -35,13 +35,19 @@ struct VoxelObjectData {
     ivec4 model;   // x: where the model starts in the atlas, yzw: its size
 };
 layout(std430, binding = 6) readonly buffer VoxelObjects { VoxelObjectData objects[]; };
+// Per 16 x 16 pixel tile: the number of objects whose box covers it, then their indices (32 each)
+layout(std430, binding = 7) readonly buffer ObjectTiles { uint objectTiles[]; };
 uniform int numObjects;
+uniform int objectTilesX;
+const int OBJECT_TILE = 16;
+const int OBJECT_TILE_STRIDE = 32;
 layout(binding = 15) uniform usampler3D objectAtlas; // Block IDs at (atlas x, z, y)
 
 // True when a world point is inside some voxel object's box (its hull keeps the sea out)
-bool insideObject(vec3 p) {
-    for (int o = 0; o < numObjects; o++) {
-        VoxelObjectData object = objects[o];
+bool insideObject(vec3 p, ivec2 pixel) {
+    uint base = uint(((pixel.y / OBJECT_TILE) * objectTilesX + pixel.x / OBJECT_TILE) * OBJECT_TILE_STRIDE);
+    for (uint k = 0u; k < objectTiles[base]; k++) {
+        VoxelObjectData object = objects[objectTiles[base + 1u + k]];
         vec3 rel = p - object.position.xyz;
         vec3 local = vec3(dot(rel, object.axisX.xyz), dot(rel, object.axisY.xyz), dot(rel, object.axisZ.xyz)) +
                      vec3(object.model.y, 0, object.model.w) * 0.5;
@@ -52,12 +58,13 @@ bool insideObject(vec3 p) {
 
 // The nearest voxel object along the ray closer than maxT (voxels); 0 = none. The axes are unit
 // length, so distances in a model's frame are distances in the world.
-float traceObjects(vec3 origin, vec3 dir, float maxT, out uint hitId, out vec3 hitNormal) {
+float traceObjects(vec3 origin, vec3 dir, float maxT, ivec2 pixel, out uint hitId, out vec3 hitNormal) {
     float best = maxT;
     hitId = 0u;
     hitNormal = vec3(0.0, 1.0, 0.0);
-    for (int o = 0; o < numObjects; o++) {
-        VoxelObjectData object = objects[o];
+    uint base = uint(((pixel.y / OBJECT_TILE) * objectTilesX + pixel.x / OBJECT_TILE) * OBJECT_TILE_STRIDE);
+    for (uint k = 0u; k < objectTiles[base]; k++) {
+        VoxelObjectData object = objects[objectTiles[base + 1u + k]];
         ivec3 size = object.model.yzw;
         vec3 rel = origin - object.position.xyz;
         vec3 lo = vec3(dot(rel, object.axisX.xyz), dot(rel, object.axisY.xyz), dot(rel, object.axisZ.xyz)) + vec3(size.x, 0, size.z) * 0.5;
@@ -442,10 +449,10 @@ void main() {
             vec3 tNear = min(t0, t1);
             sceneT = max(max(tNear.x, tNear.y), tNear.z);
             // Waves rise above a boat's deck: sea inside a boat's box does not hide the boat
-            if (voxelID == WATER_ID && insideObject(originVoxels + ray.dir * sceneT)) sceneT = 1e30;
+            if (voxelID == WATER_ID && insideObject(originVoxels + ray.dir * sceneT, pixel_coords)) sceneT = 1e30;
         }
         vec3 objectNormal;
-        float objectT = traceObjects(originVoxels, ray.dir, sceneT, objectId, objectNormal);
+        float objectT = traceObjects(originVoxels, ray.dir, sceneT, pixel_coords, objectId, objectNormal);
         if (objectId != 0u) {
             vec3 p = originVoxels + ray.dir * objectT;
             vec3 albedo = getAlbedo(int(objectId), ivec3(floor(p - objectNormal * 0.25)));

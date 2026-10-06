@@ -82,6 +82,7 @@
     <ClCompile Include="..\src\Economy\Production.cpp" />
     <ClCompile Include="..\src\Economy\Treasury.cpp" />
     <ClCompile Include="..\src\Gameplay\Carts.cpp" />
+    <ClCompile Include="..\src\Gameplay\FigureModels.cpp" />
     <ClCompile Include="..\src\Gameplay\FishingBoats.cpp" />
     <ClCompile Include="..\src\Gameplay\Smoke.cpp" />
     <ClCompile Include="..\src\Gameplay\Walkers.cpp" />

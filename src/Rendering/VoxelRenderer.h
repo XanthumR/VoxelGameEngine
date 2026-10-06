@@ -37,7 +37,9 @@ struct FrameParams {
 // textures the passes read.
 class VoxelRenderer {
 public:
-    static constexpr int MAX_OBJECTS = 128;
+    static constexpr int MAX_OBJECTS = 1024;
+    static constexpr int OBJECT_TILE = 16;      // Pixels per side of a screen tile for object culling
+    static constexpr int OBJECTS_PER_TILE = 31; // ponytail: extra objects in a crowded tile are not drawn there
 
     bool Init();
 
@@ -59,7 +61,7 @@ private:
         GLint seaLevel, oceanTileSizes, oceanChoppiness, shoreOrigin, renderDistanceVoxels;
         GLint dimX, dimY, dimZ, cameraPos, inverseView, inverseProj, time;
         GLint sunDir, moonDir, lightDir, lightColor, skyColor, ambient;
-        GLint previewState, previewMin, previewMax, previewGhost, numObjects;
+        GLint previewState, previewMin, previewMax, previewGhost, numObjects, objectTilesX;
         GLint overlayOrigin, overlayGroundY, overlayTileSize;
 
         void Locate(GLuint program);
@@ -85,6 +87,10 @@ private:
     std::vector<ObjectModelSlot> m_ObjectSlots;
     GLuint m_ObjectAtlas = 0;
     GLuint m_ObjectBuffer = 0;
+    // Per screen tile: how many objects touch it, then their indices (1 + OBJECTS_PER_TILE each)
+    GLuint m_TileBuffer = 0;
+    std::vector<uint32_t> m_TileData;
+    std::vector<uint8_t> m_GpuObjects; // This frame's GpuObjects, reserved at Init
     bool m_AtlasDirty = false;
     uint32_t m_GhostRevision = 0;
     RenderTargets m_Targets;

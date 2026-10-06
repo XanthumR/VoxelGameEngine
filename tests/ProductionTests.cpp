@@ -2,6 +2,7 @@
 #include "Economy/Production.h"
 #include "Economy/ProductionChains.h"
 #include "Gameplay/Carts.h"
+#include "Gameplay/FigureModels.h"
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/GameObjects.h"
 #include "Simulation/IslandRegistry.h"
@@ -371,18 +372,57 @@ TEST(CartPlacementTest, MovesOnBetweenTicks) {
     EXPECT_FLOAT_EQ(unloading.column.x, end.column.x);
 }
 
-TEST(CartPlacementTest, CartFigureForEveryCartOnTheRoad) {
+TEST(CartPlacementTest, CartObjectForEveryCartOnTheRoad) {
     ProductionFixture f;
     f.Stock(ItemType::Planks, 0);
     GameObjectId sawmill = f.AddSawmill(12);
     f.AddSawmill(16);
     f.objects.Production(sawmill).output = CART_CAPACITY;
     f.Run(1);
-    std::vector<Figure> figures;
-    AppendCartFigures(f.objects, 0.0f, figures);
-    ASSERT_EQ(figures.size(), 1u);
-    EXPECT_EQ(Figure::KindOf(figures[0].position.w), Figure::CART);
-    EXPECT_EQ(figures[0].position.y, BUILD_GROUND_Y);
-    EXPECT_EQ((figures[0].position.w >> 6) & 7, CART_CAPACITY);                 // A full load
-    EXPECT_EQ((figures[0].position.w >> 11) & 15, (int)ItemType::Planks);       // Of planks
+    std::vector<VoxelObject> objects;
+    AppendCartObjects(f.objects, 0.0f, 100, objects);
+    ASSERT_EQ(objects.size(), 1u);
+    EXPECT_EQ(objects[0].position.y, (float)BUILD_GROUND_Y);
+    int offset = objects[0].model - 100;
+    EXPECT_EQ(offset % CART_LOADS, CartModelOffset(0, (int)ItemType::Planks, CART_CAPACITY)); // A full load of planks
+}
+
+TEST(CartPlacementTest, TurnsSmoothlyThroughACorner) {
+    // An L route: +x for two tiles, then +z
+    ProductionComponent production;
+    production.cartState = CartState::ToWarehouse;
+    production.cartPathLength = 4;
+    production.cartPath[0] = { 10, 5 };
+    production.cartPath[1] = { 11, 5 };
+    production.cartPath[2] = { 12, 5 };
+    production.cartPath[3] = { 12, 6 };
+    const float quarter = 1.5707963f;
+    production.cartPosition = 1500;
+    EXPECT_NEAR(PlaceCart(production, 0.0f).yaw, quarter, 1e-4f); // Along +x
+    production.cartPosition = 2250;
+    float turning = PlaceCart(production, 0.0f).yaw;
+    EXPECT_GT(turning, 0.1f);
+    EXPECT_LT(turning, quarter - 0.1f); // Between +x and +z
+    production.cartPosition = 2600;
+    EXPECT_NEAR(PlaceCart(production, 0.0f).yaw, 0.0f, 1e-4f); // Along +z
+
+    // Unloading at the end it turns around, so it starts back facing the way it drives
+    production.cartPosition = 3000;
+    production.cartState = CartState::Unloading;
+    production.cartWaitTicks = CART_UNLOAD_TICKS;
+    float turned = PlaceCart(production, 0.0f).yaw;
+    production.cartState = CartState::ToProducer;
+    production.cartPosition = 2990;
+    EXPECT_NEAR(std::remainder(turned - PlaceCart(production, 0.0f).yaw, 6.2831853f), 0.0f, 1e-3f);
+}
+
+TEST(FigureModelTest, EveryModelHasItsVoxels) {
+    for (int frame = 0; frame < WALK_FRAMES; frame++) {
+        VoxelObjectModel person = BuildPersonModel(1, 5, frame);
+        EXPECT_EQ(person.ids.size(), (size_t)person.size.x * person.size.y * person.size.z);
+        EXPECT_GT(std::count_if(person.ids.begin(), person.ids.end(), [](uint8_t id) { return id != 0; }), 40);
+    }
+    auto filled = [](const VoxelObjectModel& model) { return std::count_if(model.ids.begin(), model.ids.end(), [](uint8_t id) { return id != 0; }); };
+    EXPECT_GT(filled(BuildCartModel(0, (int)ItemType::Fish, 4)), filled(BuildCartModel(0, 0, 0))); // Cargo adds voxels
+    EXPECT_EQ(CartModelOffset(CART_FRAMES - 1, ITEM_COUNT - 1, 4), CART_MODEL_COUNT - 1);       // Offsets cover every model
 }

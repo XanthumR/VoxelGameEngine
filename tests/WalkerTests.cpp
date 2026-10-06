@@ -1,4 +1,5 @@
 #include "Economy/IslandEconomy.h"
+#include "Gameplay/FigureModels.h"
 #include "Gameplay/Walkers.h"
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/GameObjects.h"
@@ -8,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 
@@ -56,7 +58,7 @@ TEST(WalkerTest, OneWalkerPerFiveResidents) {
     f.Run(10.0f);
     EXPECT_EQ(f.walkers.Count(), 4u);
     EXPECT_EQ(f.walkers.CountOn(ISLAND), 4u);
-    EXPECT_EQ(f.walkers.Figures().size(), 4u);
+    EXPECT_EQ(f.walkers.Objects().size(), 4u);
 }
 
 TEST(WalkerTest, WalkersLeaveHousesOneAtATime) {
@@ -71,10 +73,10 @@ TEST(WalkerTest, FiguresStayOnTheRoad) {
     f.SetPopulation(40);
     for (int step = 0; step < 600; step++) {
         f.walkers.Update(0.1f, f.objects, f.roads, f.economy);
-        for (const Figure& figure : f.walkers.Figures()) {
-            glm::ivec2 tile(ColumnToTile(figure.position.x), ColumnToTile(figure.position.z));
+        for (const VoxelObject& object : f.walkers.Objects()) {
+            glm::ivec2 tile(ColumnToTile((int)std::floor(object.position.x)), ColumnToTile((int)std::floor(object.position.z)));
             ASSERT_TRUE(f.roads.IsRoad(tile)) << "step " << step;
-            ASSERT_EQ(figure.position.y, BUILD_GROUND_Y);
+            ASSERT_EQ(object.position.y, (float)BUILD_GROUND_Y);
         }
     }
 }
@@ -107,32 +109,30 @@ TEST(WalkerTest, HouseWithoutRoadSendsNobody) {
     EXPECT_EQ(f.walkers.Count(), 0u);
 }
 
-TEST(WalkerTest, PackedLookRoundTrips) {
-    int packed = Figure::PackPerson(1, 3, 2, 5);
-    EXPECT_EQ(packed & 3, 1);
-    EXPECT_EQ((packed >> 2) & 3, 3);
-    EXPECT_EQ((packed >> 4) & 3, 2);
-    EXPECT_EQ((packed >> 6) & 7, 5);
-}
-
-TEST(WalkerTest, FiguresFaceTheWayTheyWalk) {
+TEST(WalkerTest, WalkersFaceTheWayTheyWalk) {
     WalkerFixture f;
     f.SetPopulation(5); // One walker, easy to follow
     f.Run(1.0f);
-    ASSERT_EQ(f.walkers.Figures().size(), 1u);
+    ASSERT_EQ(f.walkers.Objects().size(), 1u);
     int checked = 0;
+    glm::vec2 lastMove(0.0f);
+    int straight = 0; // Steps walked the same way
     for (int step = 0; step < 300; step++) {
-        glm::ivec4 before = f.walkers.Figures()[0].position;
+        glm::vec3 before = f.walkers.Objects()[0].position;
+        float yawBefore = f.walkers.Objects()[0].yaw; // Facing at the start of the step it walked
         f.walkers.Update(0.1f, f.objects, f.roads, f.economy);
-        ASSERT_EQ(f.walkers.Figures().size(), 1u);
-        glm::ivec4 after = f.walkers.Figures()[0].position;
-        glm::ivec2 moved(after.x - before.x, after.z - before.z);
-        if (moved.x != 0 && moved.y != 0) continue; // Turning a corner this step
-        int direction = (after.w >> 2) & 3;
-        if (moved.x > 0) { EXPECT_EQ(direction, 0); checked++; }
-        if (moved.x < 0) { EXPECT_EQ(direction, 1); checked++; }
-        if (moved.y > 0) { EXPECT_EQ(direction, 2); checked++; }
-        if (moved.y < 0) { EXPECT_EQ(direction, 3); checked++; }
+        ASSERT_EQ(f.walkers.Objects().size(), 1u);
+        glm::vec3 after = f.walkers.Objects()[0].position;
+        glm::vec2 moved(after.x - before.x, after.z - before.z);
+        // Walking straight on for half a second: the turn is done and it faces the way it goes
+        bool same = glm::length(moved) > 0.1f && glm::length(lastMove) > 0.1f && glm::dot(glm::normalize(moved), glm::normalize(lastMove)) > 0.99f;
+        straight = same ? straight + 1 : 0;
+        if (straight >= 5) {
+            glm::vec2 facing(std::sin(yawBefore), std::cos(yawBefore));
+            EXPECT_GT(glm::dot(facing, glm::normalize(moved)), 0.99f) << "step " << step;
+            checked++;
+        }
+        lastMove = moved;
     }
     EXPECT_GT(checked, 100);
 }
@@ -143,7 +143,7 @@ TEST(WalkerTest, WalkCycleGoesThroughEveryFrame) {
     bool seen[4] = {};
     for (int step = 0; step < 100; step++) {
         f.walkers.Update(0.1f, f.objects, f.roads, f.economy);
-        for (const Figure& figure : f.walkers.Figures()) seen[(figure.position.w >> 4) & 3] = true;
+        for (const VoxelObject& object : f.walkers.Objects()) seen[object.model % WALK_FRAMES] = true; // Model base 0
     }
     EXPECT_TRUE(seen[0] && seen[1] && seen[2] && seen[3]);
 }
