@@ -220,3 +220,40 @@ TEST(ObjectShadowTest, FootprintFollowsTheLight) {
     ObjectShadowFootprint(glm::vec3(100, 50, 200), x, y, z, size, low_sun, 40.0f, 96.0f, low, high);
     EXPECT_GE(low.x, 98.0f - 96.0f - 1e-3f);
 }
+
+TEST(CoastalPlacementTest, HarborPierMustReachOverTheWater) {
+    TestWorld& test = TestWorld::Get();
+    glm::ivec2 sea = SeaColumn();
+    test.LoadAround(sea, 6);
+    IslandRegistry islands(test.terrain);
+    OccupancyGrid occupancy;
+    RoadNetwork roads;
+    PlacementContext context{ test.world, islands, occupancy, roads };
+
+    glm::vec2 toSpawn = glm::normalize(glm::vec2(test.spawnColumn - sea));
+    for (int step = 0; step < 40; step++) {
+        glm::ivec2 column = sea + glm::ivec2(toSpawn * (float)(step * 6));
+        glm::ivec2 near(ColumnToTile(column.x), ColumnToTile(column.y));
+        for (int dz = -2; dz <= 2; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (uint8_t rotation = 0; rotation < 4; rotation++) {
+                    glm::ivec2 tile = near + glm::ivec2(dx, dz);
+                    if (ValidatePlacement(context, BUILDING_HARBOR, rotation, tile).error != PlacementError::None) continue;
+                    EXPECT_NE(ValidatePlacement(context, BUILDING_HARBOR, (uint8_t)((rotation + 2) & 3), tile).error, PlacementError::None);
+                    return;
+                }
+            }
+        }
+    }
+    FAIL() << "No coast spot for a harbor found";
+}
+
+TEST(HarborTest, IsAStorageBuildingWithABerth) {
+    const BuildingType& harbor = BUILDING_TYPES[BUILDING_HARBOR];
+    EXPECT_EQ(harbor.role, BuildingRole::Storage); // A warehouse: road reach and capacity
+    EXPECT_GT(harbor.dockRows, 0);
+    const BuildingModel* model = Library().Model(BUILDING_HARBOR, 0);
+    ASSERT_NE(model, nullptr);
+    EXPECT_EQ(model->boatBerths.size(), 1u); // Where ships moor
+    EXPECT_FALSE(model->smokeEmitters.empty());
+}

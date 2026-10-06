@@ -1,6 +1,6 @@
 """Generates the building models in assets/buildings as MagicaVoxel (.vox) files.
 
-Run from the repository root:  python tools/building_models/generate.py
+Run from the repository root:  python tools/building_models/generate.py [model names, e.g. harbor_1]
 
 Every model is built in the building's own frame (u across the front, v from the front at 0 to
 the back, y up from the ground) and saved so that MagicaVoxel shows it the right way round: the
@@ -12,6 +12,7 @@ MagicaVoxel and stay valid. Sizes must stay footprint x 12 across and at most th
 
 import os
 import struct
+import sys
 
 # --- Block IDs (src/World/BlockTypes.h) ------------------------------------------------------
 AIR = 0
@@ -707,6 +708,91 @@ def slaughterhouse():
     return m
 
 
+def harbor():
+    """48 x 60 x 40: a harbor office of stone and plastered timber with a red tile roof, a storage
+    shed, and a wide pier on pilings (the two dock rows at the back) with bollards, crates, barrels
+    and a small crane. As with the fishery the model's base is 6 below the ground (G); the boat
+    berth marker at the pier's end is at the waterline, where ships moor."""
+    m = Model(48, 60, 40)
+    G = 6
+
+    # Stone foundation under the land rows, grass on top, a paved quay along the water
+    m.box(0, 0, 0, 47, 35, G - 1, STONE_DARK)
+    for v in range(0, 28):
+        for u in range(48):
+            m.set(u, v, G - 1, 1)
+    for u in range(48):
+        for v in range(28, 36):
+            m.set(u, v, G - 1, COBBLE if (u // 3 + v // 3) % 2 else STONE_LIGHT)
+
+    # Harbor office: stone ground floor with quoins, plastered timber upper floor, red roof
+    u0, u1, v0, v1 = 3, 26, 4, 22
+    m.ring(u0, v0, u1, v1, G, G + 8, STONE_LIGHT)
+    for y in range(G, G + 9, 2):
+        for u, v in ((u0, v0), (u1, v0), (u0, v1), (u1, v1)):
+            m.set(u, v, y, STONE_DARK)
+    m.ring(u0, v0, u1, v1, G + 9, G + 16, PLASTER_WHITE)
+    m.ring(u0, v0, u1, v1, G + 9, G + 9, TIMBER_DARK)
+    m.ring(u0, v0, u1, v1, G + 16, G + 16, TIMBER_DARK)
+    for u in range(u0, u1 + 1, 4):
+        m.box(u, v0, G + 9, u, v0, G + 16, TIMBER_DARK)
+        m.box(u, v1, G + 9, u, v1, G + 16, TIMBER_DARK)
+    for v in range(v0, v1 + 1, 4):
+        m.box(u0, v, G + 9, u0, v, G + 16, TIMBER_DARK)
+        m.box(u1, v, G + 9, u1, v, G + 16, TIMBER_DARK)
+    m.box(12, v0, G, 16, v0, G + 6, STONE_DARK)  # Arched door frame
+    m.box(13, v0, G, 15, v0, G + 5, DOOR_WOOD)
+    for u in (6, 20):
+        window(m, u, v0, G + 3, 2, 3, SHUTTER_GREEN, None, facing=-1)
+    for u in (6, 13, 20):
+        window(m, u, v0, G + 11, 2, 3, SHUTTER_GREEN, FLOWER_RED if u != 13 else None, facing=-1)
+    side_window(m, u1, 12, G + 11, 3, 3, SHUTTER_GREEN, facing=+1)
+    gable_roof(m, u0, u1, v0, v1, G + 16, G + 28, ROOF_TILE_RED, ROOF_TILE_DARK, overhang=2, gable_wall=PLASTER_WHITE)
+    chimney(m, 22, 18, G + 16, G + 31)
+    # A flag pole by the door
+    m.box(9, 1, G, 9, 1, G + 18, TIMBER_DARK)
+    m.box(10, 1, G + 15, 13, 1, G + 17, AWNING_BLUE)
+
+    # Open storage shed with crates and barrels
+    m.box(30, 6, G, 30, 20, G + 9, TIMBER_DARK)
+    m.box(44, 6, G, 44, 20, G + 9, TIMBER_DARK)
+    m.box(30, 20, G, 44, 20, G + 9, TIMBER_LIGHT)
+    m.box(29, 5, G + 10, 45, 21, G + 10, ROOF_SLATE)
+    m.box(30, 6, G + 11, 44, 20, G + 11, ROOF_SLATE)
+    for u, v in ((32, 9), (36, 9), (32, 13), (40, 15)):
+        crate(m, u, v, G)
+    crate(m, 34, 11, G + 3)
+    for u, v in ((40, 8), (42, 11)):
+        barrel(m, u, v, G)
+
+    # The pier: plank deck flush with the quay, on pilings into the sea
+    d0, d1 = 6, 41
+    for v in range(36, 60):
+        for u in range(d0, d1 + 1):
+            m.set(u, v, G - 1, TIMBER_LIGHT if (v // 2) % 2 == 0 else FENCE_WOOD)
+    for v in (36, 42, 48, 54, 59):
+        for u in range(d0, d1 + 1, 7):
+            m.box(u, v, 0, u, v, G - 2, TIMBER_DARK)
+    for v in (40, 48, 56):  # Bollards along both edges
+        for u in (d0, d1):
+            m.box(u, v, G, u, v, G + 1, STONE_DARK)
+            m.set(u, v, G + 2, IRON)
+    # A small crane with a rope and a hanging crate
+    m.box(36, 50, G, 37, 51, G + 14, TIMBER_DARK)
+    m.box(28, 50, G + 14, 37, 50, G + 14, TIMBER_DARK)
+    m.box(29, 50, G + 8, 29, 50, G + 13, FENCE_WOOD)
+    crate(m, 28, 49, G + 5)
+    # Cargo waiting on the pier
+    for u, v in ((10, 39), (14, 39), (10, 43)):
+        crate(m, u, v, G)
+    crate(m, 12, 41, G + 3)
+    for u, v in ((20, 40), (23, 40), (21, 43)):
+        barrel(m, u, v, G)
+    m.box(28, 38, G, 33, 41, G + 1, HAY)
+    m.set((d0 + d1) // 2, 59, 2, BOAT_BERTH)  # Waterline at the pier's end: ships moor here
+    return m
+
+
 def main():
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     out = os.path.join(root, 'assets', 'buildings')
@@ -726,8 +812,13 @@ def main():
         'framework_knitter_1': framework_knitter(),
         'pig_farm_1': pig_farm(),
         'slaughterhouse_1': slaughterhouse(),
+        'harbor_1': harbor(),
     }
+    # Only the models named on the command line, if any (keeps hand edits to the others)
+    wanted = sys.argv[1:]
     for name, model in models.items():
+        if wanted and name not in wanted:
+            continue
         path = os.path.join(out, name + '.vox')
         model.save(path)
         print('%-20s %2d x %2d x %2d  %6d voxels  -> %s' % (name, model.width, model.depth, model.height, len(model.voxels), path))

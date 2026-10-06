@@ -177,7 +177,7 @@ void FishingBoats::Update(float deltaTime, const GameObjectRegistry& objects, co
         if (id == INVALID_GAME_OBJECT) continue;
         const BuildingComponent& building = objects.Building(id);
         const BuildingModel* model = models.Model(building.type, building.variant);
-        if (!model || model->boatBerths.empty()) continue;
+        if (!model || model->boatBerths.empty() || BUILDING_TYPES[building.type].role != BuildingRole::Producer) continue; // Fisheries, not harbors
         bool known = std::any_of(m_Boats.begin(), m_Boats.end(), [id](const Boat& boat) { return boat.fishery == id; });
         if (known) continue;
 

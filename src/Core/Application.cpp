@@ -306,7 +306,8 @@ void Application::UpdateTileOverlay() {
         if (role == BuildingRole::Storage) key.highlightedWarehouse = hovered;
         if (role == BuildingRole::Market) key.highlightedMarket = hovered;
     }
-    bool reachPreview = (key.selection == BUILDING_WAREHOUSE || key.selection == BUILDING_MARKETPLACE) && m_BuildTool.HasPlacementPreview();
+    bool reachPreview = key.selection >= 0 && (BUILDING_TYPES[key.selection].role == BuildingRole::Storage || key.selection == BUILDING_MARKETPLACE) &&
+        m_BuildTool.HasPlacementPreview();
     if (reachPreview) {
         key.previewReachType = key.selection;
         key.previewMinTile = m_BuildTool.PreviewMinTile();

@@ -52,7 +52,7 @@ struct BuildingType {
 };
 
 // Index = BuildingComponent::type
-constexpr std::array<BuildingType, 11> BUILDING_TYPES = { {
+constexpr std::array<BuildingType, 12> BUILDING_TYPES = { {
     { "Warehouse", 4, 4, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "warehouse", BuildCategory::Infrastructure, -1 },
     { "Farmer House", 3, 3, 14, 30, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true, "farmer_house", BuildCategory::Housing, -1 },
     { "Marketplace", 4, 3, 10, 24, Block::PLANK, Block::AWNING, BuildingRole::Market, 0, LookStyle::Stall, true, "marketplace", BuildCategory::Housing, -1 },
@@ -64,6 +64,8 @@ constexpr std::array<BuildingType, 11> BUILDING_TYPES = { {
     { "Framework Knitter", 3, 3, 20, 34, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "framework_knitter", BuildCategory::Production, 4 },
     { "Pig Farm", 3, 3, 10, 22, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "pig_farm", BuildCategory::Production, 5 },
     { "Slaughterhouse", 3, 3, 16, 32, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "slaughterhouse", BuildCategory::Production, 6 },
+    // A warehouse on the coast with a pier: ships are built, load and unload here
+    { "Harbor", 4, 5, 16, 34, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "harbor", BuildCategory::Infrastructure, -1, 2, 6 },
 } };
 constexpr uint16_t BUILDING_WAREHOUSE = 0;
 constexpr uint16_t BUILDING_FARMER_HOUSE = 1;
@@ -76,6 +78,7 @@ constexpr uint16_t BUILDING_SHEEP_FARM = 7;
 constexpr uint16_t BUILDING_FRAMEWORK_KNITTER = 8;
 constexpr uint16_t BUILDING_PIG_FARM = 9;
 constexpr uint16_t BUILDING_SLAUGHTERHOUSE = 10;
+constexpr uint16_t BUILDING_HARBOR = 11;
 
 // The residence building of each population tier (upgrades swap between these in place, so they
 // must share a footprint)

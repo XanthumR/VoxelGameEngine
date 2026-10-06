@@ -29,6 +29,7 @@ constexpr std::array<BuildingCost, BUILDING_TYPES.size()> BUILDING_COSTS = { {
     { 250, 6, 25 },  // Framework Knitter
     { 250, 6, 20 },  // Pig Farm
     { 300, 8, 30 },  // Slaughterhouse
+    { 400, 6, 10 },  // Harbor
 } };
 
 // Coins per minute ten residents pay with every need met, per tier

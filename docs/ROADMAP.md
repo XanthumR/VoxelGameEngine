@@ -613,3 +613,36 @@ Coins belong to the player; planks come from the island a building stands on.
 - **Game speed:** `GameClock::StepsToRun(frameDelta, speed)` with speed 0 (paused), 1, 2 or 4; the step cap grows with the speed. Walkers, smoke and boats follow the game speed; day and night stay on real time. Keys: P pauses, + and - step the speed.
 - **UI:** the top bar shows coins and the net income per minute (taxes and upkeep on hover) and the speed buttons; build buttons show the cost; building tooltips show taxes or upkeep and the demolish refund; F3 shows coins, taxes and upkeep.
 - **Tests:** `TreasuryTests` (tax at full and half supply, empty houses, upkeep into debt, `Check`, pay and refund) and `GameClockTests` (speed scales the steps, pause runs none, the cap grows).
+
+## Milestone 6, in detail
+
+A **Harbor** building, **ships** built there that sail the open sea, direct **move orders** and **trade routes**, and **settling a second island** with materials brought by ship. Coins stay the player's; goods stay on their island until a ship moves them. Done in steps, each play-tested and committed.
+
+### 1. Harbor building
+- New type `Harbor`: 4x5 tiles (3 land rows, 2 dock rows), `belowGround` 6, role `Storage` (so it is a warehouse: road reach, capacity), category Infrastructure, model `harbor`; cost 400 coins + 6 planks, upkeep 10.
+- Code that meant "warehouse" now means "storage building" (`OnWarehouseAdded/Removed`, the reach preview).
+- Placement reuses the coastal dock rules of the fishery (`dockRows`, `DockNotOverWater`).
+- Model (`tools/building_models/generate.py harbor_1`): a stone-and-timber harbor office, a storage shed, a wide pier on pilings with bollards, crates and a crane, and a boat berth marker (101) at the pier's end.
+
+### 2. Ships in the simulation (`src/Simulation/Ships.h/.cpp`)
+- `ShipSystem` in `Simulation`: up to 32 ships with generation IDs; position in thousandths of a tile, a waypoint path reserved up front, state Idle / Sailing / Docked, 2 cargo slots of 50, an optional trade route; 1.5 tiles a second.
+- Navigation on the tile grid from `TerrainGenerator::TileKindAt` (Sea and Cliff tiles are open water), so routes cross the whole map without loaded chunks: A* with 8 neighbours (no corner cutting), on a fixed 512x512-tile window allocated once; run when an order is given or a route leg starts.
+- Docking at a harbor's berth (marker position, as the fishing boats find theirs). "Build ship" in the harbor panel: 500 coins + 20 planks from the island's storage.
+
+### 3. Drawing, selection, orders, cargo
+- Ships are voxel objects (like the fishing boats): a trade ship model ~25 long with two masts and sails, deck cargo colored by the goods, turning smoothly and bobbing, casting shadows.
+- Left click near a ship selects it (a ring and a ship panel); right click on the sea sends it there, on a harbor to its berth.
+- Ship panel: state, cargo, route; while docked, +10/-10 buttons move goods between the ship and that island's storage.
+
+### 4. Trade routes
+- Up to 16 routes of up to 4 stops; each stop is a harbor and, per good, Load / Unload / nothing.
+- At a stop the ship waits 3 s, unloads the goods marked Unload (waiting while storage is full), loads the goods marked Load until full or the storage is empty, and sails on. A stop whose harbor is gone is skipped.
+- Route panel (`src/UI/TradeRoutes.h/.cpp`): routes, stops with a harbor dropdown, per-good toggles, "assign selected ship".
+
+### 5. Settling a second island
+- The first storage building ever is free of the rule and gets the starting goods.
+- On any other island without storage, the first storage building needs one of your ships anchored or docked within 4 tiles, and its planks come from that ship (`NeedsShip`); no starting goods there.
+
+### 6. UI polish, tests, docs
+- Markers for ships waiting at a full harbor; the harbor panel lists docked ships; F3 counts ships; the unsettled-island hint names the ship rule.
+- Tests per step (harbor placement and storage, paths that never cross land, docking, cargo limits, route loops, settling); `CLAUDE.md` and this roadmap.

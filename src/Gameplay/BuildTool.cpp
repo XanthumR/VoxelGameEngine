@@ -194,7 +194,7 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     anchor.origin = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y, minTile.y * TILE_SIZE);
     anchor.footprint = tiles * TILE_SIZE;
     m_Simulation.Occupancy().Occupy(minTile, tiles, id);
-    if (type == BUILDING_WAREHOUSE) m_Simulation.Economy().OnWarehouseAdded(check.island);
+    if (building.role == BuildingRole::Storage) m_Simulation.Economy().OnWarehouseAdded(check.island);
     m_Simulation.Coins().Pay(type, check.island, m_Simulation.Economy());
     m_Simulation.MarkBuildingsChanged();
 
@@ -261,7 +261,7 @@ void BuildTool::Demolish(GameObjectId id) {
     glm::ivec2 minTile(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
     m_Simulation.Occupancy().Release(minTile, anchor.footprint / TILE_SIZE, id);
     m_Simulation.Coins().Refund(component.type, component.island, m_Simulation.Economy());
-    if (component.type == BUILDING_WAREHOUSE) m_Simulation.Economy().OnWarehouseRemoved(component.island);
+    if (building.role == BuildingRole::Storage) m_Simulation.Economy().OnWarehouseRemoved(component.island);
     objects.Destroy(id);
     m_Simulation.MarkBuildingsChanged();
 }
