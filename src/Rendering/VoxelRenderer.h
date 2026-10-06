@@ -2,9 +2,12 @@
 
 #include "Rendering/BuildPreview.h"
 #include "Rendering/RenderTargets.h"
+#include "Rendering/VoxelObject.h"
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+
+#include <vector>
 
 class GpuChunkCache;
 class OceanSimulation;
@@ -23,6 +26,7 @@ struct FrameParams {
     int windowWidth, windowHeight;
     BuildPreview preview;  // Highlighted box (building placement or selection)
     const TileOverlay* overlay = nullptr; // Per-tile ground highlights; none when null
+    const std::vector<VoxelObject>* objects = nullptr; // Moving voxel objects (boats); up to MAX_OBJECTS
 };
 
 // Draws the voxel world with three compute passes (shaders/render/):
@@ -33,7 +37,12 @@ struct FrameParams {
 // textures the passes read.
 class VoxelRenderer {
 public:
+    static constexpr int MAX_OBJECTS = 128;
+
     bool Init();
+
+    // Adds a voxel object model (call before the first Render); returns its index for VoxelObject::model
+    int AddObjectModel(const VoxelObjectModel& model);
 
     // Matches the render targets to the window size and render scale
     void ResizeTargets(int windowWidth, int windowHeight, float renderScale);
@@ -50,7 +59,7 @@ private:
         GLint seaLevel, oceanTileSizes, oceanChoppiness, shoreOrigin, renderDistanceVoxels;
         GLint dimX, dimY, dimZ, cameraPos, inverseView, inverseProj, time;
         GLint sunDir, moonDir, lightDir, lightColor, skyColor, ambient;
-        GLint previewState, previewMin, previewMax, previewGhost;
+        GLint previewState, previewMin, previewMax, previewGhost, numObjects;
         GLint overlayOrigin, overlayGroundY, overlayTileSize;
 
         void Locate(GLuint program);
@@ -65,6 +74,18 @@ private:
 
     Pass m_TracePass, m_ShadowPass, m_ShadePass;
     GLuint m_GhostTexture = 0;     // The placement preview's model (R8UI, x, z, y)
+
+    // Voxel objects: every model side by side along x in one atlas (R8UI, x, z, y), and the
+    // instances of the frame in a storage buffer
+    struct ObjectModelSlot {
+        int atlasX;
+        glm::ivec3 size;
+    };
+    std::vector<VoxelObjectModel> m_ObjectModels;
+    std::vector<ObjectModelSlot> m_ObjectSlots;
+    GLuint m_ObjectAtlas = 0;
+    GLuint m_ObjectBuffer = 0;
+    bool m_AtlasDirty = false;
     uint32_t m_GhostRevision = 0;
     RenderTargets m_Targets;
 };

@@ -167,10 +167,31 @@ TEST(FishingBoatTest, RouteNeverReachesLand) {
     glm::ivec2 toSpawn = glm::ivec2(glm::sign(glm::vec2(test.spawnColumn - sea)));
     if (toSpawn.x != 0 && toSpawn.y != 0) toSpawn.y = 0; // Along an axis, as boats sail
     // Sailing toward the island from open sea: the route stops before the shore
-    int length = FishingBoats::RouteLength(test.terrain, sea, toSpawn, 2000);
+    int length = FishingBoats::RouteLength(test.terrain, glm::vec2(sea), glm::vec2(toSpawn), 2000);
     EXPECT_LT(length, 2000);
     for (int step = 0; step <= length + FishingBoats::BOAT_HALF_LENGTH; step++) {
         glm::ivec2 column = sea + toSpawn * step;
         EXPECT_LE(test.terrain.TerrainHeightAt(column.x, column.y), SEA_LEVEL - 1) << "step " << step;
     }
+}
+
+TEST(FishingBoatTest, TurnsOutTurnsAroundAndComesBackBowFirst) {
+    const float moored = 0.0f, trip = 0.5f, pi = 3.14159265f;
+    EXPECT_FLOAT_EQ(FishingBoats::HeadingAt(0.0f, moored, trip), moored);
+    float sailingOut = FishingBoats::MOORED_SECONDS + FishingBoats::TURN_SECONDS + 1.0f;
+    EXPECT_NEAR(FishingBoats::HeadingAt(sailingOut, moored, trip), trip, 1e-4f);
+    float comingBack = FishingBoats::TRIP_SECONDS - 1.0f;
+    EXPECT_NEAR(FishingBoats::HeadingAt(comingBack, moored, trip), trip + pi, 1e-4f);
+    // Turning out of the berth goes the short way round
+    float halfTurn = FishingBoats::MOORED_SECONDS + FishingBoats::TURN_SECONDS * 0.5f;
+    float heading = FishingBoats::HeadingAt(halfTurn, 0.1f, 2.0f * pi - 0.1f);
+    EXPECT_LT(std::abs(std::remainder(heading, 2.0f * pi)), 0.11f);
+}
+
+TEST(FishingBoatTest, ModelHasAHullAndASail) {
+    VoxelObjectModel moored = FishingBoats::BuildModel(false), sailing = FishingBoats::BuildModel(true);
+    ASSERT_EQ(moored.ids.size(), (size_t)moored.size.x * moored.size.y * moored.size.z);
+    auto count = [](const VoxelObjectModel& model) { return std::count_if(model.ids.begin(), model.ids.end(), [](uint8_t id) { return id != 0; }); };
+    EXPECT_GT(count(moored), 200);
+    EXPECT_GT(count(sailing), count(moored)); // The set sail adds voxels
 }

@@ -16,6 +16,17 @@
 #include <algorithm>
 #include <cmath>
 
+namespace {
+
+// One voxel object for the shade pass (std430): where it is and its local axes in the world
+struct GpuObject {
+    glm::vec4 position; // Middle of the model's bottom face, in voxels
+    glm::vec4 axisX, axisY, axisZ;
+    glm::ivec4 model;   // Atlas x of the model, its size
+};
+
+} // namespace
+
 void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     auto loc = [program](const char* name) { return glGetUniformLocation(program, name); };
     pageTable = loc("pageTable");
@@ -46,6 +57,7 @@ void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     previewMin = loc("previewMin");
     previewMax = loc("previewMax");
     previewGhost = loc("previewGhost");
+    numObjects = loc("numObjects");
     overlayOrigin = loc("overlayOrigin");
     overlayGroundY = loc("overlayGroundY");
     overlayTileSize = loc("overlayTileSize");
@@ -65,7 +77,20 @@ bool VoxelRenderer::Init() {
         return false;
     }
     m_Targets.Init(); // Textures are allocated by the first ResizeTargets
+    glGenBuffers(1, &m_ObjectBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_ObjectBuffer);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, MAX_OBJECTS * sizeof(GpuObject), nullptr, GL_DYNAMIC_DRAW);
+    m_ObjectModels.reserve(16);
+    m_ObjectSlots.reserve(16);
     return true;
+}
+
+int VoxelRenderer::AddObjectModel(const VoxelObjectModel& model) {
+    int atlasX = m_ObjectSlots.empty() ? 0 : m_ObjectSlots.back().atlasX + m_ObjectSlots.back().size.x;
+    m_ObjectSlots.push_back({ atlasX, model.size });
+    m_ObjectModels.push_back(model);
+    m_AtlasDirty = true;
+    return (int)m_ObjectSlots.size() - 1;
 }
 
 void VoxelRenderer::ResizeTargets(int windowWidth, int windowHeight, float renderScale) {
@@ -111,6 +136,49 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         m_GhostRevision = frame.preview.ghostRevision;
     }
     glBindTexture(GL_TEXTURE_3D, m_GhostTexture);
+
+    // Voxel objects: the model atlas on unit 15 (built once the models are in), instances on buffer 6
+    if (m_AtlasDirty) {
+        glm::ivec3 atlasSize(0);
+        for (const ObjectModelSlot& slot : m_ObjectSlots) atlasSize = glm::ivec3(slot.atlasX + slot.size.x, std::max(atlasSize.y, slot.size.y), std::max(atlasSize.z, slot.size.z));
+        std::vector<uint8_t> atlas((size_t)atlasSize.x * atlasSize.y * atlasSize.z, 0);
+        for (size_t m = 0; m < m_ObjectModels.size(); m++) {
+            const glm::ivec3 size = m_ObjectSlots[m].size;
+            for (int y = 0; y < size.y; y++) {
+                for (int z = 0; z < size.z; z++) {
+                    for (int x = 0; x < size.x; x++) {
+                        atlas[(size_t)(m_ObjectSlots[m].atlasX + x) + (size_t)atlasSize.x * ((size_t)z + (size_t)atlasSize.z * (size_t)y)] =
+                            m_ObjectModels[m].ids[(size_t)x + (size_t)size.x * ((size_t)z + (size_t)size.z * (size_t)y)];
+                    }
+                }
+            }
+        }
+        if (m_ObjectAtlas == 0) glGenTextures(1, &m_ObjectAtlas);
+        glBindTexture(GL_TEXTURE_3D, m_ObjectAtlas);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, atlasSize.x, atlasSize.z, atlasSize.y, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, atlas.data());
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        m_AtlasDirty = false;
+    }
+    glActiveTexture(GL_TEXTURE15);
+    glBindTexture(GL_TEXTURE_3D, m_ObjectAtlas);
+    int objectCount = 0;
+    if (frame.objects && m_ObjectAtlas != 0) {
+        GpuObject gpu[MAX_OBJECTS];
+        for (const VoxelObject& object : *frame.objects) {
+            if (objectCount == MAX_OBJECTS || object.model < 0 || object.model >= (int)m_ObjectSlots.size()) continue;
+            glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), object.yaw, glm::vec3(0, 1, 0));
+            rotation = glm::rotate(rotation, -object.pitch, glm::vec3(1, 0, 0));
+            rotation = glm::rotate(rotation, object.roll, glm::vec3(0, 0, 1));
+            const ObjectModelSlot& slot = m_ObjectSlots[object.model];
+            gpu[objectCount++] = { glm::vec4(object.position, 0.0f), rotation[0], rotation[1], rotation[2],
+                glm::ivec4(slot.atlasX, slot.size) };
+        }
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_ObjectBuffer);
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, objectCount * sizeof(GpuObject), gpu);
+    }
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, m_ObjectBuffer);
 
     // Tile highlights on unit 13
     glActiveTexture(GL_TEXTURE13);
@@ -163,6 +231,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         glUniform3iv(u.previewMin, 1, &frame.preview.min[0]);
         glUniform3iv(u.previewMax, 1, &frame.preview.max[0]);
         glUniform1i(u.previewGhost, ghost && m_GhostTexture != 0 ? 1 : 0);
+        glUniform1i(u.numObjects, objectCount);
         glUniform2i(u.overlayOrigin, overlayOrigin.x, overlayOrigin.y);
         // Buildings and roads stand on SEA_LEVEL + ISLAND_HEIGHT; no overlay draws below the world
         glUniform1i(u.overlayGroundY, frame.overlay ? SEA_LEVEL + ISLAND_HEIGHT : -1000);

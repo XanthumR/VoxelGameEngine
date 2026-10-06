@@ -3,12 +3,12 @@
 #include <glm/glm.hpp>
 
 // One thing drawn into the voxel world every frame by FigureRenderer (shaders/people/figures.comp):
-// a walking person, a smoke puff, a boat or a horse cart. 16 bytes, the std430 layout of the
+// a walking person, a smoke puff or a horse cart (boats are voxel objects). 16 bytes, the std430 layout of the
 // shader's buffer.
 struct Figure {
-    enum Kind { PERSON = 0, PUFF = 1, BOAT = 2, CART = 3 };
+    enum Kind { PERSON = 0, PUFF = 1, CART = 3 }; // 2 was the fishing boat
 
-    glm::ivec4 position; // xyz = anchor voxel (a person's feet, a puff's center, a boat's waterline center), w = packed look
+    glm::ivec4 position; // xyz = anchor voxel (a person's feet, a puff's center, a cart's center), w = packed look
 
     // Person: bits 0-1 tier, 2-3 direction (0 +x, 1 -x, 2 +z, 3 -z), 4-5 walk frame, 6-8 look variant
     static int PackPerson(int tier, int direction, int frame, int variant) {
@@ -17,10 +17,6 @@ struct Figure {
     // Puff: bits 0-1 size - 1 (1-3 voxels), 2-5 density (0-15, how much of the cube is filled), 11-18 seed
     static int PackPuff(int size, int density, int seed) {
         return ((size - 1) & 3) | ((density & 15) << 2) | (PUFF << 9) | ((seed & 255) << 11);
-    }
-    // Boat: bits 2-3 direction, 4 sail set
-    static int PackBoat(int direction, bool sailSet) {
-        return ((direction & 3) << 2) | ((sailSet ? 1 : 0) << 4) | (BOAT << 9);
     }
     // Cart: bits 2-3 direction, 4-5 trot frame, 6-8 cargo amount (0-4), 11-14 cargo item
     // (ItemType), 15 moving, 16-18 driver look variant

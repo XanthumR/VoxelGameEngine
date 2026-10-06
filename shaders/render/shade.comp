@@ -25,6 +25,77 @@ uniform ivec3 previewMax; // Voxels, exclusive
 uniform int previewGhost; // 1: the model being placed is in ghostVolume (fills previewMin..previewMax)
 layout(binding = 14) uniform usampler3D ghostVolume; // Block IDs at (x, z, y) from previewMin
 
+// Voxel objects (VoxelObject in src/Rendering/VoxelObject.h): models with a free position and
+// rotation, ray-marched inside their oriented boxes
+struct VoxelObjectData {
+    vec4 position; // Middle of the model's bottom face, in voxels
+    vec4 axisX;    // The model's local axes in the world (unit length)
+    vec4 axisY;
+    vec4 axisZ;
+    ivec4 model;   // x: where the model starts in the atlas, yzw: its size
+};
+layout(std430, binding = 6) readonly buffer VoxelObjects { VoxelObjectData objects[]; };
+uniform int numObjects;
+layout(binding = 15) uniform usampler3D objectAtlas; // Block IDs at (atlas x, z, y)
+
+// True when a world point is inside some voxel object's box (its hull keeps the sea out)
+bool insideObject(vec3 p) {
+    for (int o = 0; o < numObjects; o++) {
+        VoxelObjectData object = objects[o];
+        vec3 rel = p - object.position.xyz;
+        vec3 local = vec3(dot(rel, object.axisX.xyz), dot(rel, object.axisY.xyz), dot(rel, object.axisZ.xyz)) +
+                     vec3(object.model.y, 0, object.model.w) * 0.5;
+        if (all(greaterThanEqual(local, vec3(0.0))) && all(lessThan(local, vec3(object.model.yzw)))) return true;
+    }
+    return false;
+}
+
+// The nearest voxel object along the ray closer than maxT (voxels); 0 = none. The axes are unit
+// length, so distances in a model's frame are distances in the world.
+float traceObjects(vec3 origin, vec3 dir, float maxT, out uint hitId, out vec3 hitNormal) {
+    float best = maxT;
+    hitId = 0u;
+    hitNormal = vec3(0.0, 1.0, 0.0);
+    for (int o = 0; o < numObjects; o++) {
+        VoxelObjectData object = objects[o];
+        ivec3 size = object.model.yzw;
+        vec3 rel = origin - object.position.xyz;
+        vec3 lo = vec3(dot(rel, object.axisX.xyz), dot(rel, object.axisY.xyz), dot(rel, object.axisZ.xyz)) + vec3(size.x, 0, size.z) * 0.5;
+        vec3 ld = vec3(dot(dir, object.axisX.xyz), dot(dir, object.axisY.xyz), dot(dir, object.axisZ.xyz));
+        vec3 inv = 1.0 / ld;
+        vec3 t0 = -lo * inv, t1 = (vec3(size) - lo) * inv;
+        vec3 tNear = min(t0, t1), tFar = max(t0, t1);
+        float tEnter = max(max(tNear.x, tNear.y), tNear.z);
+        float tExit = min(min(tFar.x, tFar.y), tFar.z);
+        float t = max(tEnter, 0.0);
+        if (tExit <= t || t >= best) continue;
+
+        ivec3 cell = clamp(ivec3(floor(lo + ld * (t + 1e-4))), ivec3(0), size - 1);
+        ivec3 stepDir = ivec3(sign(ld));
+        vec3 tDelta = abs(inv);
+        vec3 tNext = (vec3(cell) + max(vec3(stepDir), vec3(0.0)) - lo) * inv;
+        int axis = tNear.x >= tNear.y && tNear.x >= tNear.z ? 0 : (tNear.y >= tNear.z ? 1 : 2);
+        for (int i = 0; i < size.x + size.y + size.z; i++) {
+            uint id = texelFetch(objectAtlas, ivec3(object.model.x + cell.x, cell.z, cell.y), 0).r;
+            if (id != 0u) {
+                best = t;
+                hitId = id;
+                vec3 n = vec3(0.0);
+                n[axis] = -float(stepDir[axis]);
+                hitNormal = n.x * object.axisX.xyz + n.y * object.axisY.xyz + n.z * object.axisZ.xyz;
+                break;
+            }
+            axis = tNext.x < tNext.y && tNext.x < tNext.z ? 0 : (tNext.y < tNext.z ? 1 : 2);
+            t = tNext[axis];
+            if (t >= best) break;
+            cell[axis] += stepDir[axis];
+            tNext[axis] += tDelta[axis];
+            if (cell[axis] < 0 || cell[axis] >= size[axis]) break;
+        }
+    }
+    return best;
+}
+
 // Per build tile ground highlights (TileOverlay in src/Rendering/TileOverlay.h)
 layout(binding = 13) uniform usampler2D tileOverlay;
 uniform ivec2 overlayOrigin; // Tile of texel (0, 0)
@@ -360,8 +431,32 @@ void main() {
         }
     }
 
+    // Voxel objects in front of the scene, lit by the sun and shadowed by the world
+    uint objectId = 0u;
+    if (numObjects > 0) {
+        vec3 originVoxels = cameraPos * float(dimX);
+        // Where the ray enters the voxel the scene hit (any face; water reports its own)
+        float sceneT = 1e30;
+        if (hit) {
+            vec3 t0 = (vec3(mapPos) - originVoxels) / ray.dir, t1 = (vec3(mapPos) + 1.0 - originVoxels) / ray.dir;
+            vec3 tNear = min(t0, t1);
+            sceneT = max(max(tNear.x, tNear.y), tNear.z);
+            // Waves rise above a boat's deck: sea inside a boat's box does not hide the boat
+            if (voxelID == WATER_ID && insideObject(originVoxels + ray.dir * sceneT)) sceneT = 1e30;
+        }
+        vec3 objectNormal;
+        float objectT = traceObjects(originVoxels, ray.dir, sceneT, objectId, objectNormal);
+        if (objectId != 0u) {
+            vec3 p = originVoxels + ray.dir * objectT;
+            vec3 albedo = getAlbedo(int(objectId), ivec3(floor(p - objectNormal * 0.25)));
+            float diff = max(dot(objectNormal, lightDir), 0.0);
+            float shadow = diff > 0.0 ? softShadow(ivec3(floor(p - objectNormal * 0.25)), objectNormal) : 0.3;
+            colorResult.rgb = albedo * (diff * lightColor * shadow + ambient);
+        }
+    }
+
     // Tile overlay on the ground's top faces
-    if (hit && normalIndex == 2 && mapPos.y == overlayGroundY - 1) {
+    if (objectId == 0u && hit && normalIndex == 2 && mapPos.y == overlayGroundY - 1) {
         ivec2 worldTile = ivec2(floor(vec2(mapPos.xz) / float(overlayTileSize)));
         ivec2 tile = worldTile - overlayOrigin;
         if (all(greaterThanEqual(tile, ivec2(0))) && all(lessThan(tile, ivec2(TILE_OVERLAY_SIZE)))) {

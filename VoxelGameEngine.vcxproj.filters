@@ -400,6 +400,9 @@
     <ClInclude Include="src\Rendering\TileOverlay.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\VoxelObject.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\VoxelRenderer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>

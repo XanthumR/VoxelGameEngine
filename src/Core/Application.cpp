@@ -115,6 +115,8 @@ bool Application::Init() {
         !m_FigureRenderer.Init()) {
         return false;
     }
+    int mooredBoat = m_Renderer.AddObjectModel(FishingBoats::BuildModel(false));
+    m_Boats.SetModels(mooredBoat, m_Renderer.AddObjectModel(FishingBoats::BuildModel(true)));
 
     // Dear ImGui
     IMGUI_CHECKVERSION();
@@ -135,6 +137,7 @@ bool Application::Init() {
     m_TileOverlay.Init(TILE_SIZE);
     m_ReachScratch.reserve(8192);
     m_Figures.reserve(FigureRenderer::MAX_FIGURES);
+    m_VoxelObjects.reserve(VoxelRenderer::MAX_OBJECTS);
 
     // The tree model must be loaded before the workers start generating
     if (!m_Trees.Load(TREE_MODEL_PATH)) {
@@ -425,7 +428,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_Figures.clear();
     m_Figures.insert(m_Figures.end(), m_Walkers.Figures().begin(), m_Walkers.Figures().end());
     m_Smoke.AppendFigures(m_Figures);
-    m_Boats.AppendFigures(m_Figures);
+    m_VoxelObjects.clear();
+    m_Boats.AppendObjects(m_VoxelObjects);
     AppendCartFigures(m_Simulation.Objects(), m_Clock.Alpha(), m_Figures);
     m_FigureRenderer.Draw(m_Figures, m_Cache, SEA_LEVEL);
 
@@ -444,6 +448,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         frame.preview = m_BuildTool.Preview();
         frame.overlay = &m_TileOverlay;
     }
+    frame.objects = &m_VoxelObjects;
     m_Renderer.Render(frame, m_Settings, m_Cache, m_Ocean, m_Shore);
 
     if (m_CameraMode == CameraMode::FreeFly) DrawHud(m_EditTool.CrosshairColor(m_FreeFlyCamera), m_EditTool.SelectedBlock());

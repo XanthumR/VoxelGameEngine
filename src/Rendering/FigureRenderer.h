@@ -8,14 +8,14 @@
 
 class GpuChunkCache;
 
-// Draws figures (walkers, smoke puffs, boats, carts) into the GPU chunk data with
+// Draws figures (walkers, smoke puffs, carts) into the GPU chunk data with
 // shaders/people/figures.comp: each frame it erases last frame's figures, then draws the current
 // ones. Figures only replace air (or water, for hulls) and only figure voxels are erased, the sea
 // being put back below sea level, so the world is never damaged; drawing every frame also restores
 // figures wiped by a chunk re-upload.
 class FigureRenderer {
 public:
-    static constexpr int MAX_FIGURES = 512 + 1536 + 64 + 128; // Walkers, puffs, boats, carts
+    static constexpr int MAX_FIGURES = 512 + 1536 + 128; // Walkers, puffs, carts
 
     bool Init();
     void Draw(const std::vector<Figure>& figures, const GpuChunkCache& cache, int seaLevel);

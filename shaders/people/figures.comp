@@ -3,7 +3,6 @@
 //  - people walking the roads: about 11 voxels tall, facing the way they walk, legs and arms
 //    swinging through a 4-frame walk cycle, a straw hat (Farmers) or a cap (Workers)
 //  - smoke puffs over chimneys: a small cube of smoke that thins out as it ages
-//  - fishing boats: a hull sitting in the water, a mast and a sail when under way
 //  - horse carts: a trotting horse in harness pulling a four-wheeled wagon with a driver and the
 //    cargo, colored by the good
 // Runs twice per frame:
@@ -43,7 +42,6 @@ const int WATER_ID = 35;
 
 const int KIND_PERSON = 0;
 const int KIND_PUFF = 1;
-const int KIND_BOAT = 2;
 const int KIND_CART = 3;
 const int ITEM_WOOD = 0;
 const int ITEM_PIGS = 7;
@@ -188,32 +186,6 @@ void drawPuff(int packed) {
                 drawVoxel(anchor + ivec3(x, y, z), SMOKE_LIGHT, false);
             }
         }
-    }
-}
-
-// A small fishing boat: a pointed 9-long hull (its bottom two layers in the water), a mast, and a
-// sail across the beam when under way (furled on the yard when moored)
-void drawBoat(int packed) {
-    setDirection((packed >> 2) & 3);
-    bool sailSet = (packed & 16) != 0;
-    intoWater = true;
-    for (int t = -4; t <= 4; t++) {
-        int halfWidth = abs(t) >= 4 ? 0 : 1; // Pointed bow and stern
-        for (int s = -halfWidth; s <= halfWidth; s++) {
-            put(s, t, -1, BOAT_WOOD);
-            put(s, t, 0, BOAT_WOOD);
-            if (abs(s) == halfWidth) put(s, t, 1, BOAT_WOOD); // Gunwale
-        }
-    }
-    put(0, 4, 2, BOAT_WOOD); // Bow post
-    intoWater = false;
-    for (int y = 1; y <= 9; y++) put(0, 0, y, BOAT_WOOD); // Mast
-    if (sailSet) {
-        for (int y = 3; y <= 8; y++) {
-            for (int s = -2; s <= 2; s++) put(s, -1, y, SMOKE_LIGHT);
-        }
-    } else {
-        for (int s = -2; s <= 2; s++) put(s, 0, 8, SMOKE_LIGHT); // Furled on the yard
     }
 }
 
@@ -379,13 +351,11 @@ void main() {
         // Everything a figure of this kind can cover, in any direction
         if (kind == KIND_PERSON) eraseBox(anchor, ivec3(-2, 0, -2), ivec3(2, 10, 2));
         else if (kind == KIND_PUFF) eraseBox(anchor, ivec3(-1), ivec3(1));
-        else if (kind == KIND_BOAT) eraseBox(anchor, ivec3(-4, -1, -4), ivec3(4, 9, 4));
         else eraseBox(anchor, ivec3(-12, 0, -12), ivec3(12, 11, 12));
         return;
     }
 
     if (kind == KIND_PERSON) drawPerson(packed);
     else if (kind == KIND_PUFF) drawPuff(packed);
-    else if (kind == KIND_BOAT) drawBoat(packed);
     else drawCart(packed);
 }
