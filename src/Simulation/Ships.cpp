@@ -247,11 +247,71 @@ int ShipSystem::Transfer(ShipId id, ItemType item, int amount, const GameObjectR
     return 0;
 }
 
-void ShipSystem::Update(const GameObjectRegistry& objects) {
+int ShipSystem::CreateRoute() {
+    for (int route = 0; route < MAX_ROUTES; route++) {
+        if (m_Routes[route].used) continue;
+        m_Routes[route] = TradeRoute();
+        m_Routes[route].used = true;
+        return route;
+    }
+    return -1;
+}
+
+void ShipSystem::DeleteRoute(int route) {
+    if (route < 0 || route >= MAX_ROUTES) return;
+    m_Routes[route].used = false;
+    for (Ship& ship : m_Ships) {
+        if (ship.route == route) ship.route = -1;
+    }
+}
+
+void ShipSystem::AssignRoute(ShipId id, int route) {
+    if (!IsAlive(id)) return;
+    Ship& ship = m_Ships[id & 0xFFFF];
+    ship.route = (route >= 0 && route < MAX_ROUTES && m_Routes[route].used) ? route : -1;
+    ship.stop = 0;
+    ship.waitTicks = 0;
+}
+
+void ShipSystem::FollowRoute(ShipId id, const GameObjectRegistry& objects, const OccupancyGrid& occupancy, IslandEconomyManager& economy) {
+    Ship& ship = m_Ships[id & 0xFFFF];
+    const TradeRoute& route = m_Routes[ship.route];
+    if (route.stopCount == 0 || ship.state == ShipState::Sailing) return;
+    ship.stop %= route.stopCount;
+
+    const RouteStop& stop = route.stops[ship.stop];
+    bool atStop = ship.state == ShipState::Docked && ship.harbor == stop.harbor;
+    if (!atStop) {
+        // On to this stop; a stop whose harbor is gone (or that no sea leads to) is skipped
+        if (!SailTo(id, glm::ivec2(0), objects, occupancy, stop.harbor)) ship.stop = (ship.stop + 1) % route.stopCount;
+        ship.waitTicks = 0;
+        return;
+    }
+
+    if (++ship.waitTicks < STOP_TICKS) return;
+    // Unload first (while the island's storage is full the ship waits), then load
+    for (int i = 0; i < ITEM_COUNT; i++) {
+        if (stop.actions[i] != StopAction::Unload) continue;
+        for (const CargoSlot& slot : ship.cargo) {
+            if (slot.amount > 0 && slot.item == (ItemType)i) Transfer(id, (ItemType)i, -slot.amount, objects, economy);
+        }
+        for (const CargoSlot& slot : ship.cargo) {
+            if (slot.amount > 0 && slot.item == (ItemType)i) return; // Not all of it fit: wait for room
+        }
+    }
+    for (int i = 0; i < ITEM_COUNT; i++) {
+        if (stop.actions[i] == StopAction::Load) Transfer(id, (ItemType)i, SLOT_CAPACITY, objects, economy);
+    }
+    ship.stop = (ship.stop + 1) % route.stopCount;
+    ship.waitTicks = 0;
+}
+
+void ShipSystem::Update(const GameObjectRegistry& objects, const OccupancyGrid& occupancy, IslandEconomyManager& economy) {
     for (int slot = 0; slot < MAX_SHIPS; slot++) {
         if (!m_Alive[slot]) continue;
         Ship& ship = m_Ships[slot];
         ship.previous = ship.position;
+        if (ship.route >= 0) FollowRoute(IdAtSlot(slot), objects, occupancy, economy);
         if (ship.state == ShipState::Docked && !objects.IsAlive(ship.harbor)) ship.state = ShipState::Idle; // Its harbor is gone
         if (ship.state != ShipState::Sailing) continue;
 

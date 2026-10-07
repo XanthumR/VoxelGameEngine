@@ -99,6 +99,9 @@
     <ClCompile Include="src\UI\ShipPanel.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
+    <ClCompile Include="src\UI\TradeRoutes.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
     <ClCompile Include="src\Gameplay\FishingBoats.cpp">
       <Filter>src\Gameplay</Filter>
     </ClCompile>
@@ -365,6 +368,9 @@
       <Filter>src\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="src\UI\ShipPanel.h">
+      <Filter>src\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI\TradeRoutes.h">
       <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\Gameplay\FishingBoats.h">

@@ -103,6 +103,7 @@ private:
     WalkerSystem m_Walkers; // Residents walking the roads (visual only)
     SmokeSystem m_Smoke;    // Chimney smoke (visual only)
     ShipControl m_ShipControl; // Selecting ships, their orders and look
+    bool m_RoutesOpen = false; // The trade route window
     FishingBoats m_Boats;   // Fishing boats of the fisheries (visual only)
     FigureRenderer m_FigureRenderer;
     std::vector<Figure> m_Figures; // This frame's smoke puffs, reserved at setup

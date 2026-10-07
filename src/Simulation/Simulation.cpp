@@ -15,7 +15,7 @@ void Simulation::FixedUpdate(float tickSeconds) {
     // Taxes in, upkeep out
     m_Treasury.Update(m_Objects);
     // Ships sail on
-    m_Ships.Update(m_Objects);
+    m_Ships.Update(m_Objects, m_Occupancy, m_Economy);
 
     m_TickCount++;
     m_SimulationSeconds += tickSeconds;

@@ -4,7 +4,7 @@
 
 #include "imgui.h"
 
-void DrawTopBar(const Treasury& treasury, int& speed) {
+void DrawTopBar(const Treasury& treasury, int& speed, bool& routesOpen) {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f, viewport->WorkPos.y + 8.0f), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove |
@@ -29,5 +29,7 @@ void DrawTopBar(const Treasury& treasury, int& speed) {
         if (ImGui::SmallButton(labels[i])) speed = speeds[i];
         if (active) ImGui::PopStyleColor();
     }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Routes")) routesOpen = !routesOpen;
     ImGui::End();
 }

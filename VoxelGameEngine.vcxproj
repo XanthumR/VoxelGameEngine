@@ -148,6 +148,7 @@
     <ClCompile Include="src\Gameplay\Carts.cpp" />
     <ClCompile Include="src\Gameplay\ShipControl.cpp" />
     <ClCompile Include="src\UI\ShipPanel.cpp" />
+    <ClCompile Include="src\UI\TradeRoutes.cpp" />
     <ClCompile Include="src\Gameplay\FigureModels.cpp" />
     <ClCompile Include="src\Gameplay\FishingBoats.cpp" />
     <ClCompile Include="src\Gameplay\FreeFlyCamera.cpp" />
@@ -240,6 +241,7 @@
     <ClInclude Include="src\Gameplay\Carts.h" />
     <ClInclude Include="src\Gameplay\ShipControl.h" />
     <ClInclude Include="src\UI\ShipPanel.h" />
+    <ClInclude Include="src\UI\TradeRoutes.h" />
     <ClInclude Include="src\Gameplay\FigureModels.h" />
     <ClInclude Include="src\Gameplay\FishingBoats.h" />
     <ClInclude Include="src\Gameplay\FreeFlyCamera.h" />

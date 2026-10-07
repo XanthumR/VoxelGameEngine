@@ -641,6 +641,8 @@ A **Harbor** building, **ships** built there that sail the open sea, direct **mo
 - At a stop the ship waits 3 s, unloads the goods marked Unload (waiting while storage is full), loads the goods marked Load until full or the storage is empty, and sails on. A stop whose harbor is gone is skipped.
 - Route panel (`src/UI/TradeRoutes.h/.cpp`): routes, stops with a harbor dropdown, per-good toggles, "assign selected ship".
 
+- Done: a right-click order takes a ship off its route; the window opens from the top bar ("Routes").
+
 ### 5. Settling a second island
 - The first storage building ever is free of the rule and gets the starting goods.
 - On any other island without storage, the first storage building needs one of your ships anchored or docked within 4 tiles, and its planks come from that ship (`NeedsShip`); no starting goods there.

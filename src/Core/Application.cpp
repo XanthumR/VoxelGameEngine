@@ -8,6 +8,7 @@
 #include "UI/IslandPanel.h"
 #include "Gameplay/FigureModels.h"
 #include "UI/ShipPanel.h"
+#include "UI/TradeRoutes.h"
 #include "UI/TopBar.h"
 #include "UI/Hud.h"
 #include "World/BlockTypes.h"
@@ -420,7 +421,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_CameraMode == CameraMode::Strategy) {
         DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
         DrawIslandPanel(m_PanelIsland, m_Simulation.Economy());
-        DrawTopBar(m_Simulation.Coins(), m_GameSpeed);
+        DrawTopBar(m_Simulation.Coins(), m_GameSpeed, m_RoutesOpen);
+        if (m_RoutesOpen) DrawTradeRoutes(m_RoutesOpen, m_Simulation, m_ShipControl.Selected());
         if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && !ImGui::GetIO().WantCaptureMouse &&
             m_BuildTool.HoveredBuilding() != m_BuildTool.InspectedBuilding()) {
             DrawBuildingInfo(m_BuildTool.HoveredBuilding(), m_Simulation.Objects(), m_Simulation.Economy());

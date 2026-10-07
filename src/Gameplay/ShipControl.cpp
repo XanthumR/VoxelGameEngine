@@ -124,6 +124,7 @@ void ShipControl::Update(GLFWwindow* window, const PickResult& hover, bool mouse
         bool harbor = occupant != INVALID_GAME_OBJECT && BUILDING_TYPES[simulation.Objects().Building(occupant).type].dockRows > 0 &&
                       BUILDING_TYPES[simulation.Objects().Building(occupant).type].role == BuildingRole::Storage;
         m_OrderFailed = !ships.SailTo(m_Selected, tile, simulation.Objects(), simulation.Occupancy(), harbor ? occupant : INVALID_GAME_OBJECT);
+        if (!m_OrderFailed) ships.AssignRoute(m_Selected, -1); // A direct order takes it off its route
     }
 }
 

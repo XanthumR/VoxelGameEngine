@@ -29,6 +29,22 @@ struct CargoSlot {
     int amount = 0; // 0 = empty
 };
 
+// What a ship does with a good at a route stop
+enum class StopAction : uint8_t { None, Load, Unload };
+
+struct RouteStop {
+    GameObjectId harbor = INVALID_GAME_OBJECT;
+    std::array<StopAction, ITEM_COUNT> actions{};
+};
+
+// A loop of harbors a ship sails on its own
+struct TradeRoute {
+    static constexpr int MAX_STOPS = 4;
+    bool used = false;
+    int stopCount = 0;
+    std::array<RouteStop, MAX_STOPS> stops{};
+};
+
 struct Ship {
     glm::vec2 position{ 0.0f }; // Tiles (a tile's middle is +0.5)
     glm::vec2 previous{ 0.0f }; // Last tick's position, for drawing between ticks
@@ -36,6 +52,9 @@ struct Ship {
     GameObjectId harbor = INVALID_GAME_OBJECT; // Docked at, or sailing to
     std::array<CargoSlot, 2> cargo{};
     int pathLength = 0, pathIndex = 0;         // Waypoints in the ship system's path store
+    int route = -1;                            // Trade route it sails, -1 = none
+    int stop = 0;                              // The route stop it is at or heading for
+    int waitTicks = 0;                         // Time at the current stop
 };
 
 // The player's ships. They sail the open sea on the build-tile grid: Sea and Cliff tiles
@@ -43,7 +62,10 @@ struct Ship {
 // whole map without loaded chunks. Routes are found with A* (8 neighbours, no corner cutting) in a
 // window allocated once, then straightened where the water allows. Ships are built at a harbor and
 // dock at its berth, the tile just past the end of its pier, where cargo moves to and from the
-// island's storage. Advanced once per simulation tick.
+// island's storage. A ship on a trade route sails from stop to stop on its own: at each it waits a
+// moment, unloads the goods marked Unload (waiting while the storage is full), loads the goods
+// marked Load until its holds are full or the storage is empty, and sails on; a stop whose harbor
+// is gone is skipped. Advanced once per simulation tick.
 class ShipSystem {
 public:
     static constexpr int MAX_SHIPS = 32;
@@ -52,10 +74,12 @@ public:
     static constexpr float SPEED = 0.15f;   // Tiles per tick (1.5 a second)
     static constexpr int SLOT_CAPACITY = 50;
     static constexpr int SHIP_COINS = 500, SHIP_PLANKS = 20;
+    static constexpr int MAX_ROUTES = 16;
+    static constexpr int STOP_TICKS = 30; // Time at a route stop before the cargo moves (3 s)
 
     explicit ShipSystem(TerrainGenerator& terrain);
 
-    void Update(const GameObjectRegistry& objects);
+    void Update(const GameObjectRegistry& objects, const OccupancyGrid& occupancy, IslandEconomyManager& economy);
 
     // A new ship docked at the harbor, paid with coins and the harbor island's planks; INVALID_SHIP
     // when the harbor is not one or the cost cannot be paid
@@ -67,6 +91,14 @@ public:
     // Moves cargo between a docked ship and its harbor's island: amount > 0 onto the ship, < 0 off it.
     // Returns how much moved (with the same sign), limited by the slots and the storage.
     int Transfer(ShipId id, ItemType item, int amount, const GameObjectRegistry& objects, IslandEconomyManager& economy);
+
+    // Trade routes: index -1 when all MAX_ROUTES are in use
+    int CreateRoute();
+    void DeleteRoute(int route);                 // Its ships stop where they are
+    TradeRoute& Route(int route) { return m_Routes[route]; }
+    const TradeRoute& Route(int route) const { return m_Routes[route]; }
+    // Puts a ship on a route (from its first stop), or takes it off with -1
+    void AssignRoute(ShipId id, int route);
 
     bool IsAlive(ShipId id) const;
     const Ship& Get(ShipId id) const { return m_Ships[id & 0xFFFF]; }
@@ -85,11 +117,13 @@ public:
 
 private:
     bool LineIsWater(glm::ivec2 from, glm::ivec2 to, const OccupancyGrid& occupancy);
+    void FollowRoute(ShipId id, const GameObjectRegistry& objects, const OccupancyGrid& occupancy, IslandEconomyManager& economy);
 
     TerrainGenerator& m_Terrain;
     std::array<Ship, MAX_SHIPS> m_Ships{};
     std::array<uint16_t, MAX_SHIPS> m_Generations{};
     std::array<bool, MAX_SHIPS> m_Alive{};
+    std::array<TradeRoute, MAX_ROUTES> m_Routes{};
     std::vector<glm::ivec2> m_Paths; // MAX_PATH waypoints per ship
 
     // A* window: cost so far, the step that reached each tile, and the open heap

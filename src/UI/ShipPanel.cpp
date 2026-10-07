@@ -48,6 +48,11 @@ bool DrawShipPanel(ShipId id, Simulation& simulation, float alpha, const ICamera
     case ShipState::Docked: ImGui::Text("Docked at the harbor of island #%u", island); break;
     }
     if (orderFailed) ImGui::TextColored(WARNING_COLOR, "No way by sea to there");
+    if (ship.route >= 0) {
+        ImGui::Text("On trade route %d, stop %d of %d", ship.route + 1, ship.stop + 1, ships.Route(ship.route).stopCount);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Leave route")) ships.AssignRoute(id, -1);
+    }
     ImGui::TextDisabled("Right click the sea or a harbor to sail there");
 
     ImGui::Separator();
