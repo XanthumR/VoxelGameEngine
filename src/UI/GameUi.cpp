@@ -15,7 +15,6 @@
 namespace {
 
 const char* FONTS[] = { "assets/ui/fonts/Monocraft.ttf", "assets/ui/fonts/Monocraft-Bold.ttf" };
-const char* TEST_DOCUMENT = "assets/ui/style_sample.rml"; // Shows the theme until the real panels move over
 
 // The GLFW system interface, with RmlUi's warnings and errors (a broken document) on the console
 class LoggingSystemInterface : public SystemInterface_GLFW {
@@ -54,9 +53,7 @@ bool GameUi::Init(GLFWwindow* window) {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     m_Context = Rml::CreateContext("game", Rml::Vector2i(width, height));
-    if (!m_Context) return false;
-    if (Rml::ElementDocument* document = m_Context->LoadDocument(TEST_DOCUMENT)) document->Show();
-    return true;
+    return m_Context != nullptr;
 }
 
 void GameUi::Shutdown() {

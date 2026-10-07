@@ -9,7 +9,6 @@
 #include "Gameplay/FigureModels.h"
 #include "UI/ShipPanel.h"
 #include "UI/TradeRoutes.h"
-#include "UI/TopBar.h"
 #include "UI/Hud.h"
 #include "World/BlockTypes.h"
 
@@ -164,7 +163,7 @@ bool Application::Init() {
     }
 
     // The game UI (RmlUi); Dear ImGui stays for the debug windows
-    if (!m_Ui.Init(m_Window)) {
+    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context())) {
         std::cout << "Failed to initialize the game UI (RmlUi)" << std::endl;
         return false;
     }
@@ -407,6 +406,11 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    // Game UI: last frame's clicks first, then this frame's values
+    if (int speed = m_TopBar.TakeSpeedRequest(); speed >= 0) m_GameSpeed = speed;
+    if (m_TopBar.TakeRoutesToggle()) m_RoutesOpen = !m_RoutesOpen;
+    m_TopBar.SetVisible(m_CameraMode == CameraMode::Strategy);
+    m_TopBar.Update(m_Simulation.Coins(), m_GameSpeed, m_RoutesOpen);
     if (!minimized) m_Ui.Update(m_WindowWidth, m_WindowHeight);
 
     // --- World streaming ---
@@ -449,7 +453,6 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_CameraMode == CameraMode::Strategy) {
         DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
         DrawIslandPanel(m_PanelIsland, m_Simulation.Economy());
-        DrawTopBar(m_Simulation.Coins(), m_GameSpeed, m_RoutesOpen);
         if (m_RoutesOpen) DrawTradeRoutes(m_RoutesOpen, m_Simulation, m_ShipControl.Selected());
         if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && MouseFree() &&
             m_BuildTool.HoveredBuilding() != m_BuildTool.InspectedBuilding()) {

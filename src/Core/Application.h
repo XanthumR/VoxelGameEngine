@@ -25,6 +25,7 @@
 #include "Simulation/Simulation.h"
 #include "UI/DebugOverlay.h"
 #include "UI/GameUi.h"
+#include "UI/TopBar.h"
 #include "World/ChunkStreamer.h"
 #include "World/TerrainGenerator.h"
 #include "World/VoxModel.h"
@@ -117,6 +118,7 @@ private:
     int m_CartModelBase = 0; // First cart model (FigureModels)
     DebugOverlay m_Overlay;
     GameUi m_Ui;
+    TopBar m_TopBar;
     TileOverlay m_TileOverlay;
 
     // What the tile overlay was last built from; rebuilt only when this changes

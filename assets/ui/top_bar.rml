@@ -1,0 +1,40 @@
+<rml>
+<head>
+    <title>Top bar</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body {
+            position: absolute;
+            top: 8dp;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6dp 10dp;
+        }
+        #treasury { position: relative; padding-right: 6dp; }
+        #coins { font-size: 18dp; }
+        /* Taxes and upkeep under the coins while hovered */
+        #treasury .tooltip { display: none; position: absolute; top: 100%; left: 0; margin-top: 8dp; white-space: nowrap; }
+        #treasury:hover .tooltip { display: block; }
+        .divider { width: 2dp; height: 24dp; background-color: #b8955c; }
+        .speed { width: 38dp; padding: 4dp 0; }
+    </style>
+</head>
+<body class="panel row" data-model="top_bar">
+    <div id="treasury" class="row">
+        <img class="icon" src="icons/coin.tga"/>
+        <span id="coins" class="value" data-class-bad="in_debt">{{coins}}</span>
+        <span data-class-good="!losing" data-class-bad="losing">{{net}}</span>
+        <div class="tooltip">
+            <div>Taxes  <span class="good">+{{taxes}}</span> / min</div>
+            <div>Upkeep <span class="bad">-{{upkeep}}</span> / min</div>
+        </div>
+    </div>
+    <div class="divider"/>
+    <button class="speed" data-class-selected="speed == 0" data-event-click="set_speed(0)">||</button>
+    <button class="speed" data-class-selected="speed == 1" data-event-click="set_speed(1)">1x</button>
+    <button class="speed" data-class-selected="speed == 2" data-event-click="set_speed(2)">2x</button>
+    <button class="speed" data-class-selected="speed == 4" data-event-click="set_speed(4)">4x</button>
+    <div class="divider"/>
+    <button class="row" data-class-selected="routes_open" data-event-click="toggle_routes"><img class="icon small" src="icons/ship.tga"/><span>Routes</span></button>
+</body>
+</rml>

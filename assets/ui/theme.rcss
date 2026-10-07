@@ -71,6 +71,8 @@ button {
 }
 button:hover { decorator: linear-gradient(to bottom, #a3713f, #7c5029); color: #fff6dc; }
 button:active { decorator: linear-gradient(to bottom, #5e3c1f, #744a28); }
+/* A toggle that is on (the game speed in use, an open window) */
+button.selected { border-color: #6b4a10; decorator: linear-gradient(to bottom, #e7c062, #c0912f); color: #2f1e10; }
 button.primary { border-color: #6b4a10; decorator: linear-gradient(to bottom, #d9ae4a, #b0832a); color: #2f1e10; }
 button.primary:hover { decorator: linear-gradient(to bottom, #e8c060, #c29436); }
 button:disabled, button[disabled], button.disabled {

@@ -674,6 +674,8 @@ The player-facing UI moves from Dear ImGui to **RmlUi** (HTML/CSS-like documents
 ### 3. Top bar
 - Coins, income and game speed through data bindings; the template for the other panels.
 
+- Done: `TopBar` binds a `top_bar` data model (text and flags, marked dirty only when they change); its buttons call data event callbacks that leave requests (`TakeSpeedRequest`, `TakeRoutesToggle`) the application applies at the start of the next frame, so the speed keys keep working. The ImGui top bar and the style sample are gone.
+
 ### 4. Build menu
 - Tabs, building buttons with cost and hotkey, the placement error text.
 

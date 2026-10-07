@@ -2,34 +2,68 @@
 
 #include "Economy/Treasury.h"
 
-#include "imgui.h"
+#include <RmlUi/Core.h>
 
-void DrawTopBar(const Treasury& treasury, int& speed, bool& routesOpen) {
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f, viewport->WorkPos.y + 8.0f), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing;
-    ImGui::Begin("Top bar", nullptr, flags);
+#include <cstdio>
 
-    const ImVec4 red(1.0f, 0.35f, 0.3f, 1.0f), green(0.45f, 0.9f, 0.45f, 1.0f);
+bool TopBar::Init(Rml::Context* context) {
+    Rml::DataModelConstructor model = context->CreateDataModel("top_bar");
+    if (!model) return false;
+    model.Bind("coins", &m_Coins);
+    model.Bind("net", &m_Net);
+    model.Bind("taxes", &m_Taxes);
+    model.Bind("upkeep", &m_Upkeep);
+    model.Bind("in_debt", &m_InDebt);
+    model.Bind("losing", &m_Losing);
+    model.Bind("speed", &m_Speed);
+    model.Bind("routes_open", &m_RoutesOpen);
+    model.BindEventCallback("set_speed", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& arguments) {
+        if (!arguments.empty()) m_SpeedRequest = arguments[0].Get<int>();
+    });
+    model.BindEventCallback("toggle_routes", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) { m_RoutesToggle = true; });
+    m_Model = model.GetModelHandle();
+
+    m_Document = context->LoadDocument("assets/ui/top_bar.rml");
+    return m_Document != nullptr;
+}
+
+void TopBar::SetVisible(bool visible) {
+    if (!m_Document || m_Document->IsVisible() == visible) return;
+    if (visible) m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+    else m_Document->Hide();
+}
+
+void TopBar::Update(const Treasury& treasury, int speed, bool routesOpen) {
+    char text[32];
     int net = treasury.IncomePerMinute() - treasury.UpkeepPerMinute();
-    if (treasury.Coins() < 0) ImGui::TextColored(red, "Coins %lld", (long long)treasury.Coins());
-    else ImGui::Text("Coins %lld", (long long)treasury.Coins());
-    ImGui::SameLine();
-    ImGui::TextColored(net < 0 ? red : green, "%+d / min", net);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Taxes  +%d / min\nUpkeep -%d / min", treasury.IncomePerMinute(), treasury.UpkeepPerMinute());
+    std::snprintf(text, sizeof(text), "%lld", (long long)treasury.Coins());
+    Rml::String coins = text;
+    std::snprintf(text, sizeof(text), "%+d / min", net);
+    Rml::String netText = text;
+    // Only what changed is marked, so the document is laid out again only then
+    auto set = [this](auto& field, const auto& value, const char* name) {
+        if (field == value) return;
+        field = value;
+        m_Model.DirtyVariable(name);
+    };
+    set(m_Coins, coins, "coins");
+    set(m_Net, netText, "net");
+    set(m_Taxes, Rml::ToString(treasury.IncomePerMinute()), "taxes");
+    set(m_Upkeep, Rml::ToString(treasury.UpkeepPerMinute()), "upkeep");
+    set(m_InDebt, treasury.Coins() < 0, "in_debt");
+    set(m_Losing, net < 0, "losing");
+    set(m_Speed, speed, "speed");
+    set(m_RoutesOpen, routesOpen, "routes_open");
+}
 
-    // Speed: pause, 1x, 2x, 4x (keys P, + and -)
-    const int speeds[4] = { 0, 1, 2, 4 };
-    const char* labels[4] = { "||", "1x", "2x", "4x" };
-    for (int i = 0; i < 4; i++) {
-        ImGui::SameLine();
-        bool active = speed == speeds[i];
-        if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.85f, 0.55f, 0.15f, 1.0f));
-        if (ImGui::SmallButton(labels[i])) speed = speeds[i];
-        if (active) ImGui::PopStyleColor();
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("Routes")) routesOpen = !routesOpen;
-    ImGui::End();
+int TopBar::TakeSpeedRequest() {
+    int request = m_SpeedRequest;
+    m_SpeedRequest = -1;
+    return request;
+}
+
+bool TopBar::TakeRoutesToggle() {
+    bool toggle = m_RoutesToggle;
+    m_RoutesToggle = false;
+    return toggle;
 }
