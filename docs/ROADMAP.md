@@ -12,8 +12,9 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 4 (done) | Production chains | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
 | 5 (done) | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
 | 6 (done) | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
-| 7 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
-| 8 | Persistence & polish | Save/load (edited chunks + game objects), notifications, sound, balancing |
+| 7 | Game UI (RmlUi) | The player-facing UI moves from Dear ImGui to RmlUi: styled Anno-like panels from markup and style sheets, data-bound to the simulation; ImGui stays for the debug tools |
+| 8 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
+| 9 | Persistence & polish | Save/load (edited chunks + game objects), notifications, sound, balancing |
 
 ## Milestone 1, in detail (done)
 
@@ -654,3 +655,31 @@ A **Harbor** building, **ships** built there that sail the open sea, direct **mo
 - Tests per step (harbor placement and storage, paths that never cross land, docking, cargo limits, route loops, settling); `CLAUDE.md` and this roadmap.
 
 - Done: an amber "!" over ships waiting for room (`ShipSystem::IsWaitingForRoom`, also in the ship panel); F3 shows the ship count; the island panel of an unsettled island explains the ship rule. The harbor panel keeps its docked-ship count. Milestone 6 is complete.
+
+## Milestone 7, in detail
+
+The player-facing UI moves from Dear ImGui to **RmlUi** (HTML/CSS-like documents, MIT licence) before the higher tiers add many more panels. Panels become `.rml` documents with `.rcss` style sheets in `assets/ui/`, bound to the simulation's values; ImGui stays for the debug tools (F3, minimap, free-fly HUD) and the world-space markers. Game logic stays in `Simulation`, so the tests are unaffected; UI checks are screenshots. Done in steps, each play-tested and committed.
+
+### 1. Integration
+- RmlUi 6.3 prebuilt (DLL build with FreeType) from the folder in the `RmlUiDir` project property, like `GlfwDir`; the DLLs are copied next to the executable after the build.
+- `GameUi` (`src/UI/GameUi.h/.cpp`): the RmlUi context, its OpenGL 3 render interface and GLFW system interface (RmlUi's own backend files, compiled from `RmlUiDir`), fonts, documents. Drawn after the scene, before ImGui.
+- Input: the GLFW callbacks feed RmlUi first; the game only gets the mouse and keyboard where neither RmlUi nor ImGui wants them.
+- Check: a test document shows, and clicks outside it still reach the world.
+
+### 2. Theme
+- One style sheet: parchment panels, dark wood and brass edges, serif headings; goods, coin, tier and status icons; hover and pressed states; tooltips.
+
+### 3. Top bar
+- Coins, income and game speed through data bindings; the template for the other panels.
+
+### 4. Build menu
+- Tabs, building buttons with cost and hotkey, the placement error text.
+
+### 5. Island panel and building info
+- Hover tooltip, the clicked-building panel, need bars, the upgrade button.
+
+### 6. Ship panel and trade routes
+- Harbor dropdowns, the Load/Unload toggles, the cargo buttons.
+
+### 7. Cleanup and docs
+- ImGui is left only for the debug tools; `CLAUDE.md` and this roadmap.

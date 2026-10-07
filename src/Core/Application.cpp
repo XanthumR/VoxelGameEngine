@@ -54,6 +54,7 @@ Application::~Application() {
 
 void Application::OnMouseMove(GLFWwindow* window, double x, double y) {
     Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    app->m_Ui.OnCursorPos(x, y);
     bool captured = glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED;
     app->m_FreeFlyCamera.OnMouseMove(x, y, app->m_CameraMode == CameraMode::FreeFly && captured);
 }
@@ -61,8 +62,25 @@ void Application::OnMouseMove(GLFWwindow* window, double x, double y) {
 void Application::OnScroll(GLFWwindow* window, double /*xOffset*/, double yOffset) {
     Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
     // ImGui chains this callback; ignore the wheel while it scrolls a UI window
-    bool uiWantsMouse = app->m_ImGuiReady && ImGui::GetIO().WantCaptureMouse;
+    bool usedByUi = app->m_Ui.OnScroll(yOffset);
+    bool uiWantsMouse = usedByUi || (app->m_ImGuiReady && !app->MouseFree());
     if (app->m_CameraMode == CameraMode::Strategy && !uiWantsMouse) app->m_StrategyCamera.OnScroll(yOffset);
+}
+
+void Application::OnMouseButton(GLFWwindow* window, int button, int action, int mods) {
+    static_cast<Application*>(glfwGetWindowUserPointer(window))->m_Ui.OnMouseButton(button, action, mods);
+}
+
+void Application::OnKey(GLFWwindow* window, int key, int /*scancode*/, int action, int mods) {
+    static_cast<Application*>(glfwGetWindowUserPointer(window))->m_Ui.OnKey(key, action, mods);
+}
+
+void Application::OnChar(GLFWwindow* window, unsigned int codepoint) {
+    static_cast<Application*>(glfwGetWindowUserPointer(window))->m_Ui.OnChar(codepoint);
+}
+
+bool Application::MouseFree() const {
+    return !ImGui::GetIO().WantCaptureMouse && !m_Ui.WantsMouse();
 }
 
 ICamera& Application::ActiveCamera() {
@@ -107,6 +125,9 @@ bool Application::Init() {
     // Installed before ImGui, which chains them
     glfwSetCursorPosCallback(m_Window, OnMouseMove);
     glfwSetScrollCallback(m_Window, OnScroll);
+    glfwSetMouseButtonCallback(m_Window, OnMouseButton);
+    glfwSetKeyCallback(m_Window, OnKey);
+    glfwSetCharCallback(m_Window, OnChar);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -140,6 +161,12 @@ bool Application::Init() {
             int index = m_Renderer.AddObjectModel(BuildCartModel(frame, item, amount));
             if (m_CartModelBase < 0) m_CartModelBase = index;
         }
+    }
+
+    // The game UI (RmlUi); Dear ImGui stays for the debug windows
+    if (!m_Ui.Init(m_Window)) {
+        std::cout << "Failed to initialize the game UI (RmlUi)" << std::endl;
+        return false;
     }
 
     // Dear ImGui
@@ -268,7 +295,7 @@ void Application::HandleKeys(float deltaTime) {
     if (m_CameraMode == CameraMode::FreeFly) {
         m_FreeFlyCamera.UpdateMovement(m_Window, deltaTime, m_World);
     } else {
-        m_StrategyCamera.Update(m_Window, deltaTime, !io.WantCaptureMouse, !io.WantCaptureKeyboard);
+        m_StrategyCamera.Update(m_Window, deltaTime, MouseFree(), !io.WantCaptureKeyboard);
     }
 }
 
@@ -277,7 +304,7 @@ void Application::UpdatePicking() {
     m_Hover = PickResult();
     m_HoverIsland = NO_ISLAND;
     if (m_CameraMode == CameraMode::Strategy) {
-        if (ImGui::GetIO().WantCaptureMouse) return; // Pointing at a UI window
+        if (!MouseFree()) return; // Pointing at a UI window
         double cursorX, cursorY;
         glfwGetCursorPos(m_Window, &cursorX, &cursorY);
         int width, height;
@@ -380,6 +407,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    if (!minimized) m_Ui.Update(m_WindowWidth, m_WindowHeight);
 
     // --- World streaming ---
     glm::ivec3 focusChunk = glm::ivec3(glm::floor(ActiveCamera().FocusPoint() * VOXELS_PER_UNIT / (float)CHUNK_SIZE));
@@ -397,8 +425,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_CameraMode == CameraMode::Strategy) {
         ImGuiIO& io = ImGui::GetIO();
         // Ships first: while one is selected, clicks are its orders, not building ones
-        m_ShipControl.Update(m_Window, m_Hover, !io.WantCaptureMouse, m_BuildTool.SelectedType() != BuildTool::NO_TYPE, m_Simulation);
-        m_BuildTool.Update(m_Window, m_Hover, !io.WantCaptureMouse && m_ShipControl.Selected() == INVALID_SHIP, !io.WantCaptureKeyboard);
+        m_ShipControl.Update(m_Window, m_Hover, MouseFree(), m_BuildTool.SelectedType() != BuildTool::NO_TYPE, m_Simulation);
+        m_BuildTool.Update(m_Window, m_Hover, MouseFree() && m_ShipControl.Selected() == INVALID_SHIP, !io.WantCaptureKeyboard);
         UpdateTileOverlay();
     }
 
@@ -423,7 +451,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         DrawIslandPanel(m_PanelIsland, m_Simulation.Economy());
         DrawTopBar(m_Simulation.Coins(), m_GameSpeed, m_RoutesOpen);
         if (m_RoutesOpen) DrawTradeRoutes(m_RoutesOpen, m_Simulation, m_ShipControl.Selected());
-        if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && !ImGui::GetIO().WantCaptureMouse &&
+        if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && MouseFree() &&
             m_BuildTool.HoveredBuilding() != m_BuildTool.InspectedBuilding()) {
             DrawBuildingInfo(m_BuildTool.HoveredBuilding(), m_Simulation.Objects(), m_Simulation.Economy());
         }
@@ -488,6 +516,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_Renderer.Render(frame, m_Settings, m_Cache, m_Ocean, m_Shore);
 
     if (m_CameraMode == CameraMode::FreeFly) DrawHud(m_EditTool.CrosshairColor(m_FreeFlyCamera), m_EditTool.SelectedBlock());
+    if (m_CameraMode == CameraMode::Strategy) m_Ui.Render(m_WindowWidth, m_WindowHeight);
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -503,6 +532,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
 }
 
 void Application::Shutdown() {
+    m_Ui.Shutdown();
     if (m_ImGuiReady) {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();

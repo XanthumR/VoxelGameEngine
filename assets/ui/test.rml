@@ -1,0 +1,39 @@
+<rml>
+<head>
+    <title>RmlUi test</title>
+    <style>
+        body {
+            font-family: LatoLatin;
+            font-size: 16dp;
+            color: #3b2a1a;
+            position: absolute;
+            left: 24dp;
+            bottom: 24dp;
+            width: 260dp;
+            padding: 14dp 18dp;
+            background-color: #efe2c4f0;
+            border: 3dp #6b4a2b;
+            border-radius: 6dp;
+        }
+        h1 { display: block; font-weight: bold; font-size: 20dp; margin-bottom: 8dp; }
+        p { display: block; margin-bottom: 10dp; }
+        button {
+            display: block;
+            text-align: center;
+            padding: 6dp;
+            color: #f4ead2;
+            background-color: #7a5230;
+            border: 2dp #3f2a17;
+            border-radius: 4dp;
+            cursor: pointer;
+        }
+        button:hover { background-color: #95663d; }
+        button:active { background-color: #5c3d22; }
+    </style>
+</head>
+<body>
+    <h1>RmlUi is running</h1>
+    <p>A test panel for the UI switch. Clicks here stay in the UI; clicks beside it still reach the world.</p>
+    <button>Hover and click me</button>
+</body>
+</rml>

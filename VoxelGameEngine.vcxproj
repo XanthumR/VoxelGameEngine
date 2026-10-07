@@ -72,6 +72,8 @@
   <PropertyGroup Label="UserMacros">
     <!-- Override with /p:GlfwDir=... or an environment variable of the same name -->
     <GlfwDir Condition="'$(GlfwDir)'==''">C:\Users\Gaming\Documents\Libraries\glfw-3.4.bin.WIN64</GlfwDir>
+    <!-- RmlUi prebuilt Windows release (the DLL build with FreeType); override like GlfwDir -->
+    <RmlUiDir Condition="'$(RmlUiDir)'==''">C:\Users\Gaming\Documents\Libraries\RmlUi-6.3</RmlUiDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -105,13 +107,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>src;$(GlfwDir)\include;imgui;imgui/backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;$(GlfwDir)\include;$(RmlUiDir)\Include;$(RmlUiDir)\Backends;imgui;imgui/backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(GlfwDir)\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(GlfwDir)\lib-vc2022;$(RmlUiDir)\Bin-Dynamic\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;user32.lib;gdi32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -123,13 +125,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>src;$(GlfwDir)\include;imgui;imgui/backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;$(GlfwDir)\include;$(RmlUiDir)\Include;$(RmlUiDir)\Backends;imgui;imgui/backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(GlfwDir)\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(GlfwDir)\lib-vc2022;$(RmlUiDir)\Bin-Dynamic\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;user32.lib;gdi32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -149,6 +151,8 @@
     <ClCompile Include="src\Gameplay\ShipControl.cpp" />
     <ClCompile Include="src\UI\ShipPanel.cpp" />
     <ClCompile Include="src\UI\TradeRoutes.cpp" />
+    <ClCompile Include="src\UI\GameUi.cpp" />
+    <ClCompile Include="src\UI\RmlBackend.cpp" />
     <ClCompile Include="src\Gameplay\FigureModels.cpp" />
     <ClCompile Include="src\Gameplay\FishingBoats.cpp" />
     <ClCompile Include="src\Gameplay\FreeFlyCamera.cpp" />
@@ -242,6 +246,7 @@
     <ClInclude Include="src\Gameplay\ShipControl.h" />
     <ClInclude Include="src\UI\ShipPanel.h" />
     <ClInclude Include="src\UI\TradeRoutes.h" />
+    <ClInclude Include="src\UI\GameUi.h" />
     <ClInclude Include="src\Gameplay\FigureModels.h" />
     <ClInclude Include="src\Gameplay\FishingBoats.h" />
     <ClInclude Include="src\Gameplay\FreeFlyCamera.h" />
@@ -308,6 +313,15 @@
     <ClInclude Include="imgui\backends\imgui_impl_opengl3_loader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!-- RmlUi and FreeType DLLs next to the executable (FreeType's debug build is freetyped.dll) -->
+  <Target Name="CopyRmlUiDlls" AfterTargets="Build">
+    <ItemGroup>
+      <RmlUiDll Include="$(RmlUiDir)\Bin-Dynamic\$(Configuration)\rmlui.dll" />
+      <RmlUiDll Condition="'$(Configuration)'=='Debug'" Include="$(RmlUiDir)\Dependencies\Bin-Dynamic\debug\bin\freetyped.dll" />
+      <RmlUiDll Condition="'$(Configuration)'!='Debug'" Include="$(RmlUiDir)\Dependencies\Bin-Dynamic\bin\freetype.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RmlUiDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>

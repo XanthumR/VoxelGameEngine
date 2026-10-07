@@ -24,6 +24,7 @@
 #include "Simulation/GameClock.h"
 #include "Simulation/Simulation.h"
 #include "UI/DebugOverlay.h"
+#include "UI/GameUi.h"
 #include "World/ChunkStreamer.h"
 #include "World/TerrainGenerator.h"
 #include "World/VoxModel.h"
@@ -57,6 +58,11 @@ private:
 
     static void OnMouseMove(GLFWwindow* window, double x, double y);
     static void OnScroll(GLFWwindow* window, double xOffset, double yOffset);
+    static void OnMouseButton(GLFWwindow* window, int button, int action, int mods);
+    static void OnKey(GLFWwindow* window, int key, int scancode, int action, int mods);
+    static void OnChar(GLFWwindow* window, unsigned int codepoint);
+    // Neither the game UI nor an ImGui window is under the cursor
+    bool MouseFree() const;
 
     // Edge-triggered key press: true only on the frame the key goes down
     bool KeyPressed(int key, bool& wasPressed);
@@ -110,6 +116,7 @@ private:
     std::vector<VoxelObject> m_VoxelObjects; // This frame's walkers, carts and boats, reserved at setup
     int m_CartModelBase = 0; // First cart model (FigureModels)
     DebugOverlay m_Overlay;
+    GameUi m_Ui;
     TileOverlay m_TileOverlay;
 
     // What the tile overlay was last built from; rebuilt only when this changes
