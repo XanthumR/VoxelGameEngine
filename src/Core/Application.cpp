@@ -2,7 +2,6 @@
 
 #include "Core/Screenshot.h"
 #include "Simulation/BuildingTypes.h"
-#include "UI/BuildMenu.h"
 #include "UI/BuildingInfo.h"
 #include "UI/BuildingMarkers.h"
 #include "UI/IslandPanel.h"
@@ -163,7 +162,7 @@ bool Application::Init() {
     }
 
     // The game UI (RmlUi); Dear ImGui stays for the debug windows
-    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context())) {
+    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context())) {
         std::cout << "Failed to initialize the game UI (RmlUi)" << std::endl;
         return false;
     }
@@ -406,12 +405,10 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    // Game UI: last frame's clicks first, then this frame's values
+    // Game UI clicks (from last frame's events)
     if (int speed = m_TopBar.TakeSpeedRequest(); speed >= 0) m_GameSpeed = speed;
     if (m_TopBar.TakeRoutesToggle()) m_RoutesOpen = !m_RoutesOpen;
-    m_TopBar.SetVisible(m_CameraMode == CameraMode::Strategy);
-    m_TopBar.Update(m_Simulation.Coins(), m_GameSpeed, m_RoutesOpen);
-    if (!minimized) m_Ui.Update(m_WindowWidth, m_WindowHeight);
+    m_BuildMenu.ApplyRequests(m_BuildTool);
 
     // --- World streaming ---
     glm::ivec3 focusChunk = glm::ivec3(glm::floor(ActiveCamera().FocusPoint() * VOXELS_PER_UNIT / (float)CHUNK_SIZE));
@@ -445,13 +442,18 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_Simulation.Trees().ClearChanges();
 
     // --- UI ---
+    bool strategy = m_CameraMode == CameraMode::Strategy;
+    m_TopBar.SetVisible(strategy);
+    m_BuildMenu.SetVisible(strategy);
+    m_TopBar.Update(m_Simulation.Coins(), m_GameSpeed, m_RoutesOpen);
+    m_BuildMenu.Update(m_BuildTool, m_Simulation.Objects().AliveCount());
+    if (!minimized) m_Ui.Update(m_WindowWidth, m_WindowHeight);
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
         m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS,
         m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover,
         m_HoverIsland, m_PanelIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool, m_Walkers.Count() };
     m_Overlay.Draw(overlay);
     if (m_CameraMode == CameraMode::Strategy) {
-        DrawBuildMenu(m_BuildTool, m_Simulation.Objects().AliveCount());
         DrawIslandPanel(m_PanelIsland, m_Simulation.Economy());
         if (m_RoutesOpen) DrawTradeRoutes(m_RoutesOpen, m_Simulation, m_ShipControl.Selected());
         if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && MouseFree() &&

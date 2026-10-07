@@ -1,0 +1,65 @@
+<rml>
+<head>
+    <title>Build menu</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body {
+            position: absolute;
+            bottom: 12dp;
+            left: 50%;
+            transform: translateX(-50%);
+            min-width: 560dp;
+        }
+        .tabs .tab { width: 160dp; flex: 0 0 auto; }
+        .tab-hint { margin-left: 8dp; }
+        #entries { display: flex; flex-direction: row; align-items: stretch; }
+        /* One building: name on top, its cost below, the hotkey in the corner */
+        .entry {
+            display: block;
+            position: relative;
+            width: 148dp;
+            margin-right: 6dp;
+            padding: 6dp 8dp;
+            text-align: left;
+        }
+        .entry .picture { display: block; width: 120dp; height: 90dp; margin: 0 auto 2dp; }
+        .entry .name { display: block; margin-bottom: 4dp; }
+        .entry .cost { display: flex; flex-direction: row; align-items: center; font-weight: normal; }
+        .entry .cost img { margin-right: 3dp; }
+        .entry .cost span { margin-right: 8dp; }
+        .entry .hotkey { position: absolute; top: 4dp; right: 6dp; font-size: 12dp; color: #d9c49a; }
+        .entry.selected .hotkey { color: #5a3d16; }
+        #cancel { align-self: center; }
+        #status { margin-top: 8dp; }
+        #status .hint { margin-left: 12dp; }
+    </style>
+</head>
+<body class="panel" data-model="build_menu">
+    <div class="row">
+        <div class="tabs">
+            <div class="tab" data-class-selected="tab == 0" data-event-click="set_tab(0)">Housing</div>
+            <div class="tab" data-class-selected="tab == 1" data-event-click="set_tab(1)">Production</div>
+            <div class="tab" data-class-selected="tab == 2" data-event-click="set_tab(2)">Infrastructure</div>
+        </div>
+        <span class="tab-hint muted">[Tab]</span>
+    </div>
+    <div id="entries">
+        <button class="entry" data-for="entry : entries" data-class-selected="entry.selected" data-event-click="select(entry.type)">
+            <img class="picture" data-attr-src="entry.image"/>
+            <span class="name">{{entry.name}}</span>
+            <div class="cost" data-if="entry.coins > 0">
+                <img class="icon small" src="icons/coin.tga"/><span>{{entry.coins}}</span>
+                <img class="icon small" src="icons/planks.tga" data-if="entry.planks > 0"/><span data-if="entry.planks > 0">{{entry.planks}}</span>
+            </div>
+            <div class="cost" data-if="entry.coins == 0"><span>1x1 tiles</span></div>
+            <span class="hotkey">{{entry.hotkey}}</span>
+        </button>
+        <button id="cancel" data-attrif-disabled="!any_selected" data-event-click="select(-1)">Cancel</button>
+    </div>
+    <div id="status" class="row">
+        <span data-class-muted="status_kind == 0" data-class-good="status_kind == 1" data-class-warn="status_kind == 2"
+              data-class-bad="status_kind == 3">{{status}}</span>
+        <span class="hint muted">{{hint}}</span>
+    </div>
+</body>
+</rml>

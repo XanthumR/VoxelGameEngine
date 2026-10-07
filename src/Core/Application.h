@@ -24,6 +24,7 @@
 #include "Simulation/GameClock.h"
 #include "Simulation/Simulation.h"
 #include "UI/DebugOverlay.h"
+#include "UI/BuildMenu.h"
 #include "UI/GameUi.h"
 #include "UI/TopBar.h"
 #include "World/ChunkStreamer.h"
@@ -119,6 +120,7 @@ private:
     DebugOverlay m_Overlay;
     GameUi m_Ui;
     TopBar m_TopBar;
+    BuildMenu m_BuildMenu;
     TileOverlay m_TileOverlay;
 
     // What the tile overlay was last built from; rebuilt only when this changes

@@ -679,6 +679,8 @@ The player-facing UI moves from Dear ImGui to **RmlUi** (HTML/CSS-like documents
 ### 4. Build menu
 - Tabs, building buttons with cost and hotkey, the placement error text.
 
+- Done: `BuildMenu` binds a `build_menu` model (the open tab, its entries as an array of structs, the status line and its color); tab and building clicks are requests `ApplyRequests` hands to `BuildTool` at the start of the next frame. The game UI documents are now updated after the frame's gameplay, so they show this frame's state. Every card shows a picture of its building: `tools/ui_icons/buildings.py` renders each building's first `.vox` model in isometric view on grass (and a road tile) into `assets/ui/buildings/`.
+
 ### 5. Island panel and building info
 - Hover tooltip, the clicked-building panel, need bars, the upgrade button.
 
