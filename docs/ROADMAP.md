@@ -652,3 +652,5 @@ A **Harbor** building, **ships** built there that sail the open sea, direct **mo
 ### 6. UI polish, tests, docs
 - Markers for ships waiting at a full harbor; the harbor panel lists docked ships; F3 counts ships; the unsettled-island hint names the ship rule.
 - Tests per step (harbor placement and storage, paths that never cross land, docking, cargo limits, route loops, settling); `CLAUDE.md` and this roadmap.
+
+- Done: an amber "!" over ships waiting for room (`ShipSystem::IsWaitingForRoom`, also in the ship panel); F3 shows the ship count; the island panel of an unsettled island explains the ship rule. The harbor panel keeps its docked-ship count. Milestone 6 is complete.

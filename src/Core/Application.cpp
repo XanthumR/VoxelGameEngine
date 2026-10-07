@@ -434,6 +434,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         int width, height;
         glfwGetWindowSize(m_Window, &width, &height);
         DrawBuildingMarkers(m_StrategyCamera, m_Simulation.Objects(), glm::ivec2(width, height));
+        DrawShipMarkers(m_Simulation.Ships(), m_Clock.Alpha(), m_StrategyCamera, glm::ivec2(width, height));
         if (m_ShipControl.Selected() != INVALID_SHIP &&
             !DrawShipPanel(m_ShipControl.Selected(), m_Simulation, m_Clock.Alpha(), m_StrategyCamera, glm::ivec2(width, height), m_ShipControl.LastOrderFailed())) {
             m_ShipControl.Deselect();

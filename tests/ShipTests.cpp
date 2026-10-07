@@ -264,9 +264,11 @@ TEST(TradeRouteTest, WaitsAtAFullHarborThenUnloads) {
     EXPECT_EQ(f.ships.Get(f.ship).state, ShipState::Docked); // Waiting with its planks
     EXPECT_EQ(f.ships.Get(f.ship).harbor, f.second);
     EXPECT_EQ(f.ships.Get(f.ship).cargo[0].amount, 40);
+    EXPECT_TRUE(f.ships.IsWaitingForRoom(f.ship));
 
     f.Storage(f.second).amounts[(size_t)ItemType::Planks] = 0; // Room again
     f.Run(2);
+    EXPECT_FALSE(f.ships.IsWaitingForRoom(f.ship));
     EXPECT_EQ(f.Storage(f.second).Amount(ItemType::Planks), 40);
     EXPECT_EQ(f.ships.Get(f.ship).cargo[0].amount, 0);
 }

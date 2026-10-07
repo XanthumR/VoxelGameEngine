@@ -97,7 +97,8 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     } else {
         ImGui::Text("Island: none");
     }
-    ImGui::Text("Islands discovered: %zu | Objects: %u", c.simulation.Islands().IslandCount(), c.simulation.Objects().AliveCount());
+    ImGui::Text("Islands discovered: %zu | Objects: %u | Ships: %d", c.simulation.Islands().IslandCount(), c.simulation.Objects().AliveCount(),
+        c.simulation.Ships().Count());
     ImGui::Text("Road tiles: %zu | Connected buildings: %u / %u", c.simulation.Roads().Count(),
         c.simulation.Logistics().ConnectedBuildings(), c.simulation.Logistics().TotalBuildings());
     int population = 0;

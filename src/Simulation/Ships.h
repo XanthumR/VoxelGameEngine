@@ -119,6 +119,8 @@ public:
     const Ship& Get(ShipId id) const { return m_Ships[id & 0xFFFF]; }
     ShipId IdAtSlot(int slot) const;
     int Count() const;
+    // On a route, docked at a stop whose storage has no room for what it unloads
+    bool IsWaitingForRoom(ShipId id) const { return IsAlive(id) && Get(id).route >= 0 && Get(id).waitTicks >= STOP_TICKS; }
     // The ship nearest a position (tiles) within maxTiles; INVALID_SHIP when none
     ShipId Nearest(glm::vec2 position, float maxTiles) const;
 

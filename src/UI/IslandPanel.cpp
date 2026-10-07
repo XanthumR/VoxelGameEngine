@@ -36,7 +36,8 @@ void DrawIslandPanel(IslandId island, const IslandEconomyManager& economy) {
     ImGui::Separator();
     const IslandStorage* storage = economy.Find(island);
     if (!storage || storage->warehouseCount == 0) {
-        ImGui::TextDisabled("Not settled: build a warehouse");
+        if (economy.SettledIslandCount() == 0 || storage) ImGui::TextDisabled("Not settled: build a warehouse");
+        else ImGui::TextDisabled("Not settled: anchor a ship within 4 tiles of the coast,\nthen build a warehouse or a harbor (its planks come from the ship)");
         ImGui::End();
         return;
     }
