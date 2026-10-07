@@ -18,10 +18,11 @@
             display: block;
             position: relative;
             width: 148dp;
-            margin-right: 6dp;
+            height: 100%;
             padding: 6dp 8dp;
             text-align: left;
         }
+        .slot { display: block; margin-right: 6dp; }
         .entry .picture { display: block; width: 120dp; height: 90dp; margin: 0 auto 2dp; }
         .entry .name { display: block; margin-bottom: 4dp; }
         .entry .cost { display: flex; flex-direction: row; align-items: center; font-weight: normal; }
@@ -44,7 +45,8 @@
         <span class="tab-hint muted">[Tab]</span>
     </div>
     <div id="entries">
-        <button class="entry" data-for="entry : entries" data-class-selected="entry.selected" data-event-click="select(entry.type)">
+        <!-- data-for on a wrapper: views on the repeated element itself fail while the list shrinks -->
+        <div class="slot" data-for="entry : entries"><button class="entry" data-class-selected="entry.selected" data-event-click="select(entry.type)">
             <img class="picture" data-attr-src="entry.image"/>
             <span class="name">{{entry.name}}</span>
             <div class="cost" data-if="entry.coins > 0">
@@ -53,7 +55,7 @@
             </div>
             <div class="cost" data-if="entry.coins == 0"><span>1x1 tiles</span></div>
             <span class="hotkey">{{entry.hotkey}}</span>
-        </button>
+        </button></div>
         <button id="cancel" data-attrif-disabled="!any_selected" data-event-click="select(-1)">Cancel</button>
     </div>
     <div id="status" class="row">

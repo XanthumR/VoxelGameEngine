@@ -2,9 +2,7 @@
 
 #include "Core/Screenshot.h"
 #include "Simulation/BuildingTypes.h"
-#include "UI/BuildingInfo.h"
 #include "UI/BuildingMarkers.h"
-#include "UI/IslandPanel.h"
 #include "Gameplay/FigureModels.h"
 #include "UI/ShipPanel.h"
 #include "UI/TradeRoutes.h"
@@ -162,7 +160,8 @@ bool Application::Init() {
     }
 
     // The game UI (RmlUi); Dear ImGui stays for the debug windows
-    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context())) {
+    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context()) || !m_IslandPanel.Init(m_Ui.Context()) ||
+        !m_BuildingInfo.Init(m_Ui.Context())) {
         std::cout << "Failed to initialize the game UI (RmlUi)" << std::endl;
         return false;
     }
@@ -409,6 +408,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (int speed = m_TopBar.TakeSpeedRequest(); speed >= 0) m_GameSpeed = speed;
     if (m_TopBar.TakeRoutesToggle()) m_RoutesOpen = !m_RoutesOpen;
     m_BuildMenu.ApplyRequests(m_BuildTool);
+    m_BuildingInfo.ApplyRequests(m_Simulation, m_BuildTool);
 
     // --- World streaming ---
     glm::ivec3 focusChunk = glm::ivec3(glm::floor(ActiveCamera().FocusPoint() * VOXELS_PER_UNIT / (float)CHUNK_SIZE));
@@ -447,6 +447,21 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_BuildMenu.SetVisible(strategy);
     m_TopBar.Update(m_Simulation.Coins(), m_GameSpeed, m_RoutesOpen);
     m_BuildMenu.Update(m_BuildTool, m_Simulation.Objects().AliveCount());
+    m_IslandPanel.Update(m_PanelIsland, m_Simulation.Economy(), strategy);
+    {
+        // The hovered building's tooltip, unless the build tool has a selection or its panel is open
+        GameObjectId hovered = m_BuildTool.HoveredBuilding();
+        bool tooltip = strategy && m_BuildTool.SelectedType() == BuildTool::NO_TYPE && m_BuildTool.MovingBuilding() == INVALID_GAME_OBJECT &&
+                       MouseFree() && hovered != m_BuildTool.InspectedBuilding();
+        double cursorX, cursorY;
+        glfwGetCursorPos(m_Window, &cursorX, &cursorY);
+        int windowWidth, windowHeight;
+        glfwGetWindowSize(m_Window, &windowWidth, &windowHeight);
+        // Cursor positions are in window coordinates, the UI in framebuffer pixels
+        glm::vec2 cursor((float)cursorX * m_WindowWidth / std::max(1, windowWidth), (float)cursorY * m_WindowHeight / std::max(1, windowHeight));
+        m_BuildingInfo.Update(tooltip ? hovered : INVALID_GAME_OBJECT, strategy ? m_BuildTool.InspectedBuilding() : INVALID_GAME_OBJECT,
+            m_Simulation, cursor, glm::ivec2(m_WindowWidth, m_WindowHeight));
+    }
     if (!minimized) m_Ui.Update(m_WindowWidth, m_WindowHeight);
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
         m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS,
@@ -454,16 +469,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         m_HoverIsland, m_PanelIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool, m_Walkers.Count() };
     m_Overlay.Draw(overlay);
     if (m_CameraMode == CameraMode::Strategy) {
-        DrawIslandPanel(m_PanelIsland, m_Simulation.Economy());
         if (m_RoutesOpen) DrawTradeRoutes(m_RoutesOpen, m_Simulation, m_ShipControl.Selected());
-        if (m_BuildTool.SelectedType() == BuildTool::NO_TYPE && MouseFree() &&
-            m_BuildTool.HoveredBuilding() != m_BuildTool.InspectedBuilding()) {
-            DrawBuildingInfo(m_BuildTool.HoveredBuilding(), m_Simulation.Objects(), m_Simulation.Economy());
-        }
-        if (m_BuildTool.InspectedBuilding() != INVALID_GAME_OBJECT &&
-            !DrawBuildingPanel(m_BuildTool.InspectedBuilding(), m_Simulation)) {
-            m_BuildTool.ClearInspection();
-        }
         int width, height;
         glfwGetWindowSize(m_Window, &width, &height);
         DrawBuildingMarkers(m_StrategyCamera, m_Simulation.Objects(), glm::ivec2(width, height));

@@ -152,6 +152,7 @@
     <ClCompile Include="src\UI\ShipPanel.cpp" />
     <ClCompile Include="src\UI\TradeRoutes.cpp" />
     <ClCompile Include="src\UI\GameUi.cpp" />
+    <ClCompile Include="src\UI\InfoLines.cpp" />
     <ClCompile Include="src\UI\RmlBackend.cpp" />
     <ClCompile Include="src\Gameplay\FigureModels.cpp" />
     <ClCompile Include="src\Gameplay\FishingBoats.cpp" />
@@ -247,6 +248,7 @@
     <ClInclude Include="src\UI\ShipPanel.h" />
     <ClInclude Include="src\UI\TradeRoutes.h" />
     <ClInclude Include="src\UI\GameUi.h" />
+    <ClInclude Include="src\UI\InfoLines.h" />
     <ClInclude Include="src\Gameplay\FigureModels.h" />
     <ClInclude Include="src\Gameplay\FishingBoats.h" />
     <ClInclude Include="src\Gameplay\FreeFlyCamera.h" />

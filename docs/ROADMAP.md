@@ -684,6 +684,8 @@ The player-facing UI moves from Dear ImGui to **RmlUi** (HTML/CSS-like documents
 ### 5. Island panel and building info
 - Hover tooltip, the clicked-building panel, need bars, the upgrade button.
 
+- Done: `InfoLines`, rows of icon, text, value and bar filled by the old panel logic and bound as an array, so one document template draws any panel; it marks the model dirty only when a row changed. `IslandPanel` and `BuildingInfo` (tooltip placed next to the cursor with `pointer-events: none`, panel with a close button and action buttons for Upgrade and Build ship, taken as requests).
+
 ### 6. Ship panel and trade routes
 - Harbor dropdowns, the Load/Unload toggles, the cargo buttons.
 

@@ -4,63 +4,75 @@
 #include "Economy/PopulationSystem.h"
 #include "Economy/ProductionChains.h"
 #include "Economy/Treasury.h"
-#include "Simulation/Simulation.h"
+#include "Gameplay/BuildTool.h"
 #include "Simulation/BuildingTypes.h"
+#include "Simulation/Simulation.h"
 
-#include "imgui.h"
+#include <RmlUi/Core.h>
 
+#include <algorithm>
 #include <cstdio>
 
 namespace {
 
-const ImVec4 GOOD_COLOR(0.5f, 1.0f, 0.55f, 1.0f);
-const ImVec4 WARNING_COLOR(1.0f, 0.85f, 0.3f, 1.0f);
-const ImVec4 BAD_COLOR(1.0f, 0.45f, 0.4f, 1.0f);
-
-void HouseInfo(GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
+void HouseInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
+    char text[96];
     const BuildingType& type = BUILDING_TYPES[objects.Building(id).type];
     const PopulationTier& tier = POPULATION_TIERS[type.tier];
     const ResidenceComponent& residence = objects.Residence(id);
     const LogisticsComponent& logistics = objects.Logistics(id);
 
-    ImGui::Text("%s: %d / %d residents", tier.name, residence.residents, tier.maxResidents);
+    InfoLine& residents = lines.Add(tier.name);
+    residents.icon = type.tier == 0 ? "icons/farmer.tga" : "icons/worker.tga";
+    std::snprintf(text, sizeof(text), "%d / %d", residence.residents, tier.maxResidents);
+    residents.value = text;
     if (!logistics.connected) {
-        ImGui::TextColored(BAD_COLOR, "No road to a warehouse");
+        lines.Add("No road to a warehouse", Tone::Bad).icon = "icons/warning.tga";
         return;
     }
     if (!logistics.inMarketRange) {
-        ImGui::TextColored(WARNING_COLOR, "No marketplace in reach");
+        lines.Add("No marketplace in reach", Tone::Warn).icon = "icons/warning.tga";
         return;
     }
 
     bool allMet = true;
     for (int n = 0; n < tier.needCount; n++) {
+        const Need& need = tier.needs[n];
         int supply = residence.needSupply[n];
         if (supply < PopulationSystem::UPGRADE_SUPPLY) allMet = false;
-        ImVec4 color = supply >= PopulationSystem::UPGRADE_SUPPLY ? GOOD_COLOR : (supply > 0 ? WARNING_COLOR : BAD_COLOR);
-        ImGui::TextColored(color, "  %-13s %3d%%  (+%d residents)", tier.needs[n].name, supply / 10, tier.needs[n].residentsGranted);
+        std::snprintf(text, sizeof(text), "%s (+%d residents)", need.name, need.residentsGranted);
+        InfoLine& line = lines.Add(text);
+        if (need.kind == NeedKind::Good) line.icon = ItemIcon(need.item);
+        std::snprintf(text, sizeof(text), "%d%%", supply / 10);
+        line.value = text;
+        line.bar = supply / 1000.0f;
     }
 
     // Upgrade progress, or what is missing
     if (type.tier + 1 >= TIER_COUNT) return;
     const IslandStorage* storage = economy.Find(objects.Building(id).island);
+    const char* next = POPULATION_TIERS[type.tier + 1].name;
     if (residence.residents < tier.maxResidents) {
-        ImGui::TextDisabled("Upgrade: needs a full house");
+        lines.Add("Upgrade: needs a full house", Tone::Muted);
     } else if (!allMet) {
-        ImGui::TextDisabled("Upgrade: needs every need at %d%%", PopulationSystem::UPGRADE_SUPPLY / 10);
+        std::snprintf(text, sizeof(text), "Upgrade: needs every need at %d%%", PopulationSystem::UPGRADE_SUPPLY / 10);
+        lines.Add(text, Tone::Muted);
     } else if (!PopulationSystem::IsReadyToUpgrade(objects, id)) {
-        ImGui::Text("Upgrade to %s: getting ready %d%%", POPULATION_TIERS[type.tier + 1].name,
-            residence.upgradeTicks * 100 / PopulationSystem::UPGRADE_TICKS);
+        std::snprintf(text, sizeof(text), "Upgrade to %s: getting ready", next);
+        InfoLine& line = lines.Add(text);
+        line.bar = (float)residence.upgradeTicks / PopulationSystem::UPGRADE_TICKS;
     } else if (!storage || storage->Amount(ItemType::Planks) < UPGRADE_PLANKS) {
-        ImGui::TextColored(WARNING_COLOR, "Ready to upgrade, but needs %d planks", UPGRADE_PLANKS);
+        std::snprintf(text, sizeof(text), "Ready to upgrade, needs %d planks", UPGRADE_PLANKS);
+        lines.Add(text, Tone::Warn).icon = "icons/upgrade.tga";
     } else {
-        ImGui::TextColored(GOOD_COLOR, "Ready to upgrade to %s: click the house", POPULATION_TIERS[type.tier + 1].name);
+        std::snprintf(text, sizeof(text), "Ready to upgrade to %s", next);
+        lines.Add(text, Tone::Good).icon = "icons/upgrade.tga";
     }
 }
 
-void MarketInfo(GameObjectId id, const GameObjectRegistry& objects) {
+void MarketInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& objects) {
     if (!objects.Logistics(id).connected) {
-        ImGui::TextColored(BAD_COLOR, "No road to a warehouse: serves nobody");
+        lines.Add("No road to a warehouse: serves nobody", Tone::Bad).icon = "icons/warning.tga";
         return;
     }
     int houses = 0, residents = 0;
@@ -71,7 +83,10 @@ void MarketInfo(GameObjectId id, const GameObjectRegistry& objects) {
         houses++;
         residents += objects.Residence(other).residents;
     }
-    ImGui::Text("Serves %d houses, %d residents", houses, residents);
+    lines.Add("Houses served").value = Rml::ToString(houses);
+    InfoLine& line = lines.Add("Residents");
+    line.icon = "icons/residents.tga";
+    line.value = Rml::ToString(residents);
 }
 
 const char* StatusText(ProducerStatus status) {
@@ -86,9 +101,9 @@ const char* StatusText(ProducerStatus status) {
     return "?";
 }
 
-// What the producer makes, how well it is doing, and why not
 // Where the producer's cart is and what it carries
-void CartInfo(const ProductionChain& chain, const ProductionComponent& production) {
+void CartInfo(InfoLines& lines, const ProductionChain& chain, const ProductionComponent& production) {
+    char text[96];
     // The inputs it brings back, e.g. "3 Wood"
     char inputs[64] = "nothing";
     int written = 0;
@@ -98,145 +113,238 @@ void CartInfo(const ProductionChain& chain, const ProductionComponent& productio
             ItemName(chain.inputs[i]));
     }
 
+    Tone tone = Tone::Normal;
     switch (production.cartState) {
     case CartState::Idle:
         if (production.cartWaitTicks > 0) {
-            int left = (CART_MAX_WAIT_TICKS - production.cartWaitTicks + 9) / 10;
-            ImGui::Text("Cart: at home, sets out in %d s (or with a full load)", left);
+            std::snprintf(text, sizeof(text), "Cart: at home, sets out in %d s", (CART_MAX_WAIT_TICKS - production.cartWaitTicks + 9) / 10);
         } else {
-            ImGui::TextDisabled("Cart: at home");
+            std::snprintf(text, sizeof(text), "Cart: at home");
+            tone = Tone::Muted;
         }
         break;
     case CartState::ToWarehouse:
-        if (production.cartOutput > 0) ImGui::Text("Cart: to the warehouse with %d %s", production.cartOutput, ItemName(chain.output));
-        else ImGui::Text("Cart: to the warehouse to fetch %s", chain.inputCount > 0 ? ItemName(chain.inputs[0]) : "goods");
+        if (production.cartOutput > 0) std::snprintf(text, sizeof(text), "Cart: to the warehouse with %d %s", production.cartOutput, ItemName(chain.output));
+        else std::snprintf(text, sizeof(text), "Cart: to the warehouse to fetch %s", chain.inputCount > 0 ? ItemName(chain.inputs[0]) : "goods");
         break;
     case CartState::Unloading:
         if (production.cartWaitTicks >= CART_UNLOAD_TICKS && production.cartOutput > 0) {
-            ImGui::TextColored(WARNING_COLOR, "Cart: waiting, the warehouse is full");
+            std::snprintf(text, sizeof(text), "Cart: waiting, the warehouse is full");
+            tone = Tone::Warn;
         } else {
-            ImGui::Text("Cart: unloading at the warehouse");
+            std::snprintf(text, sizeof(text), "Cart: unloading at the warehouse");
         }
         break;
     case CartState::ToProducer:
-        if (production.cartOutput > 0) ImGui::TextColored(WARNING_COLOR, "Cart: road cut, coming back with %d %s", production.cartOutput, ItemName(chain.output));
-        else ImGui::Text("Cart: coming back with %s", inputs);
+        if (production.cartOutput > 0) {
+            std::snprintf(text, sizeof(text), "Cart: road cut, coming back with %d %s", production.cartOutput, ItemName(chain.output));
+            tone = Tone::Warn;
+        } else {
+            std::snprintf(text, sizeof(text), "Cart: coming back with %s", inputs);
+        }
         break;
     }
+    lines.Add(text, tone);
 }
 
-void ProducerInfo(GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
+void ProducerInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
+    char text[96];
     const ProductionChain& chain = PRODUCTION_CHAINS[BUILDING_TYPES[objects.Building(id).type].chain];
     const ProductionComponent& production = objects.Production(id);
-    if (chain.inputCount == 0) ImGui::Text("Makes %s", ItemName(chain.output));
-    else ImGui::Text("Makes %s from %s", ItemName(chain.output), ItemName(chain.inputs[0]));
+    if (chain.inputCount == 0) std::snprintf(text, sizeof(text), "Makes %s", ItemName(chain.output));
+    else std::snprintf(text, sizeof(text), "Makes %s from %s", ItemName(chain.output), ItemName(chain.inputs[0]));
+    lines.Add(text).icon = ItemIcon(chain.output);
 
-    ImVec4 color = production.status == ProducerStatus::Working ? GOOD_COLOR
-                 : (production.status == ProducerStatus::OutputFull || production.status == ProducerStatus::MissingInput) ? WARNING_COLOR : BAD_COLOR;
-    ImGui::TextColored(color, "%s", StatusText(production.status));
+    Tone tone = production.status == ProducerStatus::Working ? Tone::Good
+              : (production.status == ProducerStatus::OutputFull || production.status == ProducerStatus::MissingInput) ? Tone::Warn : Tone::Bad;
+    InfoLine& status = lines.Add(StatusText(production.status), tone);
+    if (tone != Tone::Good) status.icon = "icons/warning.tga";
 
-    // Productivity: workforce share x location factor
+    // Productivity: workforce share x location factor, and the cycle under way
     const IslandStorage* storage = economy.Find(objects.Building(id).island);
     int workforce = storage ? storage->workforce[chain.workforceTier] : 0;
-    ImGui::Text("Productivity %d%% (workers %d%%, location %d%%)", production.productivity / 10, workforce / 10, production.locationFactor / 10);
-    ImGui::Text("%d %s workers needed, cycle %d s", chain.workforce, POPULATION_TIERS[chain.workforceTier].name, chain.cycleTicks / 10);
+    InfoLine& productivity = lines.Add("Productivity");
+    std::snprintf(text, sizeof(text), "%d%%", production.productivity / 10);
+    productivity.value = text;
+    productivity.bar = std::min(1.0f, production.progress / ((float)chain.cycleTicks * 1000.0f));
+    std::snprintf(text, sizeof(text), "Workers %d%%, location %d%%", workforce / 10, production.locationFactor / 10);
+    lines.Add(text, Tone::Muted);
+    std::snprintf(text, sizeof(text), "%d %s workers, cycle %d s", chain.workforce, POPULATION_TIERS[chain.workforceTier].name, chain.cycleTicks / 10);
+    lines.Add(text, Tone::Muted);
 
-    float cycle = (float)chain.cycleTicks * 1000.0f;
-    ImGui::ProgressBar(production.progress / cycle, ImVec2(220.0f, 0.0f), "");
     for (int i = 0; i < chain.inputCount; i++) {
-        ImGui::Text("In:  %-12s %d / %d", ItemName(chain.inputs[i]), production.inputs[i], PRODUCER_BUFFER);
+        std::snprintf(text, sizeof(text), "In: %s", ItemName(chain.inputs[i]));
+        InfoLine& line = lines.Add(text);
+        line.icon = ItemIcon(chain.inputs[i]);
+        std::snprintf(text, sizeof(text), "%d / %d", production.inputs[i], PRODUCER_BUFFER);
+        line.value = text;
     }
-    ImGui::Text("Out: %-12s %d / %d   (made %u)", ItemName(chain.output), production.output, PRODUCER_BUFFER, production.cycles);
-    CartInfo(chain, production);
+    std::snprintf(text, sizeof(text), "Out: %s (made %u)", ItemName(chain.output), production.cycles);
+    InfoLine& output = lines.Add(text);
+    output.icon = ItemIcon(chain.output);
+    std::snprintf(text, sizeof(text), "%d / %d", production.output, PRODUCER_BUFFER);
+    output.value = text;
+    CartInfo(lines, chain, production);
 }
 
-void WarehouseInfo(GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
+void WarehouseInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
     const IslandStorage* storage = economy.Find(objects.Building(id).island);
     if (!storage) return;
-    ImGui::Text("Island storage: %d per good", storage->CapacityPerItem());
+    char text[64];
+    std::snprintf(text, sizeof(text), "Island storage: %d per good", storage->CapacityPerItem());
+    lines.Add(text, Tone::Heading);
     for (int i = 0; i < ITEM_COUNT; i++) {
-        if (storage->amounts[i] > 0) ImGui::Text("  %-13s %d", ITEM_NAMES[i], storage->amounts[i]);
+        if (storage->amounts[i] == 0) continue;
+        InfoLine& line = lines.Add(ITEM_NAMES[i]);
+        line.icon = ItemIcon((ItemType)i);
+        line.value = Rml::ToString(storage->amounts[i]);
     }
 }
 
-
-// The building's name and what it is doing, for the tooltip and the panel
-void BuildingDetails(GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
+// The building's details, for the tooltip and the panel
+void BuildingDetails(InfoLines& lines, GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
     const BuildingType& type = BUILDING_TYPES[objects.Building(building).type];
-    ImGui::TextUnformatted(type.name);
-    ImGui::Separator();
     switch (type.role) {
-    case BuildingRole::Residence: HouseInfo(building, objects, economy); break;
-    case BuildingRole::Market: MarketInfo(building, objects); break;
-    case BuildingRole::Storage: WarehouseInfo(building, objects, economy); break;
-    case BuildingRole::Producer: ProducerInfo(building, objects, economy); break;
+    case BuildingRole::Residence: HouseInfo(lines, building, objects, economy); break;
+    case BuildingRole::Market: MarketInfo(lines, building, objects); break;
+    case BuildingRole::Storage: WarehouseInfo(lines, building, objects, economy); break;
+    case BuildingRole::Producer: ProducerInfo(lines, building, objects, economy); break;
     }
 
     // Money
-    uint16_t typeIndex = objects.Building(building).type;
-    const BuildingCost& cost = BUILDING_COSTS[typeIndex];
-    ImGui::Separator();
+    char text[64];
+    const BuildingCost& cost = BUILDING_COSTS[objects.Building(building).type];
+    InfoLine& money = lines.Add(type.role == BuildingRole::Residence ? "Taxes" : "Upkeep");
+    money.icon = "icons/coin.tga";
     if (type.role == BuildingRole::Residence) {
         int64_t tax = Treasury::HouseTaxMilli(objects, building);
-        ImGui::Text("Taxes: %lld.%lld coins / min", (long long)(tax / 1000), (long long)(tax % 1000 / 100));
+        std::snprintf(text, sizeof(text), "+%lld.%lld / min", (long long)(tax / 1000), (long long)(tax % 1000 / 100));
+        money.tone = (int)Tone::Good;
     } else {
-        ImGui::Text("Upkeep: %d coins / min", cost.upkeep);
+        std::snprintf(text, sizeof(text), "-%d / min", cost.upkeep);
     }
-    if (cost.planks / 2 > 0) ImGui::TextDisabled("Demolish refunds %dc, %d planks", cost.coins / 2, cost.planks / 2);
-    else if (cost.coins > 0) ImGui::TextDisabled("Demolish refunds %dc", cost.coins / 2);
+    money.value = text;
+    if (cost.planks / 2 > 0) std::snprintf(text, sizeof(text), "Demolish refunds %d coins, %d planks", cost.coins / 2, cost.planks / 2);
+    else std::snprintf(text, sizeof(text), "Demolish refunds %d coins", cost.coins / 2);
+    if (cost.coins > 0) lines.Add(text, Tone::Muted);
+}
+
+void Show(Rml::ElementDocument* document, bool visible) {
+    if (!document || document->IsVisible() == visible) return;
+    if (visible) document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+    else document->Hide();
+}
+
+template <typename T>
+void SetIfChanged(T& field, const T& value, Rml::DataModelHandle model, const char* name) {
+    if (field == value) return;
+    field = value;
+    model.DirtyVariable(name);
 }
 
 } // namespace
 
-void DrawBuildingInfo(GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
-    if (!objects.IsAlive(building)) return;
-    ImGui::BeginTooltip();
-    BuildingDetails(building, objects, economy);
-    ImGui::EndTooltip();
+bool BuildingInfo::Init(Rml::Context* context) {
+    Rml::DataModelConstructor tooltip = context->CreateDataModel("building_tooltip");
+    if (!tooltip) return false;
+    tooltip.Bind("title", &m_TooltipTitle);
+    m_TooltipLines.Bind(tooltip, "lines");
+    m_TooltipModel = tooltip.GetModelHandle();
+
+    Rml::DataModelConstructor panel = context->CreateDataModel("building_panel");
+    if (!panel) return false;
+    panel.Bind("title", &m_PanelTitle);
+    m_PanelLines.Bind(panel, "lines");
+    if (Rml::StructHandle<Action> action = panel.RegisterStruct<Action>()) {
+        action.RegisterMember("label", &Action::label);
+        action.RegisterMember("enabled", &Action::enabled);
+        action.RegisterMember("id", &Action::id);
+    }
+    panel.RegisterArray<std::vector<Action>>();
+    panel.Bind("actions", &m_Actions);
+    panel.BindEventCallback("do_action", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& arguments) {
+        if (!arguments.empty()) m_ActionRequest = arguments[0].Get<int>();
+    });
+    panel.BindEventCallback("close", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) { m_CloseRequest = true; });
+    m_PanelModel = panel.GetModelHandle();
+    m_Actions.reserve(2);
+
+    m_Tooltip = context->LoadDocument("assets/ui/building_tooltip.rml");
+    m_Panel = context->LoadDocument("assets/ui/building_panel.rml");
+    return m_Tooltip && m_Panel;
 }
 
-bool DrawBuildingPanel(GameObjectId building, Simulation& simulation) {
+void BuildingInfo::Update(GameObjectId tooltip, GameObjectId panel, const Simulation& simulation, glm::vec2 cursor, glm::ivec2 size) {
     const GameObjectRegistry& objects = simulation.Objects();
     const IslandEconomyManager& economy = simulation.Economy();
-    if (!objects.IsAlive(building)) return false;
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImVec2 rightMiddle(viewport->WorkPos.x + viewport->WorkSize.x - 12.0f, viewport->WorkPos.y + viewport->WorkSize.y * 0.5f);
-    ImGui::SetNextWindowPos(rightMiddle, ImGuiCond_Always, ImVec2(1.0f, 0.5f));
-    bool open = true;
-    ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing;
-    ImGui::Begin("Building", &open, flags);
-    BuildingDetails(building, objects, economy);
 
-    // Houses: the upgrade, when the residents are ready for it
-    const BuildingType& type = BUILDING_TYPES[objects.Building(building).type];
+    // Tooltip: below and right of the cursor, kept on the screen
+    bool showTooltip = objects.IsAlive(tooltip);
+    Show(m_Tooltip, showTooltip);
+    if (showTooltip) {
+        SetIfChanged(m_TooltipTitle, Rml::String(BUILDING_TYPES[objects.Building(tooltip).type].name), m_TooltipModel, "title");
+        m_TooltipLines.Begin();
+        BuildingDetails(m_TooltipLines, tooltip, objects, economy);
+        m_TooltipLines.End(m_TooltipModel);
+        Rml::Vector2f box = m_Tooltip->GetBox().GetSize(Rml::BoxArea::Border);
+        float x = std::min(cursor.x + 20.0f, size.x - box.x - 8.0f);
+        float y = std::min(cursor.y + 20.0f, size.y - box.y - 8.0f);
+        m_Tooltip->SetProperty("left", Rml::ToString(std::max(0.0f, x)) + "px");
+        m_Tooltip->SetProperty("top", Rml::ToString(std::max(0.0f, y)) + "px");
+    }
+
+    // Panel of the clicked building
+    bool showPanel = objects.IsAlive(panel);
+    Show(m_Panel, showPanel);
+    m_PanelBuilding = showPanel ? panel : INVALID_GAME_OBJECT;
+    if (!showPanel) return;
+    const BuildingType& type = BUILDING_TYPES[objects.Building(panel).type];
+    SetIfChanged(m_PanelTitle, Rml::String(type.name), m_PanelModel, "title");
+    m_PanelLines.Begin();
+    BuildingDetails(m_PanelLines, panel, objects, economy);
+
+    char text[64];
+    Action actions[2];
+    int count = 0;
     if (type.role == BuildingRole::Residence && type.tier + 1 < TIER_COUNT) {
-        ImGui::Separator();
-        bool can = PopulationSystem::CanUpgrade(objects, economy, building);
-        ImGui::BeginDisabled(!can);
-        char label[64];
-        std::snprintf(label, sizeof(label), "Upgrade to %s (%d planks)", POPULATION_TIERS[type.tier + 1].name, UPGRADE_PLANKS);
-        if (ImGui::Button(label)) simulation.Population().RequestUpgrade(building);
-        ImGui::EndDisabled();
+        std::snprintf(text, sizeof(text), "Upgrade to %s (%d planks)", POPULATION_TIERS[type.tier + 1].name, UPGRADE_PLANKS);
+        actions[count++] = { text, PopulationSystem::CanUpgrade(objects, economy, panel), UPGRADE };
     }
-
-    // Harbors: ships are built here
     if (type.role == BuildingRole::Storage && type.dockRows > 0) {
-        ImGui::Separator();
-        const IslandStorage* storage = economy.Find(objects.Building(building).island);
+        // Harbors: ships are built here
+        const IslandStorage* storage = economy.Find(objects.Building(panel).island);
         bool can = storage && storage->Amount(ItemType::Planks) >= ShipSystem::SHIP_PLANKS && simulation.Coins().Coins() >= ShipSystem::SHIP_COINS;
-        ImGui::BeginDisabled(!can);
-        char label[64];
-        std::snprintf(label, sizeof(label), "Build ship (%dc, %d planks)", ShipSystem::SHIP_COINS, ShipSystem::SHIP_PLANKS);
-        if (ImGui::Button(label)) simulation.Ships().Build(building, objects, simulation.Economy(), simulation.Coins());
-        ImGui::EndDisabled();
+        std::snprintf(text, sizeof(text), "Build ship (%d coins, %d planks)", ShipSystem::SHIP_COINS, ShipSystem::SHIP_PLANKS);
+        actions[count++] = { text, can, BUILD_SHIP };
         int docked = 0;
+        const ShipSystem& ships = simulation.Ships();
         for (int slot = 0; slot < ShipSystem::MAX_SHIPS; slot++) {
-            ShipId ship = simulation.Ships().IdAtSlot(slot);
-            if (ship != INVALID_SHIP && simulation.Ships().Get(ship).state == ShipState::Docked && simulation.Ships().Get(ship).harbor == building) docked++;
+            ShipId ship = ships.IdAtSlot(slot);
+            if (ship != INVALID_SHIP && ships.Get(ship).state == ShipState::Docked && ships.Get(ship).harbor == panel) docked++;
         }
-        ImGui::Text("Ships docked here: %d", docked);
+        InfoLine& line = m_PanelLines.Add("Ships docked here");
+        line.icon = "icons/ship.tga";
+        line.value = Rml::ToString(docked);
     }
-    ImGui::End();
-    return open;
+    m_PanelLines.End(m_PanelModel);
+
+    bool same = (int)m_Actions.size() == count;
+    for (int i = 0; same && i < count; i++) same = m_Actions[i] == actions[i];
+    if (!same) {
+        m_Actions.assign(actions, actions + count); // Within the reserved capacity
+        m_PanelModel.DirtyVariable("actions");
+    }
+}
+
+void BuildingInfo::ApplyRequests(Simulation& simulation, BuildTool& tool) {
+    if (m_CloseRequest) tool.ClearInspection();
+    // Only an action the panel shows as possible (a click on a greyed-out button does nothing)
+    bool enabled = false;
+    for (const Action& action : m_Actions) enabled |= action.id == m_ActionRequest && action.enabled;
+    if (enabled && simulation.Objects().IsAlive(m_PanelBuilding)) {
+        if (m_ActionRequest == UPGRADE) simulation.Population().RequestUpgrade(m_PanelBuilding);
+        if (m_ActionRequest == BUILD_SHIP) simulation.Ships().Build(m_PanelBuilding, simulation.Objects(), simulation.Economy(), simulation.Coins());
+    }
+    m_ActionRequest = 0;
+    m_CloseRequest = false;
 }

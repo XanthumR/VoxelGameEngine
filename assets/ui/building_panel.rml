@@ -1,0 +1,28 @@
+<rml>
+<head>
+    <title>Building</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body { position: absolute; right: 12dp; top: 50%; transform: translateY(-50%); width: 340dp; }
+        .title button.close { padding: 0 6dp; font-size: 13dp; }
+        #actions button { display: block; margin-top: 6dp; }
+    </style>
+</head>
+<body class="panel" data-model="building_panel">
+    <div class="title row"><span>{{title}}</span><span class="spacer"/><button class="close" data-event-click="close">X</button></div>
+    <div class="line" data-for="line : lines">
+        <div class="row">
+            <img class="icon small" data-if="line.icon != ''" data-attr-src="line.icon"/>
+            <span data-class-good="line.tone == 1" data-class-warn="line.tone == 2" data-class-bad="line.tone == 3"
+                  data-class-muted="line.tone == 4" data-class-heading="line.tone == 5">{{line.text}}</span>
+            <span class="spacer"/>
+            <span class="value" data-if="line.value != ''">{{line.value}}</span>
+        </div>
+        <progress data-if="line.bar >= 0" data-attr-value="line.bar" data-class-warn="line.bar < 0.9" data-class-bad="line.bar < 0.5"/>
+    </div>
+    <div id="actions">
+        <div data-for="act : actions"><button data-class-primary="act.enabled" data-attrif-disabled="!act.enabled"
+                data-event-click="do_action(act.id)">{{act.label}}</button></div>
+    </div>
+</body>
+</rml>

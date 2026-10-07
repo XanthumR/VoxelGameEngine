@@ -1,16 +1,49 @@
 #pragma once
 
 #include "Simulation/GameObjects.h"
+#include "UI/InfoLines.h"
 
+#include <glm/glm.hpp>
+
+class BuildTool;
 class IslandEconomyManager;
 class Simulation;
+namespace Rml {
+class Context;
+class ElementDocument;
+}
 
-// Tooltip next to the cursor for the building under it: a house's residents, needs and upgrade
-// progress; the houses a marketplace serves; a warehouse's island goods. Nothing for
-// INVALID_GAME_OBJECT. Call between ImGui::NewFrame and ImGui::Render.
-void DrawBuildingInfo(GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy);
+// What a building is doing, in the game UI: a tooltip next to the cursor for the hovered building
+// (assets/ui/building_tooltip.rml) and the panel of the clicked one (assets/ui/building_panel.rml).
+// Both list the same details: a house's residents, needs and upgrade progress; the houses a
+// marketplace serves; a warehouse's island goods; a producer's status, productivity, buffers and
+// cart; taxes or upkeep. The panel adds the Upgrade button for houses and Build ship for harbors.
+// Its clicks are requests the application takes each frame.
+class BuildingInfo {
+public:
+    struct Action {
+        Rml::String label;
+        bool enabled = false;
+        int id = 0;
+        bool operator==(const Action&) const = default;
+    };
 
-// The panel of a clicked building (right side of the screen): the same details, for houses the
-// Upgrade button and for harbors the Build ship button. Returns false when the player closed it or
-// the building is gone.
-bool DrawBuildingPanel(GameObjectId building, Simulation& simulation);
+    bool Init(Rml::Context* context);
+    // tooltip: the hovered building, or INVALID for none; cursor in framebuffer pixels
+    void Update(GameObjectId tooltip, GameObjectId panel, const Simulation& simulation, glm::vec2 cursor, glm::ivec2 size);
+    void ApplyRequests(Simulation& simulation, BuildTool& tool);
+
+private:
+    enum ActionId { UPGRADE = 1, BUILD_SHIP = 2 };
+
+    Rml::ElementDocument* m_Tooltip = nullptr;
+    Rml::ElementDocument* m_Panel = nullptr;
+    Rml::DataModelHandle m_TooltipModel, m_PanelModel;
+    Rml::String m_TooltipTitle, m_PanelTitle;
+    InfoLines m_TooltipLines, m_PanelLines;
+    std::vector<Action> m_Actions;
+    GameObjectId m_PanelBuilding = INVALID_GAME_OBJECT;
+
+    int m_ActionRequest = 0;
+    bool m_CloseRequest = false;
+};

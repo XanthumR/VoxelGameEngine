@@ -115,6 +115,15 @@ progress fill { border-radius: 2dp; background-color: #4f9a4a; }
 progress.warn fill { background-color: #d08a1e; }
 progress.bad fill { background-color: #b8432a; }
 
+/* --- Info rows (InfoLines): icon, text, a value on the right, maybe a bar --- */
+.line { margin-bottom: 3dp; }
+.line .row > * { margin-right: 6dp; }
+.line .heading { font-weight: bold; color: #4a2f17; }
+.line progress { height: 6dp; margin-top: 2dp; margin-bottom: 2dp; }
+/* A smaller panel (tooltips) */
+.panel.compact { padding: 6dp 10dp 8dp; font-size: 13dp; }
+.panel.compact .title { margin: -6dp -10dp 6dp; padding: 3dp 10dp 4dp; font-size: 15dp; }
+
 /* --- Tooltips: a small dark card near the cursor --- */
 .tooltip {
     padding: 6dp 10dp;

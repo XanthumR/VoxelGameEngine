@@ -2,76 +2,81 @@
 
 #include "Economy/IslandEconomy.h"
 
-#include "imgui.h"
+#include <RmlUi/Core.h>
 
 #include <cstdio>
 
-namespace {
-
-
-// A labelled bar from red (0) to green (1000 per mille)
-void SupplyBar(const char* name, int perMille) {
-    float fraction = perMille / 1000.0f;
-    ImVec4 color(1.0f - fraction * 0.7f, 0.3f + fraction * 0.6f, 0.25f, 1.0f);
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, color);
-    char overlay[48];
-    std::snprintf(overlay, sizeof(overlay), "%s %d%%", name, perMille / 10);
-    ImGui::ProgressBar(fraction, ImVec2(200.0f, 0.0f), overlay);
-    ImGui::PopStyleColor();
+bool IslandPanel::Init(Rml::Context* context) {
+    Rml::DataModelConstructor model = context->CreateDataModel("island_panel");
+    if (!model) return false;
+    model.Bind("title", &m_Title);
+    m_Lines.Bind(model, "lines");
+    m_Model = model.GetModelHandle();
+    m_Document = context->LoadDocument("assets/ui/island_panel.rml");
+    return m_Document != nullptr;
 }
 
-} // namespace
+void IslandPanel::Update(IslandId island, const IslandEconomyManager& economy, bool visible) {
+    visible = visible && island != NO_ISLAND;
+    if (m_Document && m_Document->IsVisible() != visible) {
+        if (visible) m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        else m_Document->Hide();
+    }
+    if (!visible) return;
 
-void DrawIslandPanel(IslandId island, const IslandEconomyManager& economy) {
-    if (island == NO_ISLAND) return;
+    char text[96];
+    std::snprintf(text, sizeof(text), "Island #%u", island);
+    if (m_Title != text) {
+        m_Title = text;
+        m_Model.DirtyVariable("title");
+    }
 
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImVec2 topRight(viewport->WorkPos.x + viewport->WorkSize.x - 12.0f, viewport->WorkPos.y + 12.0f);
-    ImGui::SetNextWindowPos(topRight, ImGuiCond_Always, ImVec2(1.0f, 0.0f));
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-    ImGui::Begin("Island", nullptr, flags);
-
-    ImGui::Text("Island #%u", island);
-    ImGui::Separator();
+    m_Lines.Begin();
     const IslandStorage* storage = economy.Find(island);
     if (!storage || storage->warehouseCount == 0) {
-        if (economy.SettledIslandCount() == 0 || storage) ImGui::TextDisabled("Not settled: build a warehouse");
-        else ImGui::TextDisabled("Not settled: anchor a ship within 4 tiles of the coast,\nthen build a warehouse or a harbor (its planks come from the ship)");
-        ImGui::End();
+        m_Lines.Add("Not settled", Tone::Heading);
+        if (economy.SettledIslandCount() == 0 || storage) {
+            m_Lines.Add("Build a warehouse to settle it.", Tone::Muted);
+        } else {
+            m_Lines.Add("Anchor a ship within 4 tiles of the coast,", Tone::Muted);
+            m_Lines.Add("then build a warehouse or a harbor:", Tone::Muted);
+            m_Lines.Add("its planks come from the ship.", Tone::Muted);
+        }
+        m_Lines.End(m_Model);
         return;
     }
 
-    // Population, tier by tier, with the supply of each need
+    // Population, tier by tier: jobs, then the supply of each good need
     for (int tier = 0; tier < TIER_COUNT; tier++) {
         const PopulationTier& definition = POPULATION_TIERS[tier];
         if (tier > 0 && storage->population[tier] == 0 && storage->jobs[tier] == 0) continue; // Upper tiers once they matter
-        ImGui::Text("%s: %d", definition.name, storage->population[tier]);
+        InfoLine& heading = m_Lines.Add(definition.name, Tone::Heading);
+        heading.icon = tier == 0 ? "icons/farmer.tga" : "icons/worker.tga";
+        heading.value = Rml::ToString(storage->population[tier]);
         if (storage->jobs[tier] > 0) {
-            ImVec4 color = storage->workforce[tier] >= 1000 ? ImVec4(0.5f, 1.0f, 0.55f, 1.0f) : ImVec4(1.0f, 0.45f, 0.4f, 1.0f);
-            ImGui::TextColored(color, "  Jobs: %d (%d%% filled)", storage->jobs[tier], storage->workforce[tier] / 10);
+            std::snprintf(text, sizeof(text), "Jobs %d, %d%% filled", storage->jobs[tier], storage->workforce[tier] / 10);
+            m_Lines.Add(text, storage->workforce[tier] >= 1000 ? Tone::Good : Tone::Bad);
         }
         for (int n = 0; n < definition.needCount; n++) {
             const Need& need = definition.needs[n];
             if (need.kind != NeedKind::Good) continue;
-            SupplyBar(need.name, storage->supply[tier][n]);
+            InfoLine& line = m_Lines.Add(need.name);
+            line.icon = ItemIcon(need.item);
+            std::snprintf(text, sizeof(text), "%d%%", storage->supply[tier][n] / 10);
+            line.value = text;
+            line.bar = storage->supply[tier][n] / 1000.0f;
         }
     }
-    ImGui::Separator();
 
     // Storage
-    ImGui::Text("Warehouses: %d | Capacity: %d per good", storage->warehouseCount, storage->CapacityPerItem());
-    if (ImGui::BeginTable("Goods", 2, ImGuiTableFlags_SizingFixedFit)) {
-        for (int i = 0; i < ITEM_COUNT; i++) {
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(ITEM_NAMES[i]);
-            ImGui::TableNextColumn();
-            int amount = storage->amounts[i];
-            if (amount == 0) ImGui::TextDisabled("%3d", amount);
-            else ImGui::Text("%3d", amount);
-        }
-        ImGui::EndTable();
+    std::snprintf(text, sizeof(text), "Storage (%d per good)", storage->CapacityPerItem());
+    m_Lines.Add(text, Tone::Heading);
+    std::snprintf(text, sizeof(text), "%d warehouse%s", storage->warehouseCount, storage->warehouseCount == 1 ? "" : "s");
+    m_Lines.Add(text, Tone::Muted);
+    for (int i = 0; i < ITEM_COUNT; i++) {
+        InfoLine& line = m_Lines.Add(ITEM_NAMES[i], storage->amounts[i] == 0 ? Tone::Muted : Tone::Normal);
+        line.icon = ItemIcon((ItemType)i);
+        line.value = Rml::ToString(storage->amounts[i]);
     }
-    ImGui::End();
+    m_Lines.End(m_Model);
 }

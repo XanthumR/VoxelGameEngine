@@ -1,0 +1,22 @@
+<rml>
+<head>
+    <title>Island</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body { position: absolute; top: 12dp; right: 12dp; width: 300dp; }
+    </style>
+</head>
+<body class="panel" data-model="island_panel">
+    <div class="title">{{title}}</div>
+    <div class="line" data-for="line : lines">
+        <div class="row">
+            <img class="icon small" data-if="line.icon != ''" data-attr-src="line.icon"/>
+            <span data-class-good="line.tone == 1" data-class-warn="line.tone == 2" data-class-bad="line.tone == 3"
+                  data-class-muted="line.tone == 4" data-class-heading="line.tone == 5">{{line.text}}</span>
+            <span class="spacer"/>
+            <span class="value" data-if="line.value != ''">{{line.value}}</span>
+        </div>
+        <progress data-if="line.bar >= 0" data-attr-value="line.bar" data-class-warn="line.bar < 0.9" data-class-bad="line.bar < 0.5"/>
+    </div>
+</body>
+</rml>

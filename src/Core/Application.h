@@ -25,6 +25,8 @@
 #include "Simulation/Simulation.h"
 #include "UI/DebugOverlay.h"
 #include "UI/BuildMenu.h"
+#include "UI/BuildingInfo.h"
+#include "UI/IslandPanel.h"
 #include "UI/GameUi.h"
 #include "UI/TopBar.h"
 #include "World/ChunkStreamer.h"
@@ -121,6 +123,8 @@ private:
     GameUi m_Ui;
     TopBar m_TopBar;
     BuildMenu m_BuildMenu;
+    IslandPanel m_IslandPanel;
+    BuildingInfo m_BuildingInfo;
     TileOverlay m_TileOverlay;
 
     // What the tile overlay was last built from; rebuilt only when this changes

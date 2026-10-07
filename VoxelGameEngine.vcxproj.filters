@@ -105,6 +105,9 @@
     <ClCompile Include="src\UI\GameUi.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
+    <ClCompile Include="src\UI\InfoLines.cpp">
+      <Filter>src\UI</Filter>
+    </ClCompile>
     <ClCompile Include="src\UI\RmlBackend.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
@@ -380,6 +383,9 @@
       <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\UI\GameUi.h">
+      <Filter>src\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI\InfoLines.h">
       <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\Gameplay\FishingBoats.h">
