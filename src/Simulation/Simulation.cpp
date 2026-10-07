@@ -1,6 +1,28 @@
 #include "Simulation/Simulation.h"
 
+#include "Simulation/BuildingLook.h"
+
 Simulation::Simulation(TerrainGenerator& terrain) : m_Islands(terrain), m_Trees(terrain), m_Ships(terrain) {}
+
+void Simulation::LiftBuilding(GameObjectId id) {
+    if (!m_Objects.IsAlive(id)) return;
+    const VoxelAnchorComponent& anchor = m_Objects.Anchor(id);
+    m_Occupancy.Release(glm::ivec2(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z)), anchor.footprint / TILE_SIZE, id);
+    MarkBuildingsChanged();
+}
+
+void Simulation::PlaceLiftedBuilding(GameObjectId id, glm::ivec2 minTile, uint8_t rotation) {
+    if (!m_Objects.IsAlive(id)) return;
+    BuildingComponent& building = m_Objects.Building(id);
+    glm::ivec2 tiles = FootprintTiles(BUILDING_TYPES[building.type], rotation);
+    building.rotation = rotation;
+    VoxelAnchorComponent& anchor = m_Objects.Anchor(id);
+    anchor.origin = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y, minTile.y * TILE_SIZE);
+    anchor.footprint = tiles * TILE_SIZE;
+    m_Occupancy.Occupy(minTile, tiles, id);
+    if (BUILDING_TYPES[building.type].role == BuildingRole::Producer) ProductionSystem::RecallCart(m_Objects.Production(id));
+    MarkBuildingsChanged();
+}
 
 void Simulation::FixedUpdate(float tickSeconds) {
     // Warehouse reach and building connections, when roads or buildings changed

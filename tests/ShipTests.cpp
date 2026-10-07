@@ -327,3 +327,18 @@ TEST(SettlingTest, NewIslandNeedsAShipCarryingThePlanks) {
     // Settled now: the island's own storage pays
     EXPECT_EQ(check(BUILDING_FARMER_HOUSE, far), PlacementError::NotEnoughPlanks);
 }
+
+TEST(ShipTest, DockedShipCastsOffWhenItsHarborMoves) {
+    HarborFixture f;
+    ASSERT_NE(f.harbor, INVALID_GAME_OBJECT);
+    f.treasury.SetCoins(10000);
+    f.Storage().amounts[(size_t)ItemType::Planks] = ShipSystem::SHIP_PLANKS;
+    ShipId ship = f.ships.Build(f.harbor, f.objects, f.economy, f.treasury);
+    ASSERT_NE(ship, INVALID_SHIP);
+    f.Run(1);
+    EXPECT_EQ(f.ships.Get(ship).state, ShipState::Docked);
+
+    f.objects.Anchor(f.harbor).origin += glm::ivec3(TILE_SIZE * 3, 0, 0); // Moved along the coast
+    f.Run(1);
+    EXPECT_EQ(f.ships.Get(ship).state, ShipState::Idle);
+}

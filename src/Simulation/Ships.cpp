@@ -358,8 +358,12 @@ void ShipSystem::Update(const GameObjectRegistry& objects, const OccupancyGrid& 
         if (!m_Alive[slot]) continue;
         Ship& ship = m_Ships[slot];
         ship.previous = ship.position;
+        // Its harbor is gone, or was moved away from where the ship lies
+        if (ship.state == ShipState::Docked &&
+            (!objects.IsAlive(ship.harbor) || glm::ivec2(glm::floor(ship.position)) != BerthTile(objects, ship.harbor))) {
+            ship.state = ShipState::Idle;
+        }
         if (ship.route >= 0) FollowRoute(IdAtSlot(slot), objects, occupancy, economy);
-        if (ship.state == ShipState::Docked && !objects.IsAlive(ship.harbor)) ship.state = ShipState::Idle; // Its harbor is gone
         if (ship.state != ShipState::Sailing) continue;
 
         float remaining = SPEED;

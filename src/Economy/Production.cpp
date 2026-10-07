@@ -70,6 +70,10 @@ void ProductionSystem::Update(GameObjectRegistry& objects, IslandEconomyManager&
     }
 }
 
+void ProductionSystem::RecallCart(ProductionComponent& production) {
+    CartArrivesHome(production);
+}
+
 bool ProductionSystem::FindCartPath(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, ProductionComponent& production) {
     glm::ivec2 start(0);
     uint16_t best = RoadTile::UNREACHED;

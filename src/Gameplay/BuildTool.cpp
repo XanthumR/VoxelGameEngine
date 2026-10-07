@@ -97,7 +97,18 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         return;
     }
 
+    // A building being moved is set down when the left button is let go; right click cancels
+    GameObjectRegistry& objects = m_Simulation.Objects();
+    bool leftDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    if (!leftDown) m_PressedBuilding = INVALID_GAME_OBJECT;
+    if (m_Moving != INVALID_GAME_OBJECT && (rightClick || !leftDown || !objects.IsAlive(m_Moving))) {
+        EndMove(!rightClick && m_MoveValid);
+        return;
+    }
+
     if (!hover.hit) {
+        m_MoveValid = false;
+        if (m_Moving != INVALID_GAME_OBJECT) return;
         if (rightClick) SelectType(NO_TYPE);
         if (leftClick && m_SelectedType == NO_TYPE) m_InspectedBuilding = INVALID_GAME_OBJECT;
         if (hadLocation) m_LocationRevision++; // The preview went away
@@ -108,8 +119,15 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
     GameObjectId under = m_Simulation.Occupancy().At(hoverTile);
     if (m_Simulation.Objects().IsAlive(under)) m_HoveredBuilding = under;
 
-    // Nothing selected: a click opens the building's panel, or closes it on open ground
-    if (leftClick && m_SelectedType == NO_TYPE) m_InspectedBuilding = m_HoveredBuilding;
+    // Nothing selected: a click opens the building's panel, or closes it on open ground; holding the
+    // button and dragging to another tile picks the building up
+    if (leftClick && m_SelectedType == NO_TYPE) {
+        m_InspectedBuilding = m_HoveredBuilding;
+        m_PressedBuilding = m_HoveredBuilding;
+        m_PressedTile = hoverTile;
+    }
+    if (m_Moving == INVALID_GAME_OBJECT && objects.IsAlive(m_PressedBuilding) && hoverTile != m_PressedTile) StartMove(m_PressedBuilding);
+    bool moving = m_Moving != INVALID_GAME_OBJECT;
 
     if (rightClick) {
         if (m_HoveredBuilding != INVALID_GAME_OBJECT) {
@@ -122,22 +140,29 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         }
     }
 
-    if (m_SelectedType >= 0) {
+    // The type to preview: the selected one, or the building being moved
+    int previewType = moving ? objects.Building(m_Moving).type : m_SelectedType;
+    uint8_t variant = moving ? objects.Building(m_Moving).variant : 0;
+    if (previewType >= 0) {
         // Footprint centered on the hovered tile
-        const BuildingType& type = BUILDING_TYPES[m_SelectedType];
+        const BuildingType& type = BUILDING_TYPES[previewType];
         glm::ivec2 tiles = FootprintTiles(type, m_Rotation);
         glm::ivec2 minTile = hoverTile - tiles / 2;
-        m_LastCheck = ValidatePlacement(m_Simulation.MakePlacementContext(m_World), (uint16_t)m_SelectedType, m_Rotation, minTile);
-        if (m_LastCheck.error == PlacementError::None) {
-            m_LastCheck.error = m_Simulation.Ships().CheckBuildCost((uint16_t)m_SelectedType, m_LastCheck.island, minTile, tiles,
+        m_LastCheck = ValidatePlacement(m_Simulation.MakePlacementContext(m_World), (uint16_t)previewType, m_Rotation, minTile);
+        if (m_LastCheck.error == PlacementError::None && moving) {
+            if (m_LastCheck.island != objects.Building(m_Moving).island) m_LastCheck.error = PlacementError::OtherIsland;
+        } else if (m_LastCheck.error == PlacementError::None) {
+            m_LastCheck.error = m_Simulation.Ships().CheckBuildCost((uint16_t)previewType, m_LastCheck.island, minTile, tiles,
                 m_Simulation.Economy(), m_Simulation.Coins());
         }
+        m_MoveValid = m_LastCheck.error == PlacementError::None;
+        m_MoveTile = minTile;
         m_PreviewConnected = LogisticsSystem::ConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
         m_PreviewInMarket = LogisticsSystem::MarketConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
 
         // Producers: what the location rule makes of this spot
         if (type.role == BuildingRole::Producer) {
-            LocationKey key{ m_SelectedType, m_Rotation, minTile, m_Simulation.Trees().Revision(), m_Simulation.Roads().Revision(),
+            LocationKey key{ previewType, m_Rotation, minTile, m_Simulation.Trees().Revision(), m_Simulation.Roads().Revision(),
                 m_Simulation.BuildingsRevision() };
             if (!hadLocation || !(key == m_LocationKey)) {
                 m_LocationKey = key;
@@ -148,8 +173,8 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
             m_HasLocation = true;
         }
 
-        if (leftClick && m_LastCheck.error == PlacementError::None) {
-            m_HoveredBuilding = Place((uint16_t)m_SelectedType, m_Rotation, minTile);
+        if (!moving && leftClick && m_LastCheck.error == PlacementError::None) {
+            m_HoveredBuilding = Place((uint16_t)previewType, m_Rotation, minTile);
             m_LastCheck.error = PlacementError::Occupied; // The spot is now taken
         }
 
@@ -159,10 +184,11 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         m_Preview.state = m_LastCheck.error == PlacementError::None ? BuildPreview::VALID : BuildPreview::INVALID;
         m_Preview.min = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y - type.belowGround, minTile.y * TILE_SIZE);
         m_Preview.max = m_Preview.min + glm::ivec3(tiles.x * TILE_SIZE, BuildingVolumeHeight(type), tiles.y * TILE_SIZE);
-        if (m_GhostType != m_SelectedType || m_GhostRotation != m_Rotation) {
-            m_GhostType = m_SelectedType;
+        if (m_GhostType != previewType || m_GhostRotation != m_Rotation || m_GhostVariant != variant) {
+            m_GhostType = previewType;
             m_GhostRotation = m_Rotation;
-            m_Models.BuildVoxels((uint16_t)m_SelectedType, 0, m_Rotation, m_GhostBuffer);
+            m_GhostVariant = variant;
+            m_Models.BuildVoxels((uint16_t)previewType, variant, m_Rotation, m_GhostBuffer);
             m_GhostRevision++;
         }
         m_Preview.ghost = &m_GhostBuffer;
@@ -198,27 +224,48 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     m_Simulation.Ships().PayBuildCost(type, check.island, minTile, tiles, m_Simulation.Economy(), m_Simulation.Coins());
     if (building.role == BuildingRole::Storage) m_Simulation.Economy().OnWarehouseAdded(check.island);
     m_Simulation.MarkBuildingsChanged();
-
-    m_Models.BuildVoxels(type, component.variant, rotation, m_LookBuffer);
-    glm::ivec3 volumeOrigin = anchor.origin - glm::ivec3(0, building.belowGround, 0);
-    m_Editor.WriteBox(volumeOrigin, glm::ivec3(anchor.footprint.x, BuildingVolumeHeight(building), anchor.footprint.y), m_LookBuffer,
-        building.belowGround);
+    StampLook(id);
     return id;
 }
 
-void BuildTool::RefreshLook(GameObjectId id) {
-    GameObjectRegistry& objects = m_Simulation.Objects();
-    if (!objects.IsAlive(id)) return;
-    const VoxelAnchorComponent anchor = objects.Anchor(id);
-    const BuildingComponent component = objects.Building(id);
+void BuildTool::StampLook(GameObjectId id) {
+    const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(id);
+    const BuildingComponent& component = m_Simulation.Objects().Building(id);
     const BuildingType& building = BUILDING_TYPES[component.type];
-
-    // Clear the tallest a building can be (the old look may have been taller), then stamp the new one
-    m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, MaxBuildingHeight(), anchor.footprint.y), Block::AIR);
     m_Models.BuildVoxels(component.type, component.variant, component.rotation, m_LookBuffer);
     glm::ivec3 volumeOrigin = anchor.origin - glm::ivec3(0, building.belowGround, 0);
     m_Editor.WriteBox(volumeOrigin, glm::ivec3(anchor.footprint.x, BuildingVolumeHeight(building), anchor.footprint.y), m_LookBuffer,
         building.belowGround);
+}
+
+void BuildTool::RefreshLook(GameObjectId id) {
+    GameObjectRegistry& objects = m_Simulation.Objects();
+    if (!objects.IsAlive(id) || id == m_Moving) return; // A lifted building gets its new look when set down
+    const VoxelAnchorComponent anchor = objects.Anchor(id);
+
+    // Clear the tallest a building can be (the old look may have been taller), then stamp the new one
+    m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, MaxBuildingHeight(), anchor.footprint.y), Block::AIR);
+    StampLook(id);
+}
+
+void BuildTool::StartMove(GameObjectId id) {
+    const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(id);
+    m_Moving = id;
+    m_PressedBuilding = INVALID_GAME_OBJECT;
+    m_MoveFrom = glm::ivec2(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
+    m_MoveFromRotation = m_Simulation.Objects().Building(id).rotation;
+    m_Rotation = m_MoveFromRotation;
+    m_MoveValid = false;
+    ClearLook(id);
+    m_Simulation.LiftBuilding(id);
+}
+
+void BuildTool::EndMove(bool toPreview) {
+    GameObjectId id = m_Moving;
+    m_Moving = INVALID_GAME_OBJECT;
+    if (!m_Simulation.Objects().IsAlive(id)) return;
+    m_Simulation.PlaceLiftedBuilding(id, toPreview ? m_MoveTile : m_MoveFrom, toPreview ? m_Rotation : m_MoveFromRotation);
+    StampLook(id);
 }
 
 void BuildTool::RestoreTerrain(glm::ivec3 minCorner, glm::ivec3 size) {
@@ -245,6 +292,16 @@ void BuildTool::RestoreTerrain(glm::ivec3 minCorner, glm::ivec3 size) {
     m_Editor.WriteBox(minCorner, size, m_RestoreBuffer);
 }
 
+void BuildTool::ClearLook(GameObjectId id) {
+    const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(id);
+    const BuildingType& building = BUILDING_TYPES[m_Simulation.Objects().Building(id).type];
+    m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), Block::AIR);
+    if (building.belowGround > 0) {
+        // Pilings and hulls stood in the ground or the sea: put the generated terrain back
+        RestoreTerrain(anchor.origin - glm::ivec3(0, building.belowGround, 0), glm::ivec3(anchor.footprint.x, building.belowGround, anchor.footprint.y));
+    }
+}
+
 // Clears the building's voxels (the ground under it was never changed) and frees its tiles
 void BuildTool::Demolish(GameObjectId id) {
     GameObjectRegistry& objects = m_Simulation.Objects();
@@ -253,11 +310,7 @@ void BuildTool::Demolish(GameObjectId id) {
     const VoxelAnchorComponent anchor = objects.Anchor(id);
     const BuildingComponent component = objects.Building(id);
     const BuildingType& building = BUILDING_TYPES[component.type];
-    m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), Block::AIR);
-    if (building.belowGround > 0) {
-        // Pilings and hulls stood in the ground or the sea: put the generated terrain back
-        RestoreTerrain(anchor.origin - glm::ivec3(0, building.belowGround, 0), glm::ivec3(anchor.footprint.x, building.belowGround, anchor.footprint.y));
-    }
+    ClearLook(id);
 
     glm::ivec2 minTile(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
     m_Simulation.Occupancy().Release(minTile, anchor.footprint / TILE_SIZE, id);

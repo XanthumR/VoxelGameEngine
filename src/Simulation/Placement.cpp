@@ -25,6 +25,7 @@ const char* PlacementErrorText(PlacementError error) {
     case PlacementError::NotEnoughPlanks: return "not enough planks on this island";
     case PlacementError::NeedsStorage: return "settle this island with a warehouse or harbor first";
     case PlacementError::NeedsShip: return "needs a ship of yours within 4 tiles carrying the planks";
+    case PlacementError::OtherIsland: return "a building can only move within its island";
     }
     return "?";
 }

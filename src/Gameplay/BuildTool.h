@@ -24,7 +24,10 @@ class WorldEditor;
 // Placing and demolishing buildings from the strategy camera, and the build selection (a building
 // type, the road tool, or nothing). With a building type selected the footprint follows the
 // cursor, snapped to the tile grid; R rotates it and left click places it when the preview is
-// green. With nothing selected, right click demolishes the building or road tile under the cursor.
+// green. With nothing selected, right click demolishes the building or road tile under the cursor,
+// and holding the left button on a building and dragging moves it: it lifts out of the world, its
+// ghost follows the cursor (R rotates it), and letting go sets it down there when the ghost is green
+// (free of charge, on the same island) or back where it stood otherwise; right click cancels.
 class BuildTool {
 public:
     static constexpr int NO_TYPE = -1;
@@ -57,6 +60,7 @@ public:
     bool PreviewConnected() const { return m_PreviewConnected; } // The previewed footprint touches road in range
     bool PreviewInMarketRange() const { return m_PreviewInMarket; } // ... and a marketplace's reach
     GameObjectId HoveredBuilding() const { return m_HoveredBuilding; }
+    GameObjectId MovingBuilding() const { return m_Moving; } // Being dragged; INVALID when none
 
     // The building clicked with nothing selected (its panel is open); INVALID when none
     GameObjectId InspectedBuilding() const { return m_InspectedBuilding; }
@@ -77,6 +81,10 @@ public:
 private:
     // Puts the generated terrain back in a box (under a demolished dock)
     void RestoreTerrain(glm::ivec3 minCorner, glm::ivec3 size);
+    void ClearLook(GameObjectId id); // Its voxels out of the world, the ground under a dock back
+    void StampLook(GameObjectId id); // Its model into the world at its anchor
+    void StartMove(GameObjectId id);
+    void EndMove(bool toPreview);    // Set down at the last green preview, or back where it stood
 
     const VoxelWorld& m_World;
     WorldEditor& m_Editor;
@@ -116,8 +124,17 @@ private:
     std::vector<uint8_t> m_LookBuffer; // Reused for every placement
     std::vector<uint8_t> m_GhostBuffer; // The selected type's model, for the placement preview
     int m_GhostType = -1;
-    uint8_t m_GhostRotation = 0;
+    uint8_t m_GhostRotation = 0, m_GhostVariant = 0;
     uint32_t m_GhostRevision = 0;
+
+    // Moving a building
+    GameObjectId m_PressedBuilding = INVALID_GAME_OBJECT; // Under the cursor when the left button went down
+    glm::ivec2 m_PressedTile = glm::ivec2(0);
+    GameObjectId m_Moving = INVALID_GAME_OBJECT;
+    glm::ivec2 m_MoveFrom = glm::ivec2(0);  // Where it stood
+    uint8_t m_MoveFromRotation = 0;
+    bool m_MoveValid = false;               // The last preview was green, at m_MoveTile
+    glm::ivec2 m_MoveTile = glm::ivec2(0);
 
     bool m_LeftWasPressed = false, m_RightWasPressed = false, m_RWasPressed = false;
     std::array<bool, 9> m_NumberWasPressed = {}; // Keys 1-9

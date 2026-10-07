@@ -53,6 +53,12 @@ public:
     // Everything placement checks against, for this world
     PlacementContext MakePlacementContext(const VoxelWorld& world) { return { world, m_Islands, m_Occupancy, m_Roads }; }
 
+    // Moving a building: lifted, it gives up its tiles while the player drags it; placed again, it
+    // takes the new ones (the caller has validated them). The game object keeps its residents,
+    // goods and state; a producer's cart out on the road is back home at once.
+    void LiftBuilding(GameObjectId id);
+    void PlaceLiftedBuilding(GameObjectId id, glm::ivec2 minTile, uint8_t rotation);
+
     // Bumped whenever a building is placed or demolished, so derived data knows to rebuild
     uint32_t BuildingsRevision() const { return m_BuildingsRevision; }
     void MarkBuildingsChanged() { m_BuildingsRevision++; }

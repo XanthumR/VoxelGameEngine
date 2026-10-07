@@ -1,3 +1,4 @@
+#include "Simulation/BuildingLook.h"
 #include "Simulation/GameClock.h"
 #include "Simulation/Simulation.h"
 #include "TestWorld.h"
@@ -61,4 +62,33 @@ TEST(GameClockTest, SpeedScalesTheSteps) {
 TEST(GameClockTest, StepCapGrowsWithSpeed) {
     GameClock clock;
     EXPECT_EQ(clock.StepsToRun(1.0, 4), GameClock::MAX_STEPS_PER_FRAME * 4); // 40 steps were due
+}
+
+TEST(SimulationTest, MovedBuildingKeepsItsObjectAndTakesNewTiles) {
+    Simulation simulation(TestWorld::Get().terrain);
+    GameObjectRegistry& objects = simulation.Objects();
+    GameObjectId id = objects.Create();
+    objects.Building(id).type = BUILDING_SAWMILL;
+    const glm::ivec2 from(10, 10), to(20, 14);
+    simulation.PlaceLiftedBuilding(id, from, 0); // Set down the first time
+    ProductionComponent& production = objects.Production(id);
+    production.output = 1;
+    production.cartOutput = 3; // Its cart is out on the road
+    production.cartState = CartState::ToWarehouse;
+    production.cartPosition = 2500;
+
+    uint32_t revision = simulation.BuildingsRevision();
+    simulation.LiftBuilding(id);
+    EXPECT_EQ(simulation.Occupancy().At(from), INVALID_GAME_OBJECT);
+    simulation.PlaceLiftedBuilding(id, to, 1);
+    EXPECT_GT(simulation.BuildingsRevision(), revision);
+
+    glm::ivec2 tiles = FootprintTiles(BUILDING_TYPES[BUILDING_SAWMILL], 1);
+    EXPECT_EQ(simulation.Occupancy().At(to), id);
+    EXPECT_EQ(simulation.Occupancy().At(to + tiles - 1), id);
+    EXPECT_EQ(objects.Anchor(id).origin, glm::ivec3(to.x * TILE_SIZE, BUILD_GROUND_Y, to.y * TILE_SIZE));
+    EXPECT_EQ(objects.Anchor(id).footprint, tiles * TILE_SIZE);
+    EXPECT_EQ(objects.Building(id).rotation, 1);
+    EXPECT_EQ(production.cartState, CartState::Idle); // Home with its load
+    EXPECT_EQ(production.output, 4);
 }

@@ -50,6 +50,8 @@ public:
 private:
     struct Boat {
         GameObjectId fishery;
+        glm::ivec3 origin;    // Where the fishery stood when the boat was made (a moved one gets a new boat)
+        uint8_t rotation;
         glm::vec2 start;      // Center of the moored boat
         float dockHeading;    // Out to sea along the dock
         float mooredHeading;  // How it lies at the berth (bow toward land after a trip)

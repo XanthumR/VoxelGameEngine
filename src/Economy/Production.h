@@ -37,6 +37,8 @@ public:
     // The cart route from the road tile next to a footprint with the lowest warehouse distance,
     // downhill to a tile touching a warehouse. False when no road tile around it is in reach.
     static bool FindCartPath(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, ProductionComponent& production);
+    // The cart is home at once with what it carries (its producer moved)
+    static void RecallCart(ProductionComponent& production);
 
 private:
     void UpdateLocations(GameObjectRegistry& objects, IslandRegistry& islands, const OccupancyGrid& occupancy, const RoadNetwork& roads, TreeRegistry& trees);

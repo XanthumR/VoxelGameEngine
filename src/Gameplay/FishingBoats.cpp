@@ -147,7 +147,8 @@ void FishingBoats::Update(float deltaTime, const GameObjectRegistry& objects, co
 
     // Boats of demolished fisheries go
     for (size_t i = 0; i < m_Boats.size();) {
-        if (!objects.IsAlive(m_Boats[i].fishery)) {
+        if (!objects.IsAlive(m_Boats[i].fishery) || objects.Anchor(m_Boats[i].fishery).origin != m_Boats[i].origin ||
+            objects.Building(m_Boats[i].fishery).rotation != m_Boats[i].rotation) {
             m_Boats[i] = m_Boats.back();
             m_Boats.pop_back();
             continue;
@@ -191,6 +192,8 @@ void FishingBoats::Update(float deltaTime, const GameObjectRegistry& objects, co
 
         Boat boat;
         boat.fishery = id;
+        boat.origin = anchor.origin;
+        boat.rotation = building.rotation;
         boat.start = glm::vec2(column) + 0.5f;
         boat.dockHeading = std::atan2((float)direction.x, (float)direction.y);
         boat.mooredHeading = boat.dockHeading;
