@@ -3,7 +3,7 @@
     <title>Building</title>
     <link type="text/rcss" href="theme.rcss"/>
     <style>
-        body { position: absolute; right: 12dp; top: 50%; transform: translateY(-50%); width: 340dp; }
+        body { position: absolute; right: 12dp; bottom: 12dp; width: 340dp; }
         .title button.close { padding: 0 6dp; font-size: 13dp; }
         #actions button { display: block; margin-top: 6dp; }
     </style>

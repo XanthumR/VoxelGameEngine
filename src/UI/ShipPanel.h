@@ -1,17 +1,51 @@
 #pragma once
 
 #include "Simulation/Ships.h"
+#include "UI/InfoLines.h"
 
 #include <glm/glm.hpp>
 
-class ICamera;
-class Simulation;
+#include <array>
 
-// The selected ship: a marker over it, and a panel with where it is, its cargo and, while docked,
-// buttons that move goods between the ship and that island's storage. orderFailed shows that the
-// last move order found no way by sea; alpha is GameClock::Alpha, so the marker moves with the ship
-// between ticks. Returns false when the player closed the panel.
-// Call between ImGui::NewFrame and ImGui::Render.
-// An amber "!" over every ship waiting at a stop whose storage is full
-void DrawShipMarkers(const ShipSystem& ships, float alpha, const ICamera& camera, glm::ivec2 windowSize);
-bool DrawShipPanel(ShipId ship, Simulation& simulation, float alpha, const ICamera& camera, glm::ivec2 windowSize, bool orderFailed);
+class ICamera;
+class ShipControl;
+class Simulation;
+namespace Rml {
+class Context;
+class ElementDocument;
+}
+
+// World markers (ImGui background drawing): a ring over the selected ship (INVALID for none) and
+// an amber "!" over every ship waiting at a stop whose storage is full. alpha is GameClock::Alpha,
+// so the markers move with the ships between ticks.
+void DrawShipMarkers(const ShipSystem& ships, ShipId selected, float alpha, const ICamera& camera, glm::ivec2 windowSize);
+
+// The selected ship's panel (assets/ui/ship_panel.rml): where it is, its route and cargo, and while
+// docked the goods it can load from or unload to that island, 10 at a time. orderFailed shows that
+// the last move order found no way by sea. Clicks are requests the application takes each frame.
+class ShipPanel {
+public:
+    struct GoodRow {
+        int item = 0;
+        Rml::String name, icon;
+        int island = 0, ship = 0;
+        bool operator==(const GoodRow&) const = default;
+    };
+
+    bool Init(Rml::Context* context);
+    void Update(ShipId ship, const Simulation& simulation, bool orderFailed);
+    void ApplyRequests(Simulation& simulation, ShipControl& control);
+
+private:
+    Rml::ElementDocument* m_Document = nullptr;
+    Rml::DataModelHandle m_Model;
+    ShipId m_Ship = INVALID_SHIP;
+
+    // Bound
+    InfoLines m_Lines;
+    bool m_OnRoute = false, m_Docked = false;
+    std::vector<GoodRow> m_Goods; // Always ITEM_COUNT rows
+
+    int m_LoadRequest = -1, m_UnloadRequest = -1;
+    bool m_LeaveRouteRequest = false, m_CloseRequest = false;
+};

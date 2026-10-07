@@ -4,8 +4,6 @@
 #include "Simulation/BuildingTypes.h"
 #include "UI/BuildingMarkers.h"
 #include "Gameplay/FigureModels.h"
-#include "UI/ShipPanel.h"
-#include "UI/TradeRoutes.h"
 #include "UI/Hud.h"
 #include "World/BlockTypes.h"
 
@@ -161,7 +159,7 @@ bool Application::Init() {
 
     // The game UI (RmlUi); Dear ImGui stays for the debug windows
     if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context()) || !m_IslandPanel.Init(m_Ui.Context()) ||
-        !m_BuildingInfo.Init(m_Ui.Context())) {
+        !m_BuildingInfo.Init(m_Ui.Context()) || !m_ShipPanel.Init(m_Ui.Context()) || !m_TradeRoutes.Init(m_Ui.Context())) {
         std::cout << "Failed to initialize the game UI (RmlUi)" << std::endl;
         return false;
     }
@@ -409,6 +407,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_TopBar.TakeRoutesToggle()) m_RoutesOpen = !m_RoutesOpen;
     m_BuildMenu.ApplyRequests(m_BuildTool);
     m_BuildingInfo.ApplyRequests(m_Simulation, m_BuildTool);
+    m_ShipPanel.ApplyRequests(m_Simulation, m_ShipControl);
+    if (!m_TradeRoutes.ApplyRequests(m_Simulation, m_ShipControl.Selected())) m_RoutesOpen = false;
 
     // --- World streaming ---
     glm::ivec3 focusChunk = glm::ivec3(glm::floor(ActiveCamera().FocusPoint() * VOXELS_PER_UNIT / (float)CHUNK_SIZE));
@@ -462,6 +462,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         m_BuildingInfo.Update(tooltip ? hovered : INVALID_GAME_OBJECT, strategy ? m_BuildTool.InspectedBuilding() : INVALID_GAME_OBJECT,
             m_Simulation, cursor, glm::ivec2(m_WindowWidth, m_WindowHeight));
     }
+    m_ShipPanel.Update(strategy ? m_ShipControl.Selected() : INVALID_SHIP, m_Simulation, m_ShipControl.LastOrderFailed());
+    m_TradeRoutes.Update(strategy && m_RoutesOpen, m_Simulation, m_ShipControl.Selected());
     if (!minimized) m_Ui.Update(m_WindowWidth, m_WindowHeight);
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
         m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS,
@@ -469,15 +471,10 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         m_HoverIsland, m_PanelIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool, m_Walkers.Count() };
     m_Overlay.Draw(overlay);
     if (m_CameraMode == CameraMode::Strategy) {
-        if (m_RoutesOpen) DrawTradeRoutes(m_RoutesOpen, m_Simulation, m_ShipControl.Selected());
         int width, height;
         glfwGetWindowSize(m_Window, &width, &height);
         DrawBuildingMarkers(m_StrategyCamera, m_Simulation.Objects(), glm::ivec2(width, height));
-        DrawShipMarkers(m_Simulation.Ships(), m_Clock.Alpha(), m_StrategyCamera, glm::ivec2(width, height));
-        if (m_ShipControl.Selected() != INVALID_SHIP &&
-            !DrawShipPanel(m_ShipControl.Selected(), m_Simulation, m_Clock.Alpha(), m_StrategyCamera, glm::ivec2(width, height), m_ShipControl.LastOrderFailed())) {
-            m_ShipControl.Deselect();
-        }
+        DrawShipMarkers(m_Simulation.Ships(), m_ShipControl.Selected(), m_Clock.Alpha(), m_StrategyCamera, glm::ivec2(width, height));
     }
 
     if (minimized) {

@@ -689,5 +689,7 @@ The player-facing UI moves from Dear ImGui to **RmlUi** (HTML/CSS-like documents
 ### 6. Ship panel and trade routes
 - Harbor dropdowns, the Load/Unload toggles, the cargo buttons.
 
+- Done: `ShipPanel` (info rows, Leave route, a goods table with Load and Unload while docked) and `TradeRoutes` (harbors chosen with arrows instead of a dropdown; per-good toggles colored for Load and Unload). The route window keeps every route and stop slot bound and hides unused ones, so its nested lists never shrink. The building and ship panels moved to the bottom right, below the island panel; the route window sits under the top bar. Scrollbars are styled in the theme.
+
 ### 7. Cleanup and docs
 - ImGui is left only for the debug tools; `CLAUDE.md` and this roadmap.

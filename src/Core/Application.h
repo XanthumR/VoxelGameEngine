@@ -27,6 +27,8 @@
 #include "UI/BuildMenu.h"
 #include "UI/BuildingInfo.h"
 #include "UI/IslandPanel.h"
+#include "UI/ShipPanel.h"
+#include "UI/TradeRoutes.h"
 #include "UI/GameUi.h"
 #include "UI/TopBar.h"
 #include "World/ChunkStreamer.h"
@@ -125,6 +127,8 @@ private:
     BuildMenu m_BuildMenu;
     IslandPanel m_IslandPanel;
     BuildingInfo m_BuildingInfo;
+    ShipPanel m_ShipPanel;
+    TradeRoutes m_TradeRoutes;
     TileOverlay m_TileOverlay;
 
     // What the tile overlay was last built from; rebuilt only when this changes

@@ -81,6 +81,10 @@ button:disabled, button[disabled], button.disabled {
     cursor: unavailable;
 }
 
+/* Load / unload toggles (trade routes) */
+button.load { border-color: #1f4a22; decorator: linear-gradient(to bottom, #4f9a4a, #357032); }
+button.unload { border-color: #5a3108; decorator: linear-gradient(to bottom, #d08a1e, #a5650f); }
+
 /* --- Tabs: a row of buttons, the selected one lit in brass --- */
 .tabs { display: flex; flex-direction: row; margin-bottom: 8dp; }
 .tab {
@@ -123,6 +127,13 @@ progress.bad fill { background-color: #b8432a; }
 /* A smaller panel (tooltips) */
 .panel.compact { padding: 6dp 10dp 8dp; font-size: 13dp; }
 .panel.compact .title { margin: -6dp -10dp 6dp; padding: 3dp 10dp 4dp; font-size: 15dp; }
+
+/* --- Scrollbars (RmlUi draws only styled ones): a wooden bar in a faint track --- */
+scrollbarvertical { width: 10dp; margin-left: 4dp; }
+scrollbarvertical slidertrack { background-color: #00000020; border-radius: 4dp; }
+scrollbarvertical sliderbar { background-color: #8d6038; border-radius: 4dp; }
+scrollbarvertical sliderbar:hover { background-color: #a3713f; }
+scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; height: 0; }
 
 /* --- Tooltips: a small dark card near the cursor --- */
 .tooltip {

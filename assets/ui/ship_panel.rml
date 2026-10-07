@@ -1,0 +1,43 @@
+<rml>
+<head>
+    <title>Ship</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body { position: absolute; right: 12dp; bottom: 12dp; width: 440dp; }
+        .title button.close { padding: 0 6dp; font-size: 13dp; }
+        #leave { margin: 2dp 0 6dp; padding: 2dp 8dp; font-size: 12dp; }
+        .good-row { margin-bottom: 2dp; }
+        .good-row .name { width: 120dp; }
+        .good-row .amounts { width: 150dp; font-size: 12dp; white-space: nowrap; }
+        .good-row button { padding: 2dp 8dp; font-size: 12dp; }
+    </style>
+</head>
+<body class="panel" data-model="ship_panel">
+    <div class="title row"><span>Ship</span><span class="spacer"/><button class="close" data-event-click="close">X</button></div>
+    <div class="line" data-for="line : lines">
+        <div class="row">
+            <img class="icon small" data-if="line.icon != ''" data-attr-src="line.icon"/>
+            <span data-class-good="line.tone == 1" data-class-warn="line.tone == 2" data-class-bad="line.tone == 3"
+                  data-class-muted="line.tone == 4" data-class-heading="line.tone == 5">{{line.text}}</span>
+            <span class="spacer"/>
+            <span class="value" data-if="line.value != ''">{{line.value}}</span>
+        </div>
+        <progress data-if="line.bar >= 0" data-attr-value="line.bar"/>
+    </div>
+    <button id="leave" data-if="on_route" data-event-click="leave_route">Leave route</button>
+    <div data-if="docked">
+        <div class="separator"/>
+        <h3>Load and unload, 10 at a time</h3>
+        <div data-for="good : goods">
+            <div class="row good-row">
+                <img class="icon small" data-attr-src="good.icon"/>
+                <span class="name">{{good.name}}</span>
+                <span class="amounts muted">island {{good.island}} | ship {{good.ship}}</span>
+                <span class="spacer"/>
+                <button data-attrif-disabled="good.island == 0" data-event-click="load(good.item)">Load</button>
+                <button data-attrif-disabled="good.ship == 0" data-event-click="unload(good.item)">Unload</button>
+            </div>
+        </div>
+    </div>
+</body>
+</rml>

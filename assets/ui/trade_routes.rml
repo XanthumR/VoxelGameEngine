@@ -1,0 +1,54 @@
+<rml>
+<head>
+    <title>Trade routes</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body { position: absolute; left: 50%; transform: translateX(-50%); top: 80dp; width: 560dp; max-height: 70%; overflow-y: auto; }
+        .title button.close { padding: 0 6dp; font-size: 13dp; }
+        #new { margin-bottom: 6dp; }
+        .route { margin-top: 6dp; padding-top: 4dp; border-top: 2dp #b8955c80; }
+        .stop { margin: 4dp 0 2dp 8dp; }
+        .stop .harbor { width: 220dp; text-align: center; }
+        .stop button.arrow { padding: 1dp 8dp; }
+        .goods { display: flex; flex-direction: row; flex-wrap: wrap; margin-left: 8dp; }
+        .goods .toggle-slot { display: block; width: 25%; padding: 2dp; box-sizing: border-box; }
+        .goods button { display: flex; flex-direction: row; align-items: center; width: 100%; padding: 2dp 4dp; font-size: 12dp; }
+        .goods button img { margin-right: 4dp; }
+        .controls button { padding: 2dp 8dp; font-size: 12dp; }
+    </style>
+</head>
+<body class="panel" data-model="trade_routes">
+    <div class="title row"><span>Trade routes</span><span class="spacer"/><button class="close" data-event-click="close">X</button></div>
+    <p class="muted">Ships on a route sail its stops in a loop. Click a good to cycle: -, Load, Unload.</p>
+    <button id="new" data-event-click="new_route">New route</button>
+    <div data-for="route : routes">
+        <div class="route" data-if="route.used">
+            <h3>{{route.header}}</h3>
+            <div data-for="stop : route.stops">
+                <div data-if="stop.used">
+                    <div class="row stop">
+                        <span>Stop {{stop.index + 1}}</span>
+                        <button class="arrow" data-event-click="harbor(route.index, stop.index, -1)">&lt;</button>
+                        <span class="harbor value">{{stop.harbor}}</span>
+                        <button class="arrow" data-event-click="harbor(route.index, stop.index, 1)">&gt;</button>
+                    </div>
+                    <div class="goods">
+                        <div class="toggle-slot" data-for="good : stop.goods">
+                            <button data-class-load="good.action == 1" data-class-unload="good.action == 2"
+                                    data-event-click="cycle(route.index, stop.index, good.good)">
+                                <img class="icon small" data-attr-src="good.icon"/><span>{{good.label}}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row controls">
+                <button data-attrif-disabled="!route.can_add" data-event-click="add_stop(route.index)">Add stop</button>
+                <button data-attrif-disabled="!route.can_remove" data-event-click="remove_stop(route.index)">Remove stop</button>
+                <button data-attrif-disabled="!can_assign || !route.can_remove" data-event-click="assign(route.index)">Assign ship</button>
+                <button data-event-click="delete_route(route.index)">Delete</button>
+            </div>
+        </div>
+    </div>
+</body>
+</rml>
