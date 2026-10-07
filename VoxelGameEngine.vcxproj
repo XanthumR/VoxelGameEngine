@@ -187,7 +187,7 @@
     <ClCompile Include="src\Simulation\TreeRegistry.cpp" />
     <ClCompile Include="src\UI\BuildMenu.cpp" />
     <ClCompile Include="src\UI\BuildingInfo.cpp" />
-    <ClCompile Include="src\UI\BuildingMarkers.cpp" />
+    <ClCompile Include="src\UI\WorldMarkers.cpp" />
     <ClCompile Include="src\UI\DebugOverlay.cpp" />
     <ClCompile Include="src\UI\Hud.cpp" />
     <ClCompile Include="src\UI\IslandPanel.cpp" />
@@ -288,7 +288,7 @@
     <ClInclude Include="src\ThirdParty\FastNoiseLite.h" />
     <ClInclude Include="src\UI\BuildMenu.h" />
     <ClInclude Include="src\UI\BuildingInfo.h" />
-    <ClInclude Include="src\UI\BuildingMarkers.h" />
+    <ClInclude Include="src\UI\WorldMarkers.h" />
     <ClInclude Include="src\UI\DebugOverlay.h" />
     <ClInclude Include="src\UI\Hud.h" />
     <ClInclude Include="src\UI\IslandPanel.h" />

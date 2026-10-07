@@ -2,7 +2,7 @@
 
 #include "Core/Screenshot.h"
 #include "Simulation/BuildingTypes.h"
-#include "UI/BuildingMarkers.h"
+#include "UI/WorldMarkers.h"
 #include "Gameplay/FigureModels.h"
 #include "UI/Hud.h"
 #include "World/BlockTypes.h"

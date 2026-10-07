@@ -3,22 +3,12 @@
 #include "Simulation/Ships.h"
 #include "UI/InfoLines.h"
 
-#include <glm/glm.hpp>
-
-#include <array>
-
-class ICamera;
 class ShipControl;
 class Simulation;
 namespace Rml {
 class Context;
 class ElementDocument;
 }
-
-// World markers (ImGui background drawing): a ring over the selected ship (INVALID for none) and
-// an amber "!" over every ship waiting at a stop whose storage is full. alpha is GameClock::Alpha,
-// so the markers move with the ships between ticks.
-void DrawShipMarkers(const ShipSystem& ships, ShipId selected, float alpha, const ICamera& camera, glm::ivec2 windowSize);
 
 // The selected ship's panel (assets/ui/ship_panel.rml): where it is, its route and cargo, and while
 // docked the goods it can load from or unload to that island, 10 at a time. orderFailed shows that

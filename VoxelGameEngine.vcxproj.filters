@@ -207,7 +207,7 @@
     <ClCompile Include="src\UI\BuildingInfo.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
-    <ClCompile Include="src\UI\BuildingMarkers.cpp">
+    <ClCompile Include="src\UI\WorldMarkers.cpp">
       <Filter>src\UI</Filter>
     </ClCompile>
     <ClCompile Include="src\UI\DebugOverlay.cpp">
@@ -502,7 +502,7 @@
     <ClInclude Include="src\UI\BuildingInfo.h">
       <Filter>src\UI</Filter>
     </ClInclude>
-    <ClInclude Include="src\UI\BuildingMarkers.h">
+    <ClInclude Include="src\UI\WorldMarkers.h">
       <Filter>src\UI</Filter>
     </ClInclude>
     <ClInclude Include="src\UI\DebugOverlay.h">

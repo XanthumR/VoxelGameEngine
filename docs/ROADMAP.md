@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-6 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 7 is next.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is next.
 
 ## Roadmap
 
@@ -12,7 +12,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 4 (done) | Production chains | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
 | 5 (done) | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
 | 6 (done) | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
-| 7 | Game UI (RmlUi) | The player-facing UI moves from Dear ImGui to RmlUi: styled Anno-like panels from markup and style sheets, data-bound to the simulation; ImGui stays for the debug tools |
+| 7 (done) | Game UI (RmlUi) | The player-facing UI moves from Dear ImGui to RmlUi: styled Anno-like panels from markup and style sheets, data-bound to the simulation; ImGui stays for the debug tools |
 | 8 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
 | 9 | Persistence & polish | Save/load (edited chunks + game objects), notifications, sound, balancing |
 
@@ -656,7 +656,7 @@ A **Harbor** building, **ships** built there that sail the open sea, direct **mo
 
 - Done: an amber "!" over ships waiting for room (`ShipSystem::IsWaitingForRoom`, also in the ship panel); F3 shows the ship count; the island panel of an unsettled island explains the ship rule. The harbor panel keeps its docked-ship count. Milestone 6 is complete.
 
-## Milestone 7, in detail
+## Milestone 7, in detail (done)
 
 The player-facing UI moves from Dear ImGui to **RmlUi** (HTML/CSS-like documents, MIT licence) before the higher tiers add many more panels. Panels become `.rml` documents with `.rcss` style sheets in `assets/ui/`, bound to the simulation's values; ImGui stays for the debug tools (F3, minimap, free-fly HUD) and the world-space markers. Game logic stays in `Simulation`, so the tests are unaffected; UI checks are screenshots. Done in steps, each play-tested and committed.
 
@@ -693,3 +693,5 @@ The player-facing UI moves from Dear ImGui to **RmlUi** (HTML/CSS-like documents
 
 ### 7. Cleanup and docs
 - ImGui is left only for the debug tools; `CLAUDE.md` and this roadmap.
+
+- Done: ImGui remains in `DebugOverlay` (F3), `Hud` (free-fly) and `WorldMarkers` (building and ship badges over the world, moved together from `BuildingMarkers` and `ShipPanel`). Milestone 7 is complete.

@@ -1,4 +1,4 @@
-#include "UI/BuildingMarkers.h"
+#include "UI/WorldMarkers.h"
 
 #include "Gameplay/Camera.h"
 #include "Gameplay/Picking.h"
@@ -13,6 +13,23 @@ namespace {
 
 const float MAX_MARKER_DISTANCE = 1.5f; // World units (1920 voxels)
 const float BADGE_RADIUS = 11.0f;       // Pixels
+
+// The screen point above the ship, placed between ticks like the ship itself
+bool AboveShip(const Ship& ship, float alpha, const ICamera& camera, glm::ivec2 windowSize, glm::vec2& screen) {
+    glm::vec2 column = glm::mix(ship.previous, ship.position, glm::clamp(alpha, 0.0f, 1.0f)) * (float)TILE_SIZE;
+    return WorldToScreen(camera, glm::vec3(column.x, SEA_LEVEL + 30.0f, column.y) / VOXELS_PER_UNIT, windowSize, screen);
+}
+
+// A ring and an arrow over the selected ship
+void DrawMarker(const Ship& ship, float alpha, const ICamera& camera, glm::ivec2 windowSize) {
+    glm::vec2 screen;
+    if (!AboveShip(ship, alpha, camera, windowSize, screen)) return;
+    ImDrawList* draw = ImGui::GetBackgroundDrawList();
+    ImU32 color = ImGui::ColorConvertFloat4ToU32(ImVec4(0.3f, 0.85f, 1.0f, 0.95f));
+    ImVec2 at(screen.x, screen.y);
+    draw->AddCircle(at, 11.0f, color, 0, 3.0f);
+    draw->AddTriangleFilled(ImVec2(at.x - 6.0f, at.y + 14.0f), ImVec2(at.x + 6.0f, at.y + 14.0f), ImVec2(at.x, at.y + 22.0f), color);
+}
 
 } // namespace
 
@@ -69,5 +86,24 @@ void DrawBuildingMarkers(const ICamera& camera, const GameObjectRegistry& object
                 ImVec2(center.x + 7.0f, center.y - 1.0f), white);
             drawList->AddRectFilled(ImVec2(center.x - 5.0f, center.y + 1.0f), ImVec2(center.x + 5.0f, center.y + 6.0f), white);
         }
+    }
+}
+
+void DrawShipMarkers(const ShipSystem& ships, ShipId selected, float alpha, const ICamera& camera, glm::ivec2 windowSize) {
+    if (ships.IsAlive(selected)) DrawMarker(ships.Get(selected), alpha, camera, windowSize);
+    ImDrawList* draw = ImGui::GetBackgroundDrawList();
+    ImU32 amber = ImGui::ColorConvertFloat4ToU32(ImVec4(0.95f, 0.62f, 0.10f, 0.95f));
+    ImU32 white = ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+    ImU32 outline = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 0.0f, 0.0f, 0.6f));
+    for (int slot = 0; slot < ShipSystem::MAX_SHIPS; slot++) {
+        ShipId id = ships.IdAtSlot(slot);
+        glm::vec2 screen;
+        if (!ships.IsWaitingForRoom(id) || !AboveShip(ships.Get(id), alpha, camera, windowSize, screen)) continue;
+        // An amber "!" a little higher than the selection ring
+        ImVec2 c(screen.x, screen.y - 30.0f);
+        draw->AddCircleFilled(c, 12.5f, outline);
+        draw->AddCircleFilled(c, 11.0f, amber);
+        draw->AddRectFilled(ImVec2(c.x - 1.5f, c.y - 7.0f), ImVec2(c.x + 1.5f, c.y + 2.0f), white);
+        draw->AddRectFilled(ImVec2(c.x - 1.5f, c.y + 4.0f), ImVec2(c.x + 1.5f, c.y + 7.0f), white);
     }
 }
