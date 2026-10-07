@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-3 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 4 is in progress.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-6 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 7 is next.
 
 ## Roadmap
 
@@ -11,7 +11,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 3 (done) | Housing & population | Farmer residences; needs (fish, work clothes) with supply %; population per island; houses upgrade or shrink |
 | 4 (done) | Production chains | `ProductionComponent` (inputs, outputs, cycle time); fishery, sheep farm + pastures, framework knitter, lumberjack, sawmill; goods carried to warehouses; production UI |
 | 5 (done) | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
-| 6 | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
+| 6 (done) | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
 | 7 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
 | 8 | Persistence & polish | Save/load (edited chunks + game objects), notifications, sound, balancing |
 
@@ -614,7 +614,7 @@ Coins belong to the player; planks come from the island a building stands on.
 - **UI:** the top bar shows coins and the net income per minute (taxes and upkeep on hover) and the speed buttons; build buttons show the cost; building tooltips show taxes or upkeep and the demolish refund; F3 shows coins, taxes and upkeep.
 - **Tests:** `TreasuryTests` (tax at full and half supply, empty houses, upkeep into debt, `Check`, pay and refund) and `GameClockTests` (speed scales the steps, pause runs none, the cap grows).
 
-## Milestone 6, in detail
+## Milestone 6, in detail (done)
 
 A **Harbor** building, **ships** built there that sail the open sea, direct **move orders** and **trade routes**, and **settling a second island** with materials brought by ship. Coins stay the player's; goods stay on their island until a ship moves them. Done in steps, each play-tested and committed.
 
