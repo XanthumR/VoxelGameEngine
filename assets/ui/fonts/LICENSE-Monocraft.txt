@@ -1,16 +1,4 @@
------------------------------------------------------------
----    Lato                                             ---
----    http://www.latofonts.com/                        ---
----                                                     ---
----    LatoLatin-Bold.ttf                               ---
----    LatoLatin-BoldItalic.ttf                         ---
----    LatoLatin-Italic.ttf                             ---
----    LatoLatin-Regular.ttf                            ---
------------------------------------------------------------
------------------------------------------------------------
-
-Copyright (c) 2010-2015, Łukasz Dziedzic (dziedzic@typoland.com),
-with Reserved Font Name Lato.
+Copyright (c) 2022, Idrees Hassan (https://github.com/IdreesInc/Monocraft)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

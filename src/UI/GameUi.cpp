@@ -14,8 +14,8 @@
 
 namespace {
 
-const char* FONTS[] = { "assets/ui/fonts/LatoLatin-Regular.ttf", "assets/ui/fonts/LatoLatin-Bold.ttf" };
-const char* TEST_DOCUMENT = "assets/ui/test.rml";
+const char* FONTS[] = { "assets/ui/fonts/Monocraft.ttf", "assets/ui/fonts/Monocraft-Bold.ttf" };
+const char* TEST_DOCUMENT = "assets/ui/style_sample.rml"; // Shows the theme until the real panels move over
 
 // The GLFW system interface, with RmlUi's warnings and errors (a broken document) on the console
 class LoggingSystemInterface : public SystemInterface_GLFW {

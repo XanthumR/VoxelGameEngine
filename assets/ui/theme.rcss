@@ -1,0 +1,126 @@
+/* The game UI's look, shared by every document: parchment panels framed in dark wood with a brass
+   line, a blocky pixel font (Monocraft) to match the voxels, wooden buttons. Sizes are in dp so the UI scales with the display. */
+
+/* RmlUi has no built-in styles: block elements first */
+body, div, p, h1, h2, h3, header, footer, section { display: block; }
+body {
+    font-family: Monocraft;
+    font-size: 14dp;
+    color: #3b2a1a;
+}
+h1, h2, h3 { font-weight: bold; color: #4a2f17; }
+h1 { font-size: 24dp; }
+h2 { font-size: 18dp; margin-bottom: 4dp; }
+h3 { font-size: 15dp; margin: 6dp 0 2dp; }
+p { margin-bottom: 6dp; }
+strong { font-weight: bold; }
+
+/* --- Panels --- */
+.panel {
+    padding: 10dp 14dp 12dp;
+    border: 4dp #4a3020;
+    border-radius: 7dp;
+    decorator: linear-gradient(to bottom, #f4e9cf, #e4d0a6);
+    box-shadow: #c9a24a 0 0 0 2dp inset, #00000080 0 6dp 18dp;
+}
+/* A title strip of dark wood across the panel's top */
+.panel .title {
+    margin: -10dp -14dp 8dp;
+    padding: 5dp 14dp 6dp;
+    font-family: Monocraft;
+    font-weight: bold;
+    font-size: 18dp;
+    color: #f2d98c;
+    decorator: linear-gradient(to bottom, #6b4527, #4a3020);
+    border-bottom: 2dp #c9a24a;
+}
+.separator { height: 2dp; margin: 6dp 0; background-color: #b8955c80; }
+
+/* --- Text --- */
+.muted { color: #7a6650; }
+.good { color: #2f7a3a; }
+.warn { color: #b06a10; }
+.bad { color: #a8321e; }
+.value { font-weight: bold; }
+
+/* --- Rows of things side by side --- */
+.row { display: flex; flex-direction: row; align-items: center; }
+.row > * { margin-right: 8dp; }
+.row > *:last-child { margin-right: 0; }
+.spacer { flex: 1; }
+
+/* --- Icons (64 px pixel art, shown at half or a quarter size so the pixels stay even) --- */
+img.icon { width: 32dp; height: 32dp; }
+img.icon.small { width: 16dp; height: 16dp; }
+.good-amount { display: inline-flex; flex-direction: row; align-items: center; margin-right: 10dp; }
+.good-amount img { margin-right: 3dp; }
+
+/* --- Buttons --- */
+button {
+    display: inline-block;
+    padding: 5dp 12dp;
+    text-align: center;
+    white-space: nowrap;
+    font-weight: bold;
+    color: #f6ebd0;
+    border: 2dp #2f1e10;
+    border-radius: 4dp;
+    decorator: linear-gradient(to bottom, #8d6038, #6a4424);
+    box-shadow: #d7b25a60 0 1dp 0 0 inset;
+    cursor: pointer;
+}
+button:hover { decorator: linear-gradient(to bottom, #a3713f, #7c5029); color: #fff6dc; }
+button:active { decorator: linear-gradient(to bottom, #5e3c1f, #744a28); }
+button.primary { border-color: #6b4a10; decorator: linear-gradient(to bottom, #d9ae4a, #b0832a); color: #2f1e10; }
+button.primary:hover { decorator: linear-gradient(to bottom, #e8c060, #c29436); }
+button:disabled, button[disabled], button.disabled {
+    color: #b9a98e;
+    decorator: linear-gradient(to bottom, #8a7a64, #6f6252);
+    cursor: unavailable;
+}
+
+/* --- Tabs: a row of buttons, the selected one lit in brass --- */
+.tabs { display: flex; flex-direction: row; margin-bottom: 8dp; }
+.tab {
+    flex: 1;
+    padding: 4dp 6dp;
+    margin-right: 4dp;
+    text-align: center;
+    white-space: nowrap;
+    font-family: Monocraft;
+    font-weight: bold;
+    font-size: 13dp;
+    color: #e8d6b0;
+    border: 2dp #2f1e10;
+    border-radius: 4dp 4dp 0 0;
+    decorator: linear-gradient(to bottom, #6b4527, #4a3020);
+    cursor: pointer;
+}
+.tab:last-child { margin-right: 0; }
+.tab:hover { color: #fff1cc; }
+.tab.selected { color: #2f1e10; decorator: linear-gradient(to bottom, #e7c062, #c0912f); }
+
+/* --- Bars: need supply, productivity, cycle progress --- */
+progress {
+    display: block;
+    width: 100%;
+    height: 10dp;
+    border: 1dp #4a3020;
+    border-radius: 3dp;
+    background-color: #00000030;
+}
+progress fill { border-radius: 2dp; background-color: #4f9a4a; }
+progress.warn fill { background-color: #d08a1e; }
+progress.bad fill { background-color: #b8432a; }
+
+/* --- Tooltips: a small dark card near the cursor --- */
+.tooltip {
+    padding: 6dp 10dp;
+    font-size: 13dp;
+    color: #f2e6c8;
+    background-color: #2a1c10ee;
+    border: 1dp #c9a24a;
+    border-radius: 4dp;
+    box-shadow: #00000080 0 3dp 10dp;
+}
+.tooltip .muted { color: #bfae8c; }

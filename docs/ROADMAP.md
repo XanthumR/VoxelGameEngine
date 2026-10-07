@@ -669,6 +669,8 @@ The player-facing UI moves from Dear ImGui to **RmlUi** (HTML/CSS-like documents
 ### 2. Theme
 - One style sheet: parchment panels, dark wood and brass edges, serif headings; goods, coin, tier and status icons; hover and pressed states; tooltips.
 
+- Done: `assets/ui/theme.rcss`; the Monocraft pixel font (Minecraft-like, chosen to match the voxels) for all text; 15 pixel-art icons (the 8 goods, coin, farmer, worker, residents, upgrade, warning, ship) drawn by `tools/ui_icons/generate.py` at 16 px and scaled 4x, saved as TGA; `style_sample.rml` shows every piece until the real panels replace it.
+
 ### 3. Top bar
 - Coins, income and game speed through data bindings; the template for the other panels.
 
