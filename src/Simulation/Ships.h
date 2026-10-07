@@ -2,6 +2,7 @@
 
 #include "Simulation/GameObjects.h"
 #include "Simulation/ItemType.h"
+#include "Simulation/Placement.h"
 
 #include <glm/glm.hpp>
 
@@ -65,7 +66,8 @@ struct Ship {
 // island's storage. A ship on a trade route sails from stop to stop on its own: at each it waits a
 // moment, unloads the goods marked Unload (waiting while the storage is full), loads the goods
 // marked Load until its holds are full or the storage is empty, and sails on; a stop whose harbor
-// is gone is skipped. Advanced once per simulation tick.
+// is gone is skipped. Ships also settle new islands: there the first storage building needs one of
+// them stopped nearby, and its planks come from that ship's holds. Advanced once per simulation tick.
 class ShipSystem {
 public:
     static constexpr int MAX_SHIPS = 32;
@@ -76,6 +78,7 @@ public:
     static constexpr int SHIP_COINS = 500, SHIP_PLANKS = 20;
     static constexpr int MAX_ROUTES = 16;
     static constexpr int STOP_TICKS = 30; // Time at a route stop before the cargo moves (3 s)
+    static constexpr float SETTLE_TILES = 4.0f; // How close a ship must be to settle an island
 
     explicit ShipSystem(TerrainGenerator& terrain);
 
@@ -91,6 +94,18 @@ public:
     // Moves cargo between a docked ship and its harbor's island: amount > 0 onto the ship, < 0 off it.
     // Returns how much moved (with the same sign), limited by the slots and the storage.
     int Transfer(ShipId id, ItemType item, int amount, const GameObjectRegistry& objects, IslandEconomyManager& economy);
+
+    // What placing a building costs, checked and paid. Coins and the island's planks, except on an
+    // island without storage once another is settled: there only a storage building may stand, and
+    // it needs a ship of yours (anchored or docked) within SETTLE_TILES of the footprint carrying its
+    // planks (NeedsShip). The first storage ever is free of this rule and brings the starting goods.
+    PlacementError CheckBuildCost(uint16_t type, IslandId island, glm::ivec2 minTile, glm::ivec2 tiles,
+        const IslandEconomyManager& economy, const Treasury& treasury) const;
+    // Call before the storage building is added to the economy
+    void PayBuildCost(uint16_t type, IslandId island, glm::ivec2 minTile, glm::ivec2 tiles, IslandEconomyManager& economy, Treasury& treasury);
+    // A ship stopped within SETTLE_TILES of the footprint with at least planks planks aboard; INVALID_SHIP when none
+    ShipId SettlerNear(glm::ivec2 minTile, glm::ivec2 tiles, int planks) const;
+    int CargoAmount(ShipId id, ItemType item) const;
 
     // Trade routes: index -1 when all MAX_ROUTES are in use
     int CreateRoute();

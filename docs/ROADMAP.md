@@ -647,6 +647,8 @@ A **Harbor** building, **ships** built there that sail the open sea, direct **mo
 - The first storage building ever is free of the rule and gets the starting goods.
 - On any other island without storage, the first storage building needs one of your ships anchored or docked within 4 tiles, and its planks come from that ship (`NeedsShip`); no starting goods there.
 
+- Done: the cost check lives in `ShipSystem::CheckBuildCost` / `PayBuildCost`. On an unsettled island (once another is settled) only a warehouse or harbor may stand (`NeedsStorage`); the warehouse needs only the ship nearby, the harbor also its 6 planks in the ship's holds.
+
 ### 6. UI polish, tests, docs
 - Markers for ships waiting at a full harbor; the harbor panel lists docked ships; F3 counts ships; the unsettled-island hint names the ship rule.
 - Tests per step (harbor placement and storage, paths that never cross land, docking, cargo limits, route loops, settling); `CLAUDE.md` and this roadmap.

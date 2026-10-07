@@ -23,6 +23,8 @@ const char* PlacementErrorText(PlacementError error) {
     case PlacementError::DockNotOverWater: return "the dock must reach over the water (R turns it)";
     case PlacementError::NotEnoughCoins: return "not enough coins";
     case PlacementError::NotEnoughPlanks: return "not enough planks on this island";
+    case PlacementError::NeedsStorage: return "settle this island with a warehouse or harbor first";
+    case PlacementError::NeedsShip: return "needs a ship of yours within 4 tiles carrying the planks";
     }
     return "?";
 }

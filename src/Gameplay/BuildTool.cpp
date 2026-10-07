@@ -129,7 +129,8 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         glm::ivec2 minTile = hoverTile - tiles / 2;
         m_LastCheck = ValidatePlacement(m_Simulation.MakePlacementContext(m_World), (uint16_t)m_SelectedType, m_Rotation, minTile);
         if (m_LastCheck.error == PlacementError::None) {
-            m_LastCheck.error = m_Simulation.Coins().Check((uint16_t)m_SelectedType, m_LastCheck.island, m_Simulation.Economy());
+            m_LastCheck.error = m_Simulation.Ships().CheckBuildCost((uint16_t)m_SelectedType, m_LastCheck.island, minTile, tiles,
+                m_Simulation.Economy(), m_Simulation.Coins());
         }
         m_PreviewConnected = LogisticsSystem::ConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
         m_PreviewInMarket = LogisticsSystem::MarketConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
@@ -194,8 +195,8 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     anchor.origin = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y, minTile.y * TILE_SIZE);
     anchor.footprint = tiles * TILE_SIZE;
     m_Simulation.Occupancy().Occupy(minTile, tiles, id);
+    m_Simulation.Ships().PayBuildCost(type, check.island, minTile, tiles, m_Simulation.Economy(), m_Simulation.Coins());
     if (building.role == BuildingRole::Storage) m_Simulation.Economy().OnWarehouseAdded(check.island);
-    m_Simulation.Coins().Pay(type, check.island, m_Simulation.Economy());
     m_Simulation.MarkBuildingsChanged();
 
     m_Models.BuildVoxels(type, component.variant, rotation, m_LookBuffer);

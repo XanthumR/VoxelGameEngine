@@ -288,3 +288,40 @@ TEST(TradeRouteTest, StopWithoutAHarborIsSkipped) {
     f.ships.DeleteRoute(route);
     EXPECT_EQ(f.ships.Get(f.ship).route, -1);
 }
+
+TEST(SettlingTest, FirstStorageEverNeedsNoShip) {
+    IslandEconomyManager economy;
+    Treasury treasury;
+    ShipSystem ships(TestWorld::Get().terrain);
+    EXPECT_EQ(ships.CheckBuildCost(BUILDING_WAREHOUSE, 7, glm::ivec2(0), glm::ivec2(3), economy, treasury), PlacementError::None);
+    economy.OnWarehouseAdded(7);
+    EXPECT_EQ(economy.Find(7)->Amount(ItemType::Planks), IslandEconomyManager::STARTING_GOODS[(size_t)ItemType::Planks]);
+}
+
+TEST(SettlingTest, NewIslandNeedsAShipCarryingThePlanks) {
+    TwoHarbors f;
+    ASSERT_NE(f.ship, INVALID_SHIP);
+    const IslandId island = 6001; // Not settled
+    glm::ivec2 near = glm::ivec2(f.ships.Get(f.ship).position) + glm::ivec2(2, 0);
+    glm::ivec2 far = near + glm::ivec2(20, 0);
+    const glm::ivec2 tiles(4, 5);
+    auto check = [&](uint16_t type, glm::ivec2 at) { return f.ships.CheckBuildCost(type, island, at, tiles, f.economy, f.treasury); };
+
+    EXPECT_EQ(check(BUILDING_FARMER_HOUSE, near), PlacementError::NeedsStorage);
+    EXPECT_EQ(check(BUILDING_WAREHOUSE, far), PlacementError::NeedsShip);
+    EXPECT_EQ(check(BUILDING_WAREHOUSE, near), PlacementError::None); // No planks needed
+    EXPECT_EQ(check(BUILDING_HARBOR, near), PlacementError::NeedsShip); // The holds are empty
+
+    // Load planks at the docked harbor, then the harbor can be built from them
+    ASSERT_EQ(f.ships.Transfer(f.ship, ItemType::Planks, 10, f.objects, f.economy), 10);
+    EXPECT_EQ(check(BUILDING_HARBOR, near), PlacementError::None);
+    int64_t coins = f.treasury.Coins();
+    f.ships.PayBuildCost(BUILDING_HARBOR, island, near, tiles, f.economy, f.treasury);
+    f.economy.OnWarehouseAdded(island);
+    EXPECT_EQ(f.ships.CargoAmount(f.ship, ItemType::Planks), 10 - BUILDING_COSTS[BUILDING_HARBOR].planks);
+    EXPECT_EQ(f.treasury.Coins(), coins - BUILDING_COSTS[BUILDING_HARBOR].coins);
+    EXPECT_EQ(f.economy.Find(island)->Amount(ItemType::Planks), 0); // No starting goods
+
+    // Settled now: the island's own storage pays
+    EXPECT_EQ(check(BUILDING_FARMER_HOUSE, far), PlacementError::NotEnoughPlanks);
+}

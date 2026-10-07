@@ -14,7 +14,6 @@ constexpr int WAREHOUSE_CAPACITY = 50; // Storage per good added by each warehou
 struct IslandStorage {
     IslandId island = NO_ISLAND;
     int warehouseCount = 0;
-    bool seeded = false; // Got its starting goods (only the first warehouse ever does)
     std::array<int, ITEM_COUNT> amounts = {};
 
     // Population, filled in by PopulationSystem once per second
@@ -31,7 +30,8 @@ struct IslandStorage {
     int Amount(ItemType item) const { return amounts[(size_t)item]; }
 };
 
-// The per-island economies. An island gets its storage when its first warehouse is built.
+// The per-island economies. An island gets its storage when its first warehouse is built; only the
+// first island settled gets the starting goods (others are settled with goods brought by ship).
 class IslandEconomyManager {
 public:
     static constexpr size_t MAX_ISLANDS = 256;

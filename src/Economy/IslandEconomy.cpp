@@ -28,12 +28,9 @@ void IslandEconomyManager::OnWarehouseAdded(IslandId island) {
         m_Islands.push_back(IslandStorage()); // Within the reserved capacity
         storage = &m_Islands.back();
         storage->island = island;
+        if (m_Islands.size() == 1) storage->amounts = STARTING_GOODS;
     }
     storage->warehouseCount++;
-    if (!storage->seeded) {
-        storage->amounts = STARTING_GOODS;
-        storage->seeded = true;
-    }
 }
 
 void IslandEconomyManager::OnWarehouseRemoved(IslandId island) {

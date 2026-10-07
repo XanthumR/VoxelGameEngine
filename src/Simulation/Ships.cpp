@@ -65,6 +65,53 @@ ShipId ShipSystem::Nearest(glm::vec2 position, float maxTiles) const {
     return best;
 }
 
+int ShipSystem::CargoAmount(ShipId id, ItemType item) const {
+    if (!IsAlive(id)) return 0;
+    int amount = 0;
+    for (const CargoSlot& slot : Get(id).cargo) amount += slot.item == item ? slot.amount : 0;
+    return amount;
+}
+
+ShipId ShipSystem::SettlerNear(glm::ivec2 minTile, glm::ivec2 tiles, int planks) const {
+    for (int slot = 0; slot < MAX_SHIPS; slot++) {
+        ShipId id = IdAtSlot(slot);
+        if (id == INVALID_SHIP || m_Ships[slot].state == ShipState::Sailing || CargoAmount(id, ItemType::Planks) < planks) continue;
+        // Distance from the ship to the footprint's rectangle
+        glm::vec2 p = m_Ships[slot].position;
+        glm::vec2 outside = glm::max(glm::max(glm::vec2(minTile) - p, p - glm::vec2(minTile + tiles)), glm::vec2(0.0f));
+        if (glm::length(outside) <= SETTLE_TILES) return id;
+    }
+    return INVALID_SHIP;
+}
+
+PlacementError ShipSystem::CheckBuildCost(uint16_t type, IslandId island, glm::ivec2 minTile, glm::ivec2 tiles,
+    const IslandEconomyManager& economy, const Treasury& treasury) const {
+    // The first island settled, or one already settled: the usual cost
+    if (economy.SettledIslandCount() == 0 || economy.Find(island)) return treasury.Check(type, island, economy);
+    const BuildingCost& cost = BUILDING_COSTS[type];
+    if (BUILDING_TYPES[type].role != BuildingRole::Storage) return PlacementError::NeedsStorage;
+    if (treasury.Coins() < cost.coins) return PlacementError::NotEnoughCoins;
+    return SettlerNear(minTile, tiles, cost.planks) == INVALID_SHIP ? PlacementError::NeedsShip : PlacementError::None;
+}
+
+void ShipSystem::PayBuildCost(uint16_t type, IslandId island, glm::ivec2 minTile, glm::ivec2 tiles, IslandEconomyManager& economy, Treasury& treasury) {
+    if (economy.SettledIslandCount() == 0 || economy.Find(island)) {
+        treasury.Pay(type, island, economy);
+        return;
+    }
+    const BuildingCost& cost = BUILDING_COSTS[type];
+    treasury.SetCoins(treasury.Coins() - cost.coins);
+    ShipId id = SettlerNear(minTile, tiles, cost.planks);
+    if (id == INVALID_SHIP) return;
+    int left = cost.planks;
+    for (CargoSlot& slot : m_Ships[id & 0xFFFF].cargo) {
+        if (slot.item != ItemType::Planks) continue;
+        int taken = std::min(left, slot.amount);
+        slot.amount -= taken;
+        left -= taken;
+    }
+}
+
 bool ShipSystem::IsWater(glm::ivec2 tile, const OccupancyGrid& occupancy) {
     TerrainGenerator::TileKind kind = m_Terrain.TileKindAt(tile.x, tile.y);
     return (kind == TerrainGenerator::TileKind::Sea || kind == TerrainGenerator::TileKind::Cliff) && occupancy.At(tile) == INVALID_GAME_OBJECT;

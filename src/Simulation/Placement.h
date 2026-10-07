@@ -28,6 +28,8 @@ enum class PlacementError {
     DockNotOverWater, // The dock part of a coastal building is over land
     NotEnoughCoins,   // Not placement itself: the treasury can't pay (Treasury::Check)
     NotEnoughPlanks,  // ...or the island's storage lacks the planks
+    NeedsStorage,     // An island not yet settled: its first building must be a warehouse or harbor
+    NeedsShip,        // ...and that needs a ship nearby carrying its planks (ShipSystem::CheckBuildCost)
 };
 
 const char* PlacementErrorText(PlacementError error);
