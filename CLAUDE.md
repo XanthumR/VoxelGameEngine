@@ -1,22 +1,22 @@
-# Claude Project Instructions: Voxel Anno (MSVC & Custom C++)
+# Claude Project Instructions: Voxel Anno (C++20, CMake, Windows & Linux)
 
 Project-specific guidelines for a voxel-based city-builder and logistics simulation game written in C++ (MSVC compiler), utilizing a custom object/component architecture.
 
 ## 🛠️ Build & Run Commands
 
-### MSVC Development & Build (Developer PowerShell / Command Prompt)
-* **Build System:** Visual Studio solution built with MSBuild (no CMake). GLFW location is the `GlfwDir` property in `VoxelGameEngine.vcxproj` (override with `/p:GlfwDir=...`). The game UI library is RmlUi 6.3, the prebuilt Windows release from its GitHub page, at the `RmlUiDir` property (its DLLs are copied next to the executable after each build).
-* **Build Project (Debug):** `msbuild VoxelGameEngine.sln /p:Configuration=Debug /p:Platform=x64 /m`
-* **Build Project (Release):** `msbuild VoxelGameEngine.sln /p:Configuration=Release /p:Platform=x64 /m`
-* **Run Game Client:** `.\x64\Debug\VoxelGameEngine.exe` (run from the project root so `shaders\` and `assets\` are found)
+### Build (CMake, Windows and Linux)
+* **Build System:** CMake (`CMakeLists.txt`). Every library is downloaded and built by FetchContent at configure time: GLFW 3.4, GLM 0.9.9.8, Dear ImGui 1.90, RmlUi 6.3 (static), FreeType (the system one on Linux when installed) and GoogleTest. The glad loader is in `src/ThirdParty/` (`glad.c`, `glad/glad.h`, `KHR/khrplatform.h`).
+* **Configure (Windows, Visual Studio 2022):** `cmake -B build -G "Visual Studio 17 2022" -A x64` (or open the folder in Visual Studio)
+* **Configure (Linux):** `cmake -B build -DCMAKE_BUILD_TYPE=Release` (needs a C++20 compiler and `libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl-dev`, optionally `libfreetype-dev`)
+* **Build:** `cmake --build build --config Release --parallel` (`--config Debug` for a debug build with the Visual Studio generator)
+* **Run Game Client:** from the project root so `shaders/` and `assets/` are found: `.\build\bin\Release\VoxelGameEngine.exe` (Windows), `./build/bin/VoxelGameEngine` (Linux)
 * **Launch options:** `--render-distance N`, `--render-scale F`, and for reproducible runs `--fixed-time T`, `--camera X Y Z YAW PITCH`, `--screenshot FILE SECONDS` (see `src/Core/LaunchOptions.h`).
 * **Regression check:** render the same view before and after a change with those three options and compare the PPMs pixel by pixel; the scene is deterministic (only the FPS text in the overlay differs between runs).
 
 ### Testing & Profiling
-* **Test project:** `tests/VoxelAnnoTests.vcxproj` (Google Test from NuGet, built with the solution). It compiles the pure-logic sources (`src/Simulation/`, terrain, `VoxelWorld`) at `/W4 /WX`; no OpenGL or window.
-* **Restore Google Test (once, or after a clean clone):** `msbuild VoxelGameEngine.sln -t:restore -p:RestorePackagesConfig=true` (Visual Studio restores it automatically)
-* **Run All Tests:** `.\x64\Debug\VoxelAnnoTests.exe`
-* **Run Specific Simulation Test:** `.\x64\Debug\VoxelAnnoTests.exe --gtest_filter=PlacementTest.*`
+* **Test target:** `VoxelAnnoTests` (GoogleTest, built with the game). It compiles the pure-logic sources (`LOGIC_SOURCES` in `CMakeLists.txt`: `src/Simulation/`, `src/Economy/`, terrain, `VoxelWorld`) at `/W4 /WX` with MSVC; no OpenGL or window. New files in `tests/` are picked up automatically; a new source file goes into `LOGIC_SOURCES` or `GAME_SOURCES`.
+* **Run All Tests:** `.\build\bin\Release\VoxelAnnoTests.exe` (Linux: `./build/bin/VoxelAnnoTests`), or `ctest --test-dir build -C Release`
+* **Run Specific Simulation Test:** `.\build\bin\Release\VoxelAnnoTests.exe --gtest_filter=PlacementTest.*`
 * **Format Code:** `clang-format -i -style=file src/**/*.cpp src/**/*.h`
 
 ---
@@ -24,7 +24,7 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 ## 🏗️ Architecture & Tech Stack
 
 ### Core Tech
-* **Compiler & Standard:** MSVC (Visual Studio 2022), targeting C++20 (`/std:c++20`).
+* **Compiler & Standard:** C++20; MSVC (Visual Studio 2022) on Windows, GCC or Clang on Linux. Keep the code portable: no Windows headers or MSVC-only functions (`fopen_s` and the like) outside `#ifdef _MSC_VER`.
 * **Architecture:** Custom Object-Component system. Game objects (`GameObject`) hold raw vectors of pre-allocated, flat component arrays to maintain cache locality without third-party ECS overhead.
 * **Threading:** Win32 Thread Pool / `std::jthread` for asynchronous voxel meshing and off-loop trade route updates.
 

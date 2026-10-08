@@ -16,11 +16,6 @@
 #include <algorithm>
 #include <iostream>
 
-#ifdef _MSC_VER
-#pragma comment(lib, "glfw3.lib")
-#pragma comment(lib, "opengl32.lib")
-#endif
-
 namespace {
 
 const char* TREE_MODEL_PATH = "assets/tree.vox";

@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 
 #include <cstdint>
+#include <mutex>
 #include <shared_mutex>
 #include <unordered_set>
 

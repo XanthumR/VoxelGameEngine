@@ -8,10 +8,6 @@
 
 #include <iostream>
 
-#ifdef _MSC_VER
-#pragma comment(lib, "rmlui.lib")
-#endif
-
 namespace {
 
 const char* FONTS[] = { "assets/ui/fonts/Monocraft.ttf", "assets/ui/fonts/Monocraft-Bold.ttf" };

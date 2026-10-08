@@ -33,22 +33,24 @@ A city-builder and trade game in the style of Anno 1800, built on a custom C++ v
 
 ## Building
 
-Requirements: Windows, Visual Studio 2022 (MSVC, C++20) and a GPU with OpenGL 4.4 and compute shaders.
+Requirements: CMake 3.24 or newer, a C++20 compiler (Visual Studio 2022 on Windows, GCC 11+ or Clang 14+ on Linux), git, and a GPU with OpenGL 4.4 and compute shaders. CMake downloads and builds every library itself: GLFW, GLM, Dear ImGui, RmlUi, FreeType and GoogleTest.
 
-Libraries that are not in the repository:
+On Linux, install the X11 and OpenGL development packages first (Debian/Ubuntu names):
 
-- **GLFW 3.4** (the prebuilt Windows release, with GLM in its `include` folder) at the `GlfwDir` property of `VoxelGameEngine.vcxproj`.
-- **RmlUi 6.3** (the prebuilt Windows release) at the `RmlUiDir` property. Its DLLs are copied next to the executable after each build.
-- **Dear ImGui** cloned into `imgui/` at the project root (used for the debug tools).
-
-Override either path on the command line, for example `/p:GlfwDir=D:\libs\glfw /p:RmlUiDir=D:\libs\RmlUi`.
-
-```powershell
-msbuild VoxelGameEngine.sln -t:restore -p:RestorePackagesConfig=true   # Google Test, once
-msbuild VoxelGameEngine.sln /p:Configuration=Release /p:Platform=x64 /m
-.\x64\Release\VoxelGameEngine.exe   # run from the project root
-.\x64\Release\VoxelAnnoTests.exe    # the simulation tests
+```sh
+sudo apt install build-essential cmake git libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl-dev libfreetype-dev
 ```
+
+Build, then run from the project root so the game finds `shaders/` and `assets/`:
+
+```sh
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel
+./build/bin/VoxelGameEngine                  # Linux
+.\build\bin\Release\VoxelGameEngine.exe      # Windows
+```
+
+The simulation tests are `VoxelAnnoTests`, next to the game (or `ctest --test-dir build -C Release`). Visual Studio can also open the folder directly.
 
 Launch options: `--render-distance N`, `--render-scale F`, and for reproducible screenshots `--fixed-time T`, `--camera X Y Z YAW PITCH`, `--screenshot FILE SECONDS`.
 
