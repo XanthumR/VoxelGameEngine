@@ -53,16 +53,42 @@ void WorldEditor::FillBox(glm::ivec3 minCorner, glm::ivec3 size, uint8_t id) {
     WriteBox(minCorner, size, nullptr, id, 0);
 }
 
+// Chunk by chunk: one lookup per chunk, then its voxels directly (animations rewrite whole
+// buildings every frame)
 void WorldEditor::WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const uint8_t* ids, uint8_t fill, int solidOnlyLayers) {
-    size_t i = 0;
-    for (int y = 0; y < size.y; y++) {
-        for (int z = 0; z < size.z; z++) {
-            for (int x = 0; x < size.x; x++, i++) {
-                glm::ivec3 p = minCorner + glm::ivec3(x, y, z);
-                uint8_t id = ids ? ids[i] : fill;
-                if (id == 0 && y < solidOnlyLayers) continue; // Keep the ground or sea around it
-                if (m_World.GetVoxel(p.x, p.y, p.z) == id) continue; // Unchanged: nothing to upload
-                if (m_World.SetVoxel(p.x, p.y, p.z, id)) Touch(p);
+    const glm::ivec3 maxCorner = minCorner + size - 1;
+    for (int cy = std::max(minCorner.y, 0) >> 5; cy <= std::min(maxCorner.y, WORLD_HEIGHT - 1) >> 5; cy++) {
+        for (int cz = minCorner.z >> 5; cz <= maxCorner.z >> 5; cz++) {
+            for (int cx = minCorner.x >> 5; cx <= maxCorner.x >> 5; cx++) {
+                Chunk* chunk = m_World.FindChunk(cx, cy, cz);
+                if (!chunk) continue; // Not loaded: skipped
+                const glm::ivec3 from = glm::max(minCorner, glm::ivec3(cx, cy, cz) * CHUNK_SIZE);
+                const glm::ivec3 to = glm::min(maxCorner, glm::ivec3(cx, cy, cz) * CHUNK_SIZE + (CHUNK_SIZE - 1));
+                glm::ivec3 changedMin(CHUNK_SIZE), changedMax(-1);
+                for (int y = from.y; y <= to.y; y++) {
+                    for (int z = from.z; z <= to.z; z++) {
+                        size_t i = (size_t)(from.x - minCorner.x) + (size_t)size.x * ((size_t)(z - minCorner.z) + (size_t)size.z * (size_t)(y - minCorner.y));
+                        for (int x = from.x; x <= to.x; x++, i++) {
+                            uint8_t id = ids ? ids[i] : fill;
+                            if (id == 0 && y - minCorner.y < solidOnlyLayers) continue; // Keep the ground or sea around it
+                            if (chunk->data.empty()) {
+                                if (id == 0) continue; // Already air
+                                chunk->data.assign(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE, 0);
+                            }
+                            uint8_t& voxel = chunk->data[LocalIndex(x & 31, y & 31, z & 31)];
+                            if (voxel == id) continue; // Unchanged: nothing to upload
+                            voxel = id;
+                            glm::ivec3 local(x & 31, y & 31, z & 31);
+                            changedMin = glm::min(changedMin, local);
+                            changedMax = glm::max(changedMax, local);
+                        }
+                    }
+                }
+                if (changedMax.x < 0) continue;
+                chunk->isModified = true;
+                glm::ivec3 base = glm::ivec3(cx, cy, cz) * CHUNK_SIZE;
+                Touch(base + changedMin);
+                Touch(base + changedMax);
             }
         }
     }
