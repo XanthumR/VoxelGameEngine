@@ -35,10 +35,14 @@ A city-builder and trade game in the style of Anno 1800, built on a custom C++ v
 
 Requirements: CMake 3.24 or newer, a C++20 compiler (Visual Studio 2022 on Windows, GCC 11+ or Clang 14+ on Linux), git, and a GPU with OpenGL 4.4 and compute shaders. CMake downloads and builds every library itself: GLFW, GLM, Dear ImGui, RmlUi, FreeType and GoogleTest.
 
-On Linux, install the X11 and OpenGL development packages first (Debian/Ubuntu names):
+On Linux, install the compiler, CMake, and the X11 and OpenGL development packages first:
 
 ```sh
+# Debian / Ubuntu
 sudo apt install build-essential cmake git libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl-dev libfreetype-dev
+
+# Arch
+sudo pacman -S --needed base-devel cmake git libx11 libxrandr libxinerama libxcursor libxi mesa freetype2
 ```
 
 Build, then run from the project root so the game finds `shaders/` and `assets/`:
