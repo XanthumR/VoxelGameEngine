@@ -1,6 +1,8 @@
 #include "Simulation/BuildingLook.h"
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 
 namespace {
 
@@ -148,6 +150,69 @@ void ConstructionLook(const std::vector<uint8_t>& look, glm::ivec3 size, float p
                 float level = (float)y + (float)((hash >> 8) & 255) / 256.0f * RAGGED;
                 if (level < front - FRAME) out[i] = look[i];
                 else if (level < front && (y % 4 == 0 || (x + z) % 4 == 0)) out[i] = Block::TIMBER_LIGHT; // Posts and beams on every wall
+            }
+        }
+    }
+}
+
+void DemolitionLook(const std::vector<uint8_t>& look, glm::ivec3 size, int groundLayer, float progress, std::vector<uint8_t>& out) {
+    constexpr float FALL_START = 0.45f;  // When the bottom layer gives way; the top goes at once
+    constexpr float FALL_JITTER = 0.15f; // Voxels of a layer let go up to this much apart
+    constexpr float FALL_TIME = 0.35f;   // Progress a voxel takes to fall the whole height
+    constexpr float RUBBLE_GROWN = 0.6f; // The mound is at full height from here...
+    constexpr float RUBBLE_SINKS = 0.8f; // ...and sinks away from here
+    out.assign(look.size(), Block::AIR);
+    if (progress <= 0.0f) {
+        out = look;
+        return;
+    }
+    if (progress >= 1.0f || look.size() < (size_t)size.x * size.y * size.z) return;
+
+    const size_t layer = (size_t)size.x * size.z;
+    std::copy(look.begin(), look.begin() + layer * groundLayer, out.begin()); // Pilings stay
+    const int height = std::max(1, size.y - groundLayer);
+    const float gravity = 2.0f * (float)height / (FALL_TIME * FALL_TIME);
+    const int maxRubble = std::clamp(height / 5, 2, 6);
+    auto hashOf = [](int x, int y, int z) {
+        uint32_t hash = (uint32_t)x * 73856093u ^ (uint32_t)y * 19349663u ^ (uint32_t)z * 83492791u;
+        return (hash ^ (hash >> 13)) * 0x5bd1e995u;
+    };
+
+    // The rubble: the building's commonest material, flecked with dark stone; a mound highest in the middle
+    std::array<int, 256> counts = {};
+    for (size_t i = layer * groundLayer; i < look.size(); i++) counts[look[i]]++;
+    counts[Block::AIR] = 0;
+    uint8_t material = (uint8_t)(std::max_element(counts.begin(), counts.end()) - counts.begin());
+    if (material == Block::AIR) material = Block::STONE_DARK;
+    const float grown = std::min(1.0f, progress / RUBBLE_GROWN);
+    const float sunk = progress < RUBBLE_SINKS ? 1.0f : (1.0f - progress) / (1.0f - RUBBLE_SINKS);
+    auto rubbleAt = [&](int x, int z) {
+        float u = std::abs(((float)x + 0.5f) / (float)size.x * 2.0f - 1.0f);
+        float v = std::abs(((float)z + 0.5f) / (float)size.z * 2.0f - 1.0f);
+        float shape = 0.35f + 0.65f * (1.0f - std::max(u, v)) + (float)(hashOf(x, 0, z) >> 24 & 3) * 0.1f;
+        return std::max(1, (int)((float)maxRubble * shape * grown * sunk + 0.5f));
+    };
+    for (int z = 0; z < size.z; z++) {
+        for (int x = 0; x < size.x; x++) {
+            int rubble = std::min(rubbleAt(x, z), height);
+            for (int r = 0; r < rubble; r++) {
+                out[(size_t)x + (size_t)size.x * ((size_t)z + (size_t)size.z * (size_t)(groundLayer + r))] =
+                    hashOf(x, r, z) % 3 == 0 ? Block::STONE_DARK : material;
+            }
+        }
+    }
+
+    // Falling voxels; those that reach the mound are part of it
+    size_t i = layer * groundLayer;
+    for (int y = groundLayer; y < size.y; y++) {
+        float start = FALL_START * (1.0f - (float)(y - groundLayer) / (float)height);
+        for (int z = 0; z < size.z; z++) {
+            for (int x = 0; x < size.x; x++, i++) {
+                if (look[i] == Block::AIR) continue;
+                float t = progress - start - FALL_JITTER * (float)((hashOf(x, y, z) >> 8) & 255) / 256.0f;
+                int fallen = y - (t > 0.0f ? (int)(0.5f * gravity * t * t) : 0);
+                if (fallen < groundLayer + rubbleAt(x, z)) continue;
+                out[(size_t)x + (size_t)size.x * ((size_t)z + (size_t)size.z * (size_t)fallen)] = look[i];
             }
         }
     }

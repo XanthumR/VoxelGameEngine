@@ -41,6 +41,9 @@ public:
     // Uploads chunk data, allocating a slot if it has none yet. brickMask may be null, in which
     // case it is computed here (used after edits).
     void MakeResident(uint64_t key, glm::ivec3 chunkCoord, const std::vector<uint8_t>& data, const uint8_t* brickMask);
+    // Uploads only the box min..max (chunk-local voxels, inclusive) of an edited resident chunk, and
+    // its brick mask. False when it has no slot or is now all air: MakeResident handles those.
+    bool UpdateRegion(uint64_t key, const std::vector<uint8_t>& data, glm::ivec3 min, glm::ivec3 max);
     void Evict(uint64_t key);
     void Forget(uint64_t key); // Evict and drop the "known empty" mark (chunk left the GPU window)
 
@@ -74,6 +77,7 @@ private:
     bool AddPool();
     int LocateSlot(int slotIndex, glm::ivec3& originVoxels) const;
     void UploadToSlot(int slotIndex, const std::vector<uint8_t>& data, const uint8_t* brickMask);
+    void UploadBrickMask(int pool, glm::ivec3 origin, const uint8_t* brickMask);
     void WritePageTable(int cx, int cy, int cz, glm::ivec4 value);
     const glm::ivec4& ReadPageTable(int cx, int cy, int cz) const;
 

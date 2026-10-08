@@ -53,6 +53,8 @@ public:
 
     // Re-uploads an edited chunk, or makes it resident if it is close enough
     void RefreshChunk(uint64_t key);
+    // The same, when only the box min..max (chunk-local, inclusive) changed: just that is uploaded
+    void RefreshChunkBox(uint64_t key, glm::ivec3 min, glm::ivec3 max);
 
     // Generates a chunk again and re-uploads it, for GPU-only chunks whose generated content
     // changed (a tree felled or grown back); chunks with CPU data are edited directly instead

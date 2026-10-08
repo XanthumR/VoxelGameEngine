@@ -10,9 +10,21 @@
 
 WorldEditor::WorldEditor(VoxelWorld& world, ChunkStreamer& streamer) : m_World(world), m_Streamer(streamer) {}
 
-// Each touched chunk is re-uploaded once per edit, not once per voxel
+void WorldEditor::Touch(glm::ivec3 p) {
+    uint64_t key = ChunkKey(p.x >> 5, p.y >> 5, p.z >> 5);
+    glm::ivec3 local = p & 31;
+    for (Touched& touched : m_Touched) {
+        if (touched.key != key) continue;
+        touched.min = glm::min(touched.min, local);
+        touched.max = glm::max(touched.max, local);
+        return;
+    }
+    m_Touched.push_back({ key, local, local });
+}
+
+// Each touched chunk is re-uploaded once per edit, not once per voxel, and only the box that changed
 void WorldEditor::RefreshTouched() {
-    for (uint64_t key : m_Touched) m_Streamer.RefreshChunk(key);
+    for (const Touched& touched : m_Touched) m_Streamer.RefreshChunkBox(touched.key, touched.min, touched.max);
     if (!m_Touched.empty()) m_TerrainChanged = true;
     m_Touched.clear();
 }
@@ -25,10 +37,7 @@ void WorldEditor::FillSphere(glm::ivec3 center, int radius, uint8_t id) {
                 int px = center.x + dx;
                 int py = center.y + dy;
                 int pz = center.z + dz;
-                if (m_World.SetVoxel(px, py, pz, id)) {
-                    uint64_t key = ChunkKey(px >> 5, py >> 5, pz >> 5);
-                    if (std::find(m_Touched.begin(), m_Touched.end(), key) == m_Touched.end()) m_Touched.push_back(key);
-                }
+                if (m_World.SetVoxel(px, py, pz, id)) Touch(glm::ivec3(px, py, pz));
             }
         }
     }
@@ -52,10 +61,8 @@ void WorldEditor::WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const uint8_t*
                 glm::ivec3 p = minCorner + glm::ivec3(x, y, z);
                 uint8_t id = ids ? ids[i] : fill;
                 if (id == 0 && y < solidOnlyLayers) continue; // Keep the ground or sea around it
-                if (m_World.SetVoxel(p.x, p.y, p.z, id)) {
-                    uint64_t key = ChunkKey(p.x >> 5, p.y >> 5, p.z >> 5);
-                    if (std::find(m_Touched.begin(), m_Touched.end(), key) == m_Touched.end()) m_Touched.push_back(key);
-                }
+                if (m_World.GetVoxel(p.x, p.y, p.z) == id) continue; // Unchanged: nothing to upload
+                if (m_World.SetVoxel(p.x, p.y, p.z, id)) Touch(p);
             }
         }
     }
@@ -76,10 +83,7 @@ void WorldEditor::StampModel(glm::ivec3 base, const VoxModel& model, bool erase,
         bool ground = offset.y == 0;
         uint8_t empty = ground ? groundId : (uint8_t)0; // What the voxel is without the model
         if (erase ? current != offset.blockType : current != empty) continue;
-        if (m_World.SetVoxel(p.x, p.y, p.z, erase ? empty : (uint8_t)offset.blockType)) {
-            uint64_t key = ChunkKey(p.x >> 5, p.y >> 5, p.z >> 5);
-            if (std::find(m_Touched.begin(), m_Touched.end(), key) == m_Touched.end()) m_Touched.push_back(key);
-        }
+        if (m_World.SetVoxel(p.x, p.y, p.z, erase ? empty : (uint8_t)offset.blockType)) Touch(p);
     }
     RefreshTouched();
 }

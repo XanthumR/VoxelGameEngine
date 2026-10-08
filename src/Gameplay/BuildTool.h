@@ -33,12 +33,16 @@ class WorldEditor;
 // demolishes its modules. A moved farm carries its modules along (turning with it): set down, any
 // whose new spot is blocked (a tree, a building) is destroyed, as in Anno. A newly placed building goes up over CONSTRUCTION_SECONDS: a timber frame rises from the ground
 // with the finished layers behind it, raising dust. Only its look: it works from the start.
+// A demolished building is gone at once, but its look comes down over DEMOLITION_SECONDS: it
+// collapses into rubble, in a cloud of dust, and the rubble sinks away.
 class BuildTool {
 public:
     static constexpr int NO_TYPE = -1;
     static constexpr int ROAD = -2; // The road tool is selected (RoadTool handles the mouse)
     static constexpr float CONSTRUCTION_SECONDS = 3.0f;
     static constexpr int MAX_CONSTRUCTIONS = 64; // More at once are finished straight away
+    static constexpr float DEMOLITION_SECONDS = 2.0f;
+    static constexpr int MAX_DEMOLITIONS = 64;   // More at once vanish straight away
 
     // Build menu tabs: the buildable types of a category (hotkeys 1, 2, ...); the Infrastructure
     // tab ends with the road
@@ -92,13 +96,14 @@ public:
     // Rebuilds the voxels of a building whose type changed in place (house upgrades)
     void RefreshLook(GameObjectId id);
 
-    // Once per frame (real time): buildings going up. dust: where their dust goes, null for none.
-    void AnimateConstruction(float deltaTime, SmokeSystem* dust);
+    // Once per frame (real time): buildings going up and coming down. dust: where their dust goes, null for none.
+    void AnimateBuildings(float deltaTime, SmokeSystem* dust);
 
 private:
     // Puts the generated terrain back in a box (under a demolished dock)
     void RestoreTerrain(glm::ivec3 minCorner, glm::ivec3 size);
     void ClearLook(GameObjectId id); // Its voxels out of the world, the ground under a dock back
+    void ClearBox(const VoxelAnchorComponent& anchor, const BuildingType& building); // The same, by place
     void StampLook(GameObjectId id); // Its model into the world at its anchor
     void StartMove(GameObjectId id);
     void EndMove(bool toPreview);    // Set down at the last green preview, or back where it stood
@@ -128,6 +133,13 @@ private:
         float progress; // 0 to 1
     };
     std::vector<Construction> m_Constructions;
+    struct Demolition {
+        VoxelAnchorComponent anchor; // The object is gone: where it stood and what it looked like
+        uint16_t type;
+        uint8_t variant, rotation;
+        float progress; // 0 to 1
+    };
+    std::vector<Demolition> m_Demolitions;
     std::vector<uint8_t> m_ConstructionBuffer;
 
     int m_SelectedType = NO_TYPE;

@@ -161,6 +161,14 @@ void ChunkStreamer::RefreshChunk(uint64_t key) {
     }
 }
 
+void ChunkStreamer::RefreshChunkBox(uint64_t key, glm::ivec3 min, glm::ivec3 max) {
+    int cx, cy, cz;
+    UnpackChunkKey(key, cx, cy, cz);
+    Chunk* chunk = m_World.FindChunk(cx, cy, cz);
+    if (chunk && !chunk->data.empty() && m_Cache.UpdateRegion(key, chunk->data, min, max)) return;
+    RefreshChunk(key);
+}
+
 bool ChunkStreamer::Window::Contains(int cx, int cz) const {
     return radius >= 0 && std::abs(cx - center.x) <= radius && std::abs(cz - center.y) <= radius;
 }

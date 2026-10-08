@@ -40,6 +40,7 @@ BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& s
     m_RestoreBuffer.reserve(largest);
     m_ConstructionBuffer.reserve(largest);
     m_Constructions.reserve(MAX_CONSTRUCTIONS);
+    m_Demolitions.reserve(MAX_DEMOLITIONS);
     m_Carried.reserve(8);
     m_CarriedTiles.reserve(64);
     m_CarriedValid.reserve(64);
@@ -283,14 +284,37 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     m_Simulation.MarkBuildingsChanged();
     if (m_Constructions.size() < (size_t)MAX_CONSTRUCTIONS) {
         m_Constructions.push_back({ id, 0.0f }); // Within the reserve
-        AnimateConstruction(0.0f, nullptr);
+        AnimateBuildings(0.0f, nullptr);
     } else {
         StampLook(id);
     }
     return id;
 }
 
-void BuildTool::AnimateConstruction(float deltaTime, SmokeSystem* dust) {
+void BuildTool::AnimateBuildings(float deltaTime, SmokeSystem* dust) {
+    for (size_t i = 0; i < m_Demolitions.size();) {
+        Demolition& demolition = m_Demolitions[i];
+        const BuildingType& building = BUILDING_TYPES[demolition.type];
+        demolition.progress += deltaTime / DEMOLITION_SECONDS;
+        if (demolition.progress >= 1.0f) {
+            ClearBox(demolition.anchor, building);
+            demolition = m_Demolitions.back();
+            m_Demolitions.pop_back();
+            continue;
+        }
+        glm::ivec3 origin = demolition.anchor.origin - glm::ivec3(0, building.belowGround, 0);
+        glm::ivec3 size(demolition.anchor.footprint.x, BuildingVolumeHeight(building), demolition.anchor.footprint.y);
+        m_Models.BuildVoxels(demolition.type, demolition.variant, demolition.rotation, m_LookBuffer);
+        DemolitionLook(m_LookBuffer, size, building.belowGround, demolition.progress, m_ConstructionBuffer);
+        m_Editor.WriteBox(origin, size, m_ConstructionBuffer, building.belowGround);
+        if (dust && demolition.progress < 0.7f) {
+            // A thick cloud while it falls
+            glm::vec2 min(demolition.anchor.origin.x, demolition.anchor.origin.z);
+            dust->Dust(deltaTime * 4.0f, min, min + glm::vec2(demolition.anchor.footprint), (float)BUILD_GROUND_Y + 2.0f);
+        }
+        i++;
+    }
+
     GameObjectRegistry& objects = m_Simulation.Objects();
     for (size_t i = 0; i < m_Constructions.size();) {
         Construction& construction = m_Constructions[i];
@@ -460,8 +484,10 @@ void BuildTool::RestoreTerrain(glm::ivec3 minCorner, glm::ivec3 size) {
 
 void BuildTool::ClearLook(GameObjectId id) {
     std::erase_if(m_Constructions, [id](const Construction& construction) { return construction.id == id; }); // Moved or demolished
-    const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(id);
-    const BuildingType& building = BUILDING_TYPES[m_Simulation.Objects().Building(id).type];
+    ClearBox(m_Simulation.Objects().Anchor(id), BUILDING_TYPES[m_Simulation.Objects().Building(id).type]);
+}
+
+void BuildTool::ClearBox(const VoxelAnchorComponent& anchor, const BuildingType& building) {
     m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), Block::AIR);
     if (building.belowGround > 0) {
         // Pilings and hulls stood in the ground or the sea: put the generated terrain back
@@ -477,7 +503,13 @@ void BuildTool::Demolish(GameObjectId id) {
     const VoxelAnchorComponent anchor = objects.Anchor(id);
     const BuildingComponent component = objects.Building(id);
     const BuildingType& building = BUILDING_TYPES[component.type];
-    ClearLook(id);
+    // It comes down in a heap of rubble, unless it was still going up (then it just goes)
+    bool goingUp = std::any_of(m_Constructions.begin(), m_Constructions.end(), [id](const Construction& c) { return c.id == id; });
+    if (!goingUp && m_Demolitions.size() < (size_t)MAX_DEMOLITIONS) {
+        m_Demolitions.push_back({ anchor, component.type, component.variant, component.rotation, 0.0f }); // Within the reserve
+    } else {
+        ClearLook(id);
+    }
     // A farm's modules go with it
     if (ModuleTypeOf(component.type) >= 0) {
         for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {

@@ -444,8 +444,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     // Trees cut down or grown back
     for (const TreeChange& change : m_Simulation.Trees().Changes()) ApplyTreeChange(change);
     m_Simulation.Trees().ClearChanges();
-    // Buildings going up; their dust stops while the game is paused, like the smoke
-    m_BuildTool.AnimateConstruction(deltaTime, m_GameSpeed > 0 ? &m_Smoke : nullptr);
+    // Buildings going up and coming down; their dust stops while the game is paused, like the smoke
+    m_BuildTool.AnimateBuildings(deltaTime, m_GameSpeed > 0 ? &m_Smoke : nullptr);
 
     // --- UI ---
     bool strategy = m_CameraMode == CameraMode::Strategy;

@@ -34,10 +34,15 @@ public:
 
 private:
     void WriteBox(glm::ivec3 minCorner, glm::ivec3 size, const uint8_t* ids, uint8_t fill, int solidOnlyLayers);
+    void Touch(glm::ivec3 p); // A voxel changed: grow its chunk's changed box
     void RefreshTouched();
 
     VoxelWorld& m_World;
     ChunkStreamer& m_Streamer;
     bool m_TerrainChanged = false;
-    std::vector<uint64_t> m_Touched; // Chunk keys written by the current edit
+    struct Touched {
+        uint64_t key;
+        glm::ivec3 min, max; // Chunk-local voxels that changed, inclusive
+    };
+    std::vector<Touched> m_Touched; // Chunks written by the current edit
 };

@@ -110,3 +110,26 @@ TEST(BuildingLookTest, ConstructionRisesFromNothingToTheFinishedLook) {
     EXPECT_TRUE(std::all_of(out.end() - layer, out.end(), [](uint8_t id) { return id == Block::AIR; }));
     EXPECT_NE(std::find(out.begin(), out.end(), Block::TIMBER_LIGHT), out.end());
 }
+
+TEST(BuildingLookTest, DemolitionFallsIntoRubbleThatCoversTheGroundToTheEnd) {
+    const BuildingType& type = BUILDING_TYPES[0];
+    std::vector<uint8_t> look, out;
+    BuildLook(type, 0, look);
+    glm::ivec2 columns = FootprintColumns(type, 0);
+    glm::ivec3 size(columns.x, BuildingHeight(type), columns.y);
+    size_t layer = (size_t)size.x * size.z;
+    auto air = [](uint8_t id) { return id == Block::AIR; };
+
+    DemolitionLook(look, size, 0, 0.0f, out);
+    EXPECT_EQ(out, look);
+    DemolitionLook(look, size, 0, 1.0f, out);
+    EXPECT_TRUE(std::all_of(out.begin(), out.end(), air));
+
+    // Halfway the top is down; to the very end every column has rubble on the ground
+    DemolitionLook(look, size, 0, 0.5f, out);
+    EXPECT_TRUE(std::all_of(out.end() - layer, out.end(), air));
+    for (float progress : { 0.1f, 0.5f, 0.99f }) {
+        DemolitionLook(look, size, 0, progress, out);
+        EXPECT_TRUE(std::none_of(out.begin(), out.begin() + layer, air)) << progress;
+    }
+}

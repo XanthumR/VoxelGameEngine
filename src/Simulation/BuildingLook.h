@@ -43,3 +43,10 @@ void BuildLook(const BuildingType& type, uint8_t rotation, std::vector<uint8_t>&
 // look is the finished volume of the given size (x, height, z; ordered like BuildLook); out gets
 // the same size.
 void ConstructionLook(const std::vector<uint8_t>& look, glm::ivec3 size, float progress, std::vector<uint8_t>& out);
+
+// A demolished building coming down, progress 0 (standing) to 1 (gone): the top gives way first and
+// every voxel falls, faster and faster, into a mound of rubble that grows on the footprint and then
+// sinks away. Until progress 1 every column keeps at least one rubble voxel on the ground, so
+// nothing can be built there before the end. The lowest groundLayer layers (pilings under the
+// ground or sea) stay as they are.
+void DemolitionLook(const std::vector<uint8_t>& look, glm::ivec3 size, int groundLayer, float progress, std::vector<uint8_t>& out);

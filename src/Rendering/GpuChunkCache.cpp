@@ -126,10 +126,37 @@ void GpuChunkCache::UploadToSlot(int slotIndex, const std::vector<uint8_t>& data
     glBindTexture(GL_TEXTURE_3D, m_Pools[p].voxels);
     glTexSubImage3D(GL_TEXTURE_3D, 0, origin.x, origin.y, origin.z, CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE, GL_RED, GL_UNSIGNED_BYTE, data.data());
 
+    UploadBrickMask(p, origin, brickMask);
+}
+
+void GpuChunkCache::UploadBrickMask(int pool, glm::ivec3 origin, const uint8_t* brickMask) {
     glm::ivec3 brickOrigin = origin / BRICK_SIZE;
-    glBindTexture(GL_TEXTURE_3D, m_Pools[p].bricks);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_3D, m_Pools[pool].bricks);
     glTexSubImage3D(GL_TEXTURE_3D, 0, brickOrigin.x, brickOrigin.y, brickOrigin.z,
         BRICKS_PER_AXIS, BRICKS_PER_AXIS, BRICKS_PER_AXIS, GL_RED, GL_UNSIGNED_BYTE, brickMask);
+}
+
+bool GpuChunkCache::UpdateRegion(uint64_t key, const std::vector<uint8_t>& data, glm::ivec3 min, glm::ivec3 max) {
+    auto it = m_ChunkSlots.find(key);
+    if (it == m_ChunkSlots.end()) return false;
+    uint8_t brickMask[BRICK_MASK_SIZE];
+    if (!ComputeBrickMask(data, brickMask)) return false;
+
+    glm::ivec3 origin;
+    int p = LocateSlot(it->second, origin);
+    glm::ivec3 size = max - min + 1;
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_3D, m_Pools[p].voxels);
+    // Rows and slices of the box are read from the whole chunk's data
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, CHUNK_SIZE);
+    glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, CHUNK_SIZE);
+    glTexSubImage3D(GL_TEXTURE_3D, 0, origin.x + min.x, origin.y + min.y, origin.z + min.z, size.x, size.y, size.z, GL_RED,
+        GL_UNSIGNED_BYTE, data.data() + LocalIndex(min.x, min.y, min.z));
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0);
+    UploadBrickMask(p, origin, brickMask);
+    return true;
 }
 
 void GpuChunkCache::WritePageTable(int cx, int cy, int cz, glm::ivec4 value) {
