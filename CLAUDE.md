@@ -61,6 +61,7 @@ Project-specific guidelines for a voxel-based city-builder and logistics simulat
 * **Pre-allocation:** Use `std::vector::reserve()` inside system setup routines or rely on static `std::array` sizes for fixed mechanics (like maximum factory input slots).
 
 ### 3. Voxel Rendering (GPU Ray Marching)
+* Shaders must compile on Mesa (AMD and Intel on Linux) as well as NVIDIA: Mesa rejects GLSL's reserved words as names (`packed`, `input`, `output`, `filter`, `sample`, `common`, `partition`, `active`, `half`, `fixed`, `long`, `short`, ...), which NVIDIA accepts.
 * There is no meshing: the world is ray-marched on the GPU by compute shaders (`default.comp`: trace, half-resolution shadow and shade passes) reading chunk voxel data from 3D textures through a page table.
 * Keep chunk generation off the main thread (worker threads). When a building modifies voxels, update the CPU chunk and re-upload that chunk to its GPU slot; the 8³ brick occupancy mask is rebuilt on upload.
 

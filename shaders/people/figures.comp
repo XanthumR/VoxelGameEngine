@@ -38,10 +38,10 @@ void main() {
     uint index = gl_GlobalInvocationID.x;
     if (index >= uint(numFigures)) return;
     ivec3 center = figures[index].xyz;
-    int packed = figures[index].w;
-    int size = (packed & 3) + 1;
-    int density = (packed >> 2) & 15;
-    uint seed = uint((packed >> 11) & 255);
+    int look = figures[index].w;
+    int size = (look & 3) + 1;
+    int density = (look >> 2) & 15;
+    uint seed = uint((look >> 11) & 255);
     int low = -(size - 1) / 2;
 
     for (int y = low; y < low + size; y++) {
