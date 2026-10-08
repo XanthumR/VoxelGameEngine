@@ -17,7 +17,8 @@ class ElementDocument;
 // (assets/ui/building_tooltip.rml) and the panel of the clicked one (assets/ui/building_panel.rml).
 // Both list the same details: a house's residents, needs and upgrade progress; the houses a
 // marketplace serves; a warehouse's island goods; a producer's status, productivity, buffers and
-// cart; taxes or upkeep. The panel adds the Upgrade button for houses and Build ship for harbors.
+// cart; a farm's modules; taxes or upkeep. The panel adds the Upgrade button for houses, Build ship
+// for harbors and the button that places a farm's modules.
 // Its clicks are requests the application takes each frame.
 class BuildingInfo {
 public:
@@ -34,7 +35,7 @@ public:
     void ApplyRequests(Simulation& simulation, BuildTool& tool);
 
 private:
-    enum ActionId { UPGRADE = 1, BUILD_SHIP = 2 };
+    enum ActionId { UPGRADE = 1, BUILD_SHIP = 2, BUILD_MODULE = 3 };
 
     Rml::ElementDocument* m_Tooltip = nullptr;
     Rml::ElementDocument* m_Panel = nullptr;

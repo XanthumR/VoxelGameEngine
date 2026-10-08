@@ -22,12 +22,17 @@ public:
     static constexpr float LIFETIME = 5.0f;      // Seconds a puff lasts
     static constexpr float RISE_SPEED = 4.0f;    // Voxels per second
     static constexpr float DRIFT_SPEED = 2.5f;   // Voxels per second, with the wind
+    static constexpr float DUST_RATE = 8.0f;     // Puffs per second of a building going up
 
     SmokeSystem();
 
     // focusColumn and maxDistance (voxels): only chimneys near the camera's focus smoke
     void Update(float deltaTime, const GameObjectRegistry& objects, const BuildingModelLibrary& models, glm::vec2 focusColumn, float maxDistance);
     void AppendFigures(std::vector<Figure>& out) const;
+
+    // Dust of a building going up: now and then a puff at a random point on the edge of the
+    // footprint (min to max, voxel columns), at height y
+    void Dust(float deltaTime, glm::vec2 min, glm::vec2 max, float y);
     size_t PuffCount() const { return m_Puffs.size(); }
 
     // Whether a building is lived in or working, so its chimneys smoke

@@ -15,6 +15,7 @@ enum class BuildingRole : uint8_t {
     Residence, // House: residents of one population tier
     Market,    // Marketplace: houses in its road reach get goods
     Producer,  // Makes goods (ProductionChains): workforce, inputs, a cart to the warehouse
+    Module,    // A farm's pen (sheepfold, pigsty): placed near its farm, it makes the farm work (no road needed)
 };
 
 // Build menu tab
@@ -49,10 +50,11 @@ struct BuildingType {
     int8_t chain;          // Producers: index into PRODUCTION_CHAINS (src/Economy/ProductionChains.h), else -1
     int dockRows = 0;      // Tiles at the back of the footprint that stand over the water (a dock)
     int belowGround = 0;   // Voxels the look reaches below the ground (pilings, a moored hull)
+    int8_t moduleOf = -1;  // Modules: the farm type they belong to
 };
 
 // Index = BuildingComponent::type
-constexpr std::array<BuildingType, 12> BUILDING_TYPES = { {
+constexpr std::array<BuildingType, 14> BUILDING_TYPES = { {
     { "Warehouse", 4, 4, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "warehouse", BuildCategory::Infrastructure, -1 },
     { "Farmer House", 3, 3, 14, 30, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true, "farmer_house", BuildCategory::Housing, -1 },
     { "Marketplace", 4, 3, 10, 24, Block::PLANK, Block::AWNING, BuildingRole::Market, 0, LookStyle::Stall, true, "marketplace", BuildCategory::Housing, -1 },
@@ -62,10 +64,14 @@ constexpr std::array<BuildingType, 12> BUILDING_TYPES = { {
     { "Sawmill", 3, 3, 12, 26, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "sawmill", BuildCategory::Production, 2 },
     { "Sheep Farm", 3, 3, 12, 28, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "sheep_farm", BuildCategory::Production, 3 },
     { "Framework Knitter", 3, 3, 20, 34, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "framework_knitter", BuildCategory::Production, 4 },
-    { "Pig Farm", 3, 3, 10, 22, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "pig_farm", BuildCategory::Production, 5 },
+    { "Pig Farm", 3, 4, 10, 26, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "pig_farm", BuildCategory::Production, 5 },
     { "Slaughterhouse", 3, 3, 16, 32, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "slaughterhouse", BuildCategory::Production, 6 },
     // A warehouse on the coast with a pier: ships are built, load and unload here
     { "Harbor", 4, 5, 16, 34, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "harbor", BuildCategory::Infrastructure, -1, 2, 6 },
+    // Farm modules, as in Anno 1800: fenced pens placed around their farm (from the farm's panel,
+    // or right after placing the farm)
+    { "Sheepfold", 3, 3, 4, 14, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "sheepfold", BuildCategory::Production, -1, 0, 0, 7 },
+    { "Pigsty", 2, 3, 4, 12, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "pigsty", BuildCategory::Production, -1, 0, 0, 9 },
 } };
 constexpr uint16_t BUILDING_WAREHOUSE = 0;
 constexpr uint16_t BUILDING_FARMER_HOUSE = 1;
@@ -79,6 +85,17 @@ constexpr uint16_t BUILDING_FRAMEWORK_KNITTER = 8;
 constexpr uint16_t BUILDING_PIG_FARM = 9;
 constexpr uint16_t BUILDING_SLAUGHTERHOUSE = 10;
 constexpr uint16_t BUILDING_HARBOR = 11;
+constexpr uint16_t BUILDING_SHEEPFOLD = 12;
+constexpr uint16_t BUILDING_PIGSTY = 13;
+static_assert(BUILDING_TYPES[BUILDING_SHEEPFOLD].moduleOf == BUILDING_SHEEP_FARM && BUILDING_TYPES[BUILDING_PIGSTY].moduleOf == BUILDING_PIG_FARM);
+
+// The module type of a farm type, or -1
+constexpr int ModuleTypeOf(int farmType) {
+    for (int type = 0; type < (int)BUILDING_TYPES.size(); type++) {
+        if (BUILDING_TYPES[type].moduleOf == farmType) return type;
+    }
+    return -1;
+}
 
 // The residence building of each population tier (upgrades swap between these in place, so they
 // must share a footprint)

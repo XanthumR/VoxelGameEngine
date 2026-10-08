@@ -594,25 +594,75 @@ def sawmill():
 
 
 def sheep_farm():
-    """36 x 36 x 28: a barn with a fenced sheep yard and a hay rack."""
+    """36 x 36 x 28: the shepherd's farmstead: a timber-framed farmhouse with a thatched roof and a
+    chimney, an open shearing shed with wool bales and a shearing bench, hay ricks and a water
+    trough. The sheep themselves live in the sheepfolds placed around it."""
     m = Model(36, 36, 28)
-    u0, u1, v0, v1 = 2, 16, 16, 33
-    m.ring(u0, v0, u1, v1, 0, 10, TIMBER_LIGHT)
-    for u in range(u0, u1 + 1, 2):
-        m.box(u, v0, 0, u, v0, 10, TIMBER_DARK)
-    m.box(6, v0, 0, 12, v0, 8, DOOR_WOOD)
-    m.box(9, v0, 0, 9, v0, 8, TIMBER_DARK)
-    gable_roof(m, u0, u1, v0, v1, 10, 22, THATCH, THATCH_DARK, overhang=2, gable_wall=TIMBER_LIGHT)
+    # Farmhouse at the back left
+    u0, u1, v0, v1 = 2, 19, 14, 33
+    m.ring(u0, v0, u1, v1, 0, 1, STONE_DARK)
+    timber_frame(m, u0, u1, v0, v1, 2, 11, PLASTER_CREAM, post_spacing=4)
+    m.box(9, v0, 2, 12, v0, 9, DOOR_WOOD)
+    m.box(9, v0 - 2, 0, 12, v0 - 1, 0, COBBLE)
+    window(m, 4, v0, 5, 3, 3, SHUTTER_GREEN, FLOWER_YELLOW, facing=-1)
+    window(m, 15, v0, 5, 2, 3, SHUTTER_GREEN, None, facing=-1)
+    side_window(m, u0, 22, 5, 3, 3, SHUTTER_GREEN, facing=-1)
+    gable_roof(m, u0, u1, v0, v1, 11, 24, THATCH, THATCH_DARK, overhang=2, gable_wall=PLASTER_CREAM)
+    chimney(m, 14, 27, 2, 27)
 
-    fence(m, 19, 2, 34, 33, gate=(24, 27))
-    m.box(22, 28, 0, 27, 31, 0, TIMBER_DARK)  # Hay rack
-    m.box(22, 28, 1, 27, 31, 3, HAY)
-    for u in (22, 27):
+    # Open shearing shed at the right: posts, a slate lean-to roof, wool inside
+    s0, s1, t0, t1 = 23, 34, 14, 33
+    for u, v in ((s0, t0), (s1, t0), (s0, t1), (s1, t1), (s0, 23), (s1, 23)):
+        m.box(u, v, 0, u, v, 10 - (u - s0) // 3, TIMBER_DARK)
+    for u in range(s0 - 1, s1 + 2):
+        m.box(u, t0 - 1, 11 - (u - s0) // 3, u, t1 + 1, 11 - (u - s0) // 3, ROOF_SLATE)
+    m.box(s1, t0, 0, s1, t1, 4, TIMBER_LIGHT)  # Back wall, half height
+    m.box(25, 17, 0, 30, 19, 2, TIMBER_LIGHT)  # Shearing bench
+    m.box(26, 17, 3, 29, 19, 4, WOOL_WHITE)    # A fleece on it
+    m.set(30, 18, 3, IRON)                     # Shears
+    for u, v in ((25, 26), (29, 26), (25, 30)):  # Wool bales tied with bands
+        m.box(u, v, 0, u + 2, v + 2, 2, WOOL_WHITE)
+        m.box(u + 1, v, 0, u + 1, v + 2, 2, TIMBER_DARK)
+    m.box(27, 28, 3, 29, 30, 5, WOOL_WHITE)
+
+    # Yard in front: hay ricks, a trough, a cart of hay, a fence along the front
+    fence(m, 0, 0, 35, 10, gate=(8, 14))
+    for u in (24, 30):
+        m.box(u, 3, 0, u + 3, 6, 2, HAY)
+        m.box(u + 1, 4, 3, u + 2, 5, 4, HAY)
+    m.box(3, 3, 0, 4, 8, 1, TIMBER_DARK)  # Trough with water
+    m.box(4, 4, 1, 4, 7, 1, WELL_WATER)
+    m.box(16, 3, 1, 21, 6, 1, TIMBER_LIGHT)  # Hay cart
+    m.box(16, 3, 2, 21, 6, 3, HAY)
+    for u, v in ((16, 2), (21, 2), (16, 7), (21, 7)):
+        m.box(u, v, 0, u, v, 1, TIMBER_DARK)
+    m.box(14, 4, 1, 15, 4, 1, TIMBER_DARK)  # Shafts
+    return m
+
+
+def sheepfold():
+    """36 x 36 x 14: a fenced sheep pasture (a farm module): grass inside a post-and-rail fence, a
+    small thatched shelter, a hay rack, a trough and a flock of sheep."""
+    m = Model(36, 36, 14)
+    fence(m, 0, 0, 35, 35, gate=(15, 19))
+    # Shelter in the back corner: posts and a thatched lean-to
+    for u, v in ((24, 25), (33, 25), (24, 33), (33, 33)):
+        m.box(u, v, 0, u, v, 7 - (33 - v) // 3, TIMBER_DARK)
+    for v in range(24, 35):
+        m.box(23, v, 8 - (34 - v) // 3, 34, v, 8 - (34 - v) // 3, THATCH)
+    m.box(24, 33, 0, 33, 33, 4, TIMBER_LIGHT)
+    m.box(26, 29, 0, 30, 31, 1, HAY)  # Straw bedding
+    # Hay rack and trough
+    m.box(4, 28, 0, 9, 31, 0, TIMBER_DARK)
+    m.box(4, 28, 1, 9, 31, 3, HAY)
+    for u in (4, 9):
         m.box(u, 28, 1, u, 28, 4, TIMBER_DARK)
-    for u, v in ((21, 5), (27, 7), (31, 12), (23, 15), (29, 20), (25, 23)):
+    m.box(3, 8, 0, 4, 15, 1, TIMBER_DARK)
+    m.box(4, 9, 1, 4, 14, 1, WELL_WATER)
+    for u, v in ((8, 5), (14, 10), (21, 6), (27, 13), (10, 18), (19, 21), (28, 4)):
         sheep(m, u, v)
-    sheep(m, 7, 4)
-    m.box(4, 10, 0, 7, 12, 1, HAY)
+    for u, v in ((6, 22), (31, 19), (16, 28)):  # Flowers in the grass
+        m.set(u, v, 0, FLOWER_YELLOW)
     return m
 
 
@@ -651,24 +701,76 @@ def framework_knitter():
 
 
 def pig_farm():
-    """36 x 36 x 22: a low stone sty with a thatched roof and a muddy pen with troughs and pigs."""
-    m = Model(36, 36, 22)
-    u0, u1, v0, v1 = 4, 19, 21, 33
-    m.ring(u0, v0, u1, v1, 0, 5, STONE_DARK)
-    m.box(9, v0, 0, 13, v0, 4, AIR)  # Open doorway into the pen
-    gable_roof(m, u0, u1, v0, v1, 5, 14, THATCH, THATCH_DARK, overhang=2, gable_wall=TIMBER_LIGHT)
+    """36 x 48 x 26: the swineherd's farmstead: a stone farmhouse with a tiled roof and a chimney,
+    a feed barn with grain sacks and swill barrels, a muck heap and a covered feed store. The pigs
+    live in the pigsties placed around it."""
+    m = Model(36, 48, 26)
+    # Farmhouse at the back
+    u0, u1, v0, v1 = 3, 22, 28, 45
+    m.ring(u0, v0, u1, v1, 0, 9, STONE_LIGHT)
+    m.ring(u0, v0, u1, v1, 0, 0, STONE_DARK)
+    for y in range(0, 10, 2):
+        for u, v in ((u0, v0), (u1, v0), (u0, v1), (u1, v1)):
+            m.set(u, v, y, STONE_DARK)
+    m.box(11, v0, 0, 14, v0, 7, DOOR_WOOD)
+    m.box(11, v0 - 3, 0, 14, v0 - 1, 0, COBBLE)
+    for u in (5, 18):
+        window(m, u, v0, 3, 2, 3, SHUTTER_RED, FLOWER_RED, facing=-1)
+    side_window(m, u0, 35, 3, 3, 3, SHUTTER_RED, facing=-1)
+    gable_roof(m, u0, u1, v0, v1, 9, 21, ROOF_TILE_RED, ROOF_TILE_DARK, overhang=2, gable_wall=STONE_LIGHT)
+    chimney(m, 6, 40, 2, 24)
 
-    fence(m, 1, 1, 34, 19, gate=(15, 18))
-    for v in range(2, 19):
-        for u in range(2, 34):
-            if (u * 7 + v * 13) % 5 != 0:
+    # Feed barn at the front right: timber walls, a wide door, thatch
+    b0, b1, c0, c1 = 18, 33, 4, 20
+    for y in range(0, 9):
+        m.ring(b0, c0, b1, c1, y, y, TIMBER_LIGHT if y % 3 else TIMBER_DARK)
+    m.box(22, c0, 0, 28, c0, 7, AIR)  # Open double door
+    m.box(21, c0, 0, 21, c0, 8, TIMBER_DARK)
+    m.box(29, c0, 0, 29, c0, 8, TIMBER_DARK)
+    gable_roof(m, b0, b1, c0, c1, 8, 17, THATCH, THATCH_DARK, overhang=2, gable_wall=TIMBER_LIGHT)
+    for u, v in ((20, 8), (23, 8), (20, 12)):  # Grain sacks inside
+        m.box(u, v, 0, u + 1, v + 2, 2, PLASTER_CREAM)
+    m.box(26, 14, 0, 31, 18, 2, HAY)
+    barrel(m, 29, 7)
+
+    # Yard: swill barrels and a trough, a muck heap, a feed store on posts, a cart path
+    for u, v in ((3, 3), (7, 3)):
+        barrel(m, u, v)
+    m.box(3, 8, 0, 11, 9, 1, TIMBER_DARK)
+    m.box(4, 8, 1, 10, 9, 1, MUD)  # Swill in the trough
+    for v in range(14, 22):  # Muck heap
+        for u in range(3, 10):
+            h = 2 - (abs(u - 6) + abs(v - 18)) // 3
+            if h >= 0:
+                m.box(u, v, 0, u, v, h, MUD)
+    m.set(5, 17, 3, HAY)
+    m.box(12, 0, 0, 16, v0 - 4, 0, COBBLE)  # Path from the road to the house
+    fence(m, 0, 0, 35, 47, gate=(11, 17))
+    return m
+
+
+def pigsty():
+    """24 x 36 x 12: a pigsty (a farm module): a muddy pen inside a low fence, a stone hut with a
+    thatched roof at the back, troughs and pigs."""
+    m = Model(24, 36, 12)
+    for v in range(1, 35):
+        for u in range(1, 23):
+            if (u * 7 + v * 13) % 6 != 0:
                 m.set(u, v, 0, MUD)
-    for u0_trough in (5, 22):  # Troughs with water
-        m.box(u0_trough, 16, 0, u0_trough + 6, 17, 1, TIMBER_DARK)
-        m.box(u0_trough + 1, 16, 1, u0_trough + 5, 17, 1, WELL_WATER)
-    for u, v in ((6, 4), (14, 7), (24, 4), (27, 10), (9, 11)):
+    fence(m, 0, 0, 23, 35, gate=(9, 13))
+    # Hut at the back: stone walls, open front, thatch
+    h0, h1, k0, k1 = 3, 20, 24, 33
+    m.ring(h0, k0, h1, k1, 0, 4, STONE_DARK)
+    m.box(8, k0, 0, 14, k0, 3, AIR)
+    gable_roof(m, h0, h1, k0, k1, 4, 9, THATCH, THATCH_DARK, overhang=1, gable_wall=TIMBER_LIGHT)
+    m.box(h0 + 1, k0 + 1, 0, h1 - 1, k1 - 1, 0, HAY)  # Straw inside
+    # Troughs
+    m.box(2, 3, 0, 3, 10, 1, TIMBER_DARK)
+    m.box(3, 4, 1, 3, 9, 1, WELL_WATER)
+    m.box(15, 3, 0, 21, 4, 1, TIMBER_DARK)
+    m.box(16, 3, 1, 20, 3, 1, MUD)
+    for u, v in ((6, 6), (12, 12), (16, 8), (5, 17), (14, 19)):
         pig(m, u, v)
-    m.box(24, 26, 0, 29, 29, 2, HAY)
     return m
 
 
@@ -811,6 +913,8 @@ def main():
         'sheep_farm_1': sheep_farm(),
         'framework_knitter_1': framework_knitter(),
         'pig_farm_1': pig_farm(),
+        'sheepfold_1': sheepfold(),
+        'pigsty_1': pigsty(),
         'slaughterhouse_1': slaughterhouse(),
         'harbor_1': harbor(),
     }

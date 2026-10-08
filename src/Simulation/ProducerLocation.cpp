@@ -54,8 +54,8 @@ LocationReport EvaluateLocation(const ProductionChain& chain, glm::ivec2 minTile
         break;
     }
 
-    case LocationRule::Pasture:
-        // Free island ground around the footprint: no building, no road
+    case LocationRule::Modules:
+        // Where the modules may go: free island ground around the footprint, no building, no road
         for (int tz = minTile.y - radius; tz < minTile.y + tiles.y + radius; tz++) {
             for (int tx = minTile.x - radius; tx < minTile.x + tiles.x + radius; tx++) {
                 glm::ivec2 tile(tx, tz);
@@ -63,12 +63,49 @@ LocationReport EvaluateLocation(const ProductionChain& chain, glm::ivec2 minTile
                 if (inFootprint || occupancy.At(tile) != INVALID_GAME_OBJECT || roads.IsRoad(tile)) continue;
                 glm::ivec2 center = tile * TILE_SIZE + TILE_SIZE / 2;
                 if (!islands.IsLandColumn(center.x, center.y)) continue;
-                report.count++;
                 if (counted) counted->push_back(tile);
             }
         }
-        report.factor = std::min(1000, report.count * 1000 / std::max(1, report.needed));
+        report.factor = 0;
         break;
     }
     return report;
+}
+
+bool InModuleRange(const VoxelAnchorComponent& farm, int radius, glm::ivec2 moduleMinTile, glm::ivec2 moduleTiles) {
+    glm::ivec2 farmMin(ColumnToTile(farm.origin.x), ColumnToTile(farm.origin.z));
+    glm::ivec2 rangeMin = farmMin - radius;
+    glm::ivec2 rangeMax = farmMin + farm.footprint / TILE_SIZE + radius; // Exclusive
+    return glm::all(glm::greaterThanEqual(moduleMinTile, rangeMin)) && glm::all(glm::lessThanEqual(moduleMinTile + moduleTiles, rangeMax));
+}
+
+int CountModules(const GameObjectRegistry& objects, GameObjectId farm) {
+    int radius = PRODUCTION_CHAINS[BUILDING_TYPES[objects.Building(farm).type].chain].radius;
+    const VoxelAnchorComponent& farmAnchor = objects.Anchor(farm);
+    int count = 0;
+    for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
+        GameObjectId id = objects.IdAtSlot(slot);
+        if (id == INVALID_GAME_OBJECT || objects.Building(id).owner != farm) continue;
+        const VoxelAnchorComponent& anchor = objects.Anchor(id);
+        glm::ivec2 minTile(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
+        if (InModuleRange(farmAnchor, radius, minTile, anchor.footprint / TILE_SIZE)) count++;
+    }
+    return count;
+}
+
+GameObjectId FindModuleFarm(const GameObjectRegistry& objects, uint16_t moduleType, IslandId island, glm::ivec2 minTile, glm::ivec2 tiles,
+    GameObjectId preferred) {
+    int farmType = BUILDING_TYPES[moduleType].moduleOf;
+    if (farmType < 0) return INVALID_GAME_OBJECT;
+    const ProductionChain& chain = PRODUCTION_CHAINS[BUILDING_TYPES[farmType].chain];
+    auto fits = [&](GameObjectId farm) {
+        return objects.IsAlive(farm) && objects.Building(farm).type == farmType && objects.Building(farm).island == island &&
+               InModuleRange(objects.Anchor(farm), chain.radius, minTile, tiles) && CountModules(objects, farm) < chain.fullSpeedCount;
+    };
+    if (fits(preferred)) return preferred;
+    for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
+        GameObjectId id = objects.IdAtSlot(slot);
+        if (id != INVALID_GAME_OBJECT && fits(id)) return id;
+    }
+    return INVALID_GAME_OBJECT;
 }

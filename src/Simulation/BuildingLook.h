@@ -37,3 +37,9 @@ inline glm::ivec2 RotateToFootprint(int u, int v, uint8_t rotation, glm::ivec2 s
 // Fills ids with the building's volume (FootprintColumns x BuildingHeight), AIR where empty.
 // Order: x fastest, then z, then y (from the ground up).
 void BuildLook(const BuildingType& type, uint8_t rotation, std::vector<uint8_t>& ids);
+
+// A building going up, progress 0 (nothing) to 1 (finished): the lower layers are finished, with a
+// ragged top edge, and above them a timber frame stands where the next layers go; the rest is air.
+// look is the finished volume of the given size (x, height, z; ordered like BuildLook); out gets
+// the same size.
+void ConstructionLook(const std::vector<uint8_t>& look, glm::ivec3 size, float progress, std::vector<uint8_t>& out);

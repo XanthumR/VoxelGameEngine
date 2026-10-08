@@ -47,7 +47,7 @@ void DrawBuildingMarkers(const ICamera& camera, const GameObjectRegistry& object
         if (id == INVALID_GAME_OBJECT) continue;
         const BuildingType& type = BUILDING_TYPES[objects.Building(id).type];
         const LogisticsComponent& logistics = objects.Logistics(id);
-        if (type.role == BuildingRole::Storage) continue; // Never needs a road to itself
+        if (type.role == BuildingRole::Storage || type.role == BuildingRole::Module) continue; // Never need a road
 
         // Red: no road to a warehouse. Amber: a house no marketplace serves.
         bool noRoad = !logistics.connected;

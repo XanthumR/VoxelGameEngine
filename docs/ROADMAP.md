@@ -407,9 +407,9 @@ Producers with workforce, location rules and carts. Trees: one tree per clump of
 | Fishery (3×3) | 5 Farmers | → Fish | 30 s | **Coast** (required): open sea within 2 tiles of the footprint |
 | Lumberjack (3×3) | 5 Farmers | → Wood | 20 s | **Trees** within 6 tiles; productivity = standing trees ÷ 6. Fells the nearest tree each cycle; it regrows after 5 min |
 | Sawmill (3×3) | 5 Farmers | Wood → Planks | 20 s | — |
-| Sheep Farm (3×3) | 5 Farmers | → Wool | 30 s | **Pasture**: free grass tiles within 3 tiles; productivity = free tiles ÷ 24 |
+| Sheep Farm (3×3) | 5 Farmers | → Wool | 30 s | **Modules** (changed later, as in Anno 1800): 3 sheepfolds (3×3 pens) within 3 tiles; productivity = sheepfolds ÷ 3 |
 | Framework Knitter (3×3) | 10 Farmers | Wool → Work Clothes | 30 s | — |
-| Pig Farm (3×3) | 10 Workers | → Pigs (new good) | 60 s | **Pasture**, as for the sheep farm |
+| Pig Farm (3×4) | 10 Workers | → Pigs (new good) | 60 s | **Modules**: 5 pigsties (2×3 pens) within 3 tiles; productivity = pigsties ÷ 5 |
 | Slaughterhouse (3×3) | 15 Workers | Pigs → Sausages | 30 s | — |
 
 **Balance:**

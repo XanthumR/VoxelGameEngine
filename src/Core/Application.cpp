@@ -368,6 +368,10 @@ void Application::UpdateTileOverlay() {
     if (m_BuildTool.HasLocationPreview()) {
         for (const glm::ivec2& tile : m_BuildTool.PreviewLocationTiles()) m_TileOverlay.Set(tile, TileOverlay::LOCATION_COUNTED);
     }
+    // A moved farm's modules: green where they fit, red where they would be destroyed
+    for (size_t i = 0; i < m_BuildTool.CarriedTiles().size(); i++) {
+        m_TileOverlay.Set(m_BuildTool.CarriedTiles()[i], m_BuildTool.CarriedValid()[i] ? TileOverlay::PREVIEW_ADD : TileOverlay::PREVIEW_INVALID);
+    }
     if (key.selection == BuildTool::ROAD) {
         const std::vector<glm::ivec2>& path = m_RoadTool.PathTiles();
         const std::vector<uint8_t>& valid = m_RoadTool.PathValid();
@@ -440,6 +444,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     // Trees cut down or grown back
     for (const TreeChange& change : m_Simulation.Trees().Changes()) ApplyTreeChange(change);
     m_Simulation.Trees().ClearChanges();
+    // Buildings going up; their dust stops while the game is paused, like the smoke
+    m_BuildTool.AnimateConstruction(deltaTime, m_GameSpeed > 0 ? &m_Smoke : nullptr);
 
     // --- UI ---
     bool strategy = m_CameraMode == CameraMode::Strategy;

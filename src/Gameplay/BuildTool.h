@@ -16,6 +16,7 @@
 struct GLFWwindow;
 class BuildingModelLibrary;
 class RoadTool;
+class SmokeSystem;
 class TerrainGenerator;
 class Simulation;
 class VoxelWorld;
@@ -28,10 +29,16 @@ class WorldEditor;
 // and holding the left button on a building and dragging moves it: it lifts out of the world, its
 // ghost follows the cursor (R rotates it), and letting go sets it down there when the ghost is green
 // (free of charge, on the same island) or back where it stood otherwise; right click cancels.
+// Placing a farm selects its module type next, so its pens go around it; demolishing a farm
+// demolishes its modules. A moved farm carries its modules along (turning with it): set down, any
+// whose new spot is blocked (a tree, a building) is destroyed, as in Anno. A newly placed building goes up over CONSTRUCTION_SECONDS: a timber frame rises from the ground
+// with the finished layers behind it, raising dust. Only its look: it works from the start.
 class BuildTool {
 public:
     static constexpr int NO_TYPE = -1;
     static constexpr int ROAD = -2; // The road tool is selected (RoadTool handles the mouse)
+    static constexpr float CONSTRUCTION_SECONDS = 3.0f;
+    static constexpr int MAX_CONSTRUCTIONS = 64; // More at once are finished straight away
 
     // Build menu tabs: the buildable types of a category (hotkeys 1, 2, ...); the Infrastructure
     // tab ends with the road
@@ -70,13 +77,23 @@ public:
     bool HasLocationPreview() const { return m_HasLocation; }
     const LocationReport& PreviewLocation() const { return m_Location; }
     const std::vector<glm::ivec2>& PreviewLocationTiles() const { return m_LocationTiles; }
-    uint32_t LocationRevision() const { return m_LocationRevision; } // Changes when the above do
+    uint32_t LocationRevision() const { return m_LocationRevision; } // Changes when the above or below do
+
+    // While a farm is moved: the tiles its modules would take, and whether each module fits there
+    const std::vector<glm::ivec2>& CarriedTiles() const { return m_CarriedTiles; }
+    const std::vector<uint8_t>& CarriedValid() const { return m_CarriedValid; } // Per tile
 
     GameObjectId Place(uint16_t type, uint8_t rotation, glm::ivec2 minTile); // INVALID if not placeable
     void Demolish(GameObjectId id);
 
+    // Selects the module type of a farm, to place its modules (they go to this farm first)
+    void SelectModules(GameObjectId farm);
+
     // Rebuilds the voxels of a building whose type changed in place (house upgrades)
     void RefreshLook(GameObjectId id);
+
+    // Once per frame (real time): buildings going up. dust: where their dust goes, null for none.
+    void AnimateConstruction(float deltaTime, SmokeSystem* dust);
 
 private:
     // Puts the generated terrain back in a box (under a demolished dock)
@@ -85,6 +102,17 @@ private:
     void StampLook(GameObjectId id); // Its model into the world at its anchor
     void StartMove(GameObjectId id);
     void EndMove(bool toPreview);    // Set down at the last green preview, or back where it stood
+
+    // A moved farm's modules, lifted with it, and where each stood
+    struct Carried {
+        GameObjectId id;
+        glm::ivec2 minTile;
+        uint8_t rotation;
+    };
+    // Where a carried module goes when its farm is set down at farmTile with farmRotation
+    void CarriedTarget(const Carried& carried, glm::ivec2 farmTile, uint8_t farmRotation, glm::ivec2& minTile, uint8_t& rotation) const;
+    bool CarriedFits(GameObjectId id, glm::ivec2 minTile, uint8_t rotation) const;
+    void DestroyLifted(GameObjectId id); // A carried module that does not fit: gone, half its cost back
 
     const VoxelWorld& m_World;
     WorldEditor& m_Editor;
@@ -95,7 +123,16 @@ private:
     std::vector<uint8_t> m_ChunkScratch;   // One generated chunk (RestoreTerrain)
     std::vector<uint8_t> m_RestoreBuffer;  // The restored box
 
+    struct Construction {
+        GameObjectId id;
+        float progress; // 0 to 1
+    };
+    std::vector<Construction> m_Constructions;
+    std::vector<uint8_t> m_ConstructionBuffer;
+
     int m_SelectedType = NO_TYPE;
+    GameObjectId m_ModuleFarm = INVALID_GAME_OBJECT; // The farm SelectModules chose
+    GameObjectId m_MoveOwner = INVALID_GAME_OBJECT;  // A moved module's farm
     BuildCategory m_Tab = BuildCategory::Housing;
     uint8_t m_Rotation = 0;
     PlacementCheck m_LastCheck;
@@ -135,6 +172,10 @@ private:
     uint8_t m_MoveFromRotation = 0;
     bool m_MoveValid = false;               // The last preview was green, at m_MoveTile
     glm::ivec2 m_MoveTile = glm::ivec2(0);
+    std::vector<Carried> m_Carried;
+    std::vector<glm::ivec2> m_CarriedTiles;
+    std::vector<uint8_t> m_CarriedValid;
+    glm::ivec3 m_CarriedKey = glm::ivec3(-1); // Farm tile and rotation the above were made for
 
     bool m_LeftWasPressed = false, m_RightWasPressed = false, m_RWasPressed = false;
     std::array<bool, 9> m_NumberWasPressed = {}; // Keys 1-9

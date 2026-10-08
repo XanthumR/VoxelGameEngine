@@ -108,24 +108,44 @@ TEST(ProducerLocationTest, FisheryInlandIsRefused) {
     FAIL() << "No inland building spot found";
 }
 
-TEST(ProducerLocationTest, PastureShrinksWithRoadsAndBuildings) {
-    TestWorld& test = TestWorld::Get();
-    IslandRegistry islands(test.terrain);
-    OccupancyGrid occupancy;
-    RoadNetwork roads;
-    TreeRegistry trees(test.terrain);
-    glm::ivec2 tile = InlandTile();
-    std::vector<glm::ivec2> counted;
-    LocationReport before = EvaluateLocation(SheepFarm(), tile, PRODUCER_TILES, islands, occupancy, roads, trees, &counted);
-    ASSERT_GE(before.count, 3);
-    EXPECT_EQ((size_t)before.count, counted.size());
-    EXPECT_EQ(before.needed, SheepFarm().fullSpeedCount);
+// A building object of a type at a tile, as BuildTool::Place sets it up
+static GameObjectId AddBuilding(GameObjectRegistry& objects, uint16_t type, glm::ivec2 minTile, GameObjectId owner = INVALID_GAME_OBJECT) {
+    GameObjectId id = objects.Create();
+    objects.Building(id).type = type;
+    objects.Building(id).island = 1;
+    objects.Building(id).owner = owner;
+    objects.Anchor(id).origin = glm::ivec3(minTile.x * TILE_SIZE, 0, minTile.y * TILE_SIZE);
+    objects.Anchor(id).footprint = FootprintTiles(BUILDING_TYPES[type], 0) * TILE_SIZE;
+    return id;
+}
 
-    occupancy.Occupy(counted[0], glm::ivec2(1), 7);
-    roads.Add(counted[1]);
-    LocationReport after = EvaluateLocation(SheepFarm(), tile, PRODUCER_TILES, islands, occupancy, roads, trees);
-    EXPECT_EQ(after.count, before.count - 2);
-    EXPECT_EQ(after.factor, std::min(1000, after.count * 1000 / SheepFarm().fullSpeedCount));
+TEST(ProducerLocationTest, FarmModulesCountInRangeUpToTheFullCount) {
+    GameObjectRegistry objects;
+    const glm::ivec2 farmTile(100, 100);
+    GameObjectId farm = AddBuilding(objects, BUILDING_SHEEP_FARM, farmTile);
+    const glm::ivec2 fold = FootprintTiles(BUILDING_TYPES[BUILDING_SHEEPFOLD], 0);
+    const int radius = SheepFarm().radius;
+
+    // Within the radius on every side, not one tile beyond it
+    EXPECT_EQ(FindModuleFarm(objects, BUILDING_SHEEPFOLD, 1, farmTile - radius, fold), farm);
+    EXPECT_EQ(FindModuleFarm(objects, BUILDING_SHEEPFOLD, 1, farmTile + glm::ivec2(3 + radius) - fold, fold), farm);
+    EXPECT_EQ(FindModuleFarm(objects, BUILDING_SHEEPFOLD, 1, farmTile - radius - 1, fold), INVALID_GAME_OBJECT);
+    EXPECT_EQ(FindModuleFarm(objects, BUILDING_SHEEPFOLD, 2, farmTile - radius, fold), INVALID_GAME_OBJECT); // Other island
+    EXPECT_EQ(FindModuleFarm(objects, BUILDING_PIGSTY, 1, farmTile - radius, glm::ivec2(2, 3)), INVALID_GAME_OBJECT); // Not its farm
+
+    // Each owned module counts; the farm is full at the chain's full-speed count
+    for (int i = 0; i < SheepFarm().fullSpeedCount; i++) {
+        EXPECT_EQ(CountModules(objects, farm), i);
+        AddBuilding(objects, BUILDING_SHEEPFOLD, farmTile + glm::ivec2(-3, -3 + 3 * i), farm);
+    }
+    EXPECT_EQ(CountModules(objects, farm), SheepFarm().fullSpeedCount);
+    EXPECT_EQ(FindModuleFarm(objects, BUILDING_SHEEPFOLD, 1, farmTile + glm::ivec2(3, 0), fold), INVALID_GAME_OBJECT);
+
+    // A second farm nearby takes the next one; a module out of its farm's range stops counting
+    GameObjectId second = AddBuilding(objects, BUILDING_SHEEP_FARM, farmTile + glm::ivec2(6, 0));
+    EXPECT_EQ(FindModuleFarm(objects, BUILDING_SHEEPFOLD, 1, farmTile + glm::ivec2(3, 0), fold, farm), second);
+    objects.Anchor(farm).origin.x -= 20 * TILE_SIZE; // The farm moved away
+    EXPECT_EQ(CountModules(objects, farm), 0);
 }
 
 TEST(TreeRegistryTest, TreesStandApart) {

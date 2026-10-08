@@ -90,3 +90,23 @@ TEST(BuildingLookTest, MarketplaceIsAnOpenStall) {
     EXPECT_EQ(At(ids, size, size.x / 2, 0, 1), Block::AIR);
     EXPECT_EQ(At(ids, size, size.x / 2, 1, 1), Block::AIR);
 }
+
+TEST(BuildingLookTest, ConstructionRisesFromNothingToTheFinishedLook) {
+    const BuildingType& type = BUILDING_TYPES[0];
+    std::vector<uint8_t> look, out;
+    BuildLook(type, 0, look);
+    glm::ivec2 columns = FootprintColumns(type, 0);
+    glm::ivec3 size(columns.x, BuildingHeight(type), columns.y);
+
+    ConstructionLook(look, size, 0.0f, out);
+    EXPECT_TRUE(std::all_of(out.begin(), out.end(), [](uint8_t id) { return id == Block::AIR; }));
+    ConstructionLook(look, size, 1.0f, out);
+    EXPECT_EQ(out, look);
+
+    // Halfway: the ground layer is finished, the top is still air, and timber stands in between
+    ConstructionLook(look, size, 0.5f, out);
+    size_t layer = (size_t)size.x * size.z;
+    EXPECT_TRUE(std::equal(out.begin(), out.begin() + layer, look.begin()));
+    EXPECT_TRUE(std::all_of(out.end() - layer, out.end(), [](uint8_t id) { return id == Block::AIR; }));
+    EXPECT_NE(std::find(out.begin(), out.end(), Block::TIMBER_LIGHT), out.end());
+}

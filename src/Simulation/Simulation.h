@@ -51,7 +51,7 @@ public:
     const PopulationSystem& Population() const { return m_Population; }
 
     // Everything placement checks against, for this world
-    PlacementContext MakePlacementContext(const VoxelWorld& world) { return { world, m_Islands, m_Occupancy, m_Roads }; }
+    PlacementContext MakePlacementContext(const VoxelWorld& world) { return { world, m_Islands, m_Occupancy, m_Roads, &m_Objects }; }
 
     // Moving a building: lifted, it gives up its tiles while the player drags it; placed again, it
     // takes the new ones (the caller has validated them). The game object keeps its residents,

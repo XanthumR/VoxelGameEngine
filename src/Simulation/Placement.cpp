@@ -26,6 +26,7 @@ const char* PlacementErrorText(PlacementError error) {
     case PlacementError::NeedsStorage: return "settle this island with a warehouse or harbor first";
     case PlacementError::NeedsShip: return "needs a ship of yours within 4 tiles carrying the planks";
     case PlacementError::OtherIsland: return "a building can only move within its island";
+    case PlacementError::NeedsFarm: return "must be near its farm (3 tiles), and the farm must have room";
     }
     return "?";
 }
@@ -169,6 +170,10 @@ PlacementCheck ValidatePlacement(const PlacementContext& context, uint16_t type,
         if (chain.rule == LocationRule::Coast && !HasCoast(context.islands.Terrain(), minTile, tiles, chain.radius)) {
             check.error = PlacementError::NeedsCoast;
         }
+    }
+    if (building.role == BuildingRole::Module &&
+        (!context.objects || FindModuleFarm(*context.objects, type, check.island, minTile, tiles) == INVALID_GAME_OBJECT)) {
+        check.error = PlacementError::NeedsFarm;
     }
     return check;
 }

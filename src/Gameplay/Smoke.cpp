@@ -85,6 +85,17 @@ void SmokeSystem::Update(float deltaTime, const GameObjectRegistry& objects, con
     }
 }
 
+void SmokeSystem::Dust(float deltaTime, glm::vec2 min, glm::vec2 max, float y) {
+    if ((float)(Random() % 10000) >= deltaTime * DUST_RATE * 10000.0f || m_Puffs.size() >= (size_t)MAX_PUFFS) return;
+    glm::vec2 size = max - min;
+    float along = (float)(Random() % 10000) / 10000.0f * 2.0f * (size.x + size.y); // Around the edge
+    glm::vec2 point = along < size.x               ? min + glm::vec2(along, 0.0f)
+                      : along < size.x + size.y     ? min + glm::vec2(size.x, along - size.x)
+                      : along < 2 * size.x + size.y ? max - glm::vec2(along - size.x - size.y, 0.0f)
+                                                    : max - glm::vec2(size.x, along - 2 * size.x - size.y);
+    m_Puffs.push_back({ glm::vec3(point.x, y, point.y), 0.0f, (uint8_t)(Random() & 255) }); // Within the reserve
+}
+
 void SmokeSystem::AppendFigures(std::vector<Figure>& out) const {
     for (const Puff& puff : m_Puffs) {
         float life = puff.age / LIFETIME;

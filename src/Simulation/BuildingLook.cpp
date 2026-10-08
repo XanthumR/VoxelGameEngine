@@ -132,3 +132,23 @@ void BuildLook(const BuildingType& type, uint8_t rotation, std::vector<uint8_t>&
         }
     }
 }
+
+void ConstructionLook(const std::vector<uint8_t>& look, glm::ivec3 size, float progress, std::vector<uint8_t>& out) {
+    constexpr float RAGGED = 4.0f; // Layers the finished edge wanders up and down
+    constexpr float FRAME = 6.0f;  // Layers of timber frame above it
+    float front = progress * ((float)size.y + RAGGED + FRAME);
+    out.assign(look.size(), Block::AIR);
+    size_t i = 0;
+    for (int y = 0; y < size.y; y++) {
+        for (int z = 0; z < size.z; z++) {
+            for (int x = 0; x < size.x; x++, i++) {
+                if (i >= look.size() || look[i] == Block::AIR) continue;
+                uint32_t hash = (uint32_t)x * 73856093u ^ (uint32_t)y * 19349663u ^ (uint32_t)z * 83492791u;
+                hash = (hash ^ (hash >> 13)) * 0x5bd1e995u;
+                float level = (float)y + (float)((hash >> 8) & 255) / 256.0f * RAGGED;
+                if (level < front - FRAME) out[i] = look[i];
+                else if (level < front && (y % 4 == 0 || (x + z) % 4 == 0)) out[i] = Block::TIMBER_LIGHT; // Posts and beams on every wall
+            }
+        }
+    }
+}

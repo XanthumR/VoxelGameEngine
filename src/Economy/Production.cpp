@@ -204,7 +204,12 @@ void ProductionSystem::UpdateLocations(GameObjectRegistry& objects, IslandRegist
         if (id == INVALID_GAME_OBJECT || !IsProducer(objects, id)) continue;
         glm::ivec2 minTile, tiles;
         FootprintOf(objects.Anchor(id), minTile, tiles);
-        LocationReport report = EvaluateLocation(ChainOf(objects, id), minTile, tiles, islands, occupancy, roads, trees);
+        const ProductionChain& chain = ChainOf(objects, id);
+        if (chain.rule == LocationRule::Modules) {
+            objects.Production(id).locationFactor = (int16_t)std::min(1000, CountModules(objects, id) * 1000 / chain.fullSpeedCount);
+            continue;
+        }
+        LocationReport report = EvaluateLocation(chain, minTile, tiles, islands, occupancy, roads, trees);
         objects.Production(id).locationFactor = (int16_t)report.factor;
     }
 }

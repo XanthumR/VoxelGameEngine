@@ -117,11 +117,20 @@ void BuildMenu::Update(const BuildTool& tool, uint32_t buildingCount) {
         } else if (error != PlacementError::None) {
             std::snprintf(text, sizeof(text), "%s", PlacementErrorText(error));
             kind = 3;
-        } else if (tool.HasLocationPreview() && tool.PreviewLocation().needed > 0) {
-            // Producers with a trees or pasture rule: productivity from the surroundings
+        } else if (role == BuildingRole::Module) {
+            // A farm's pen: how many its farm has
             const LocationReport& location = tool.PreviewLocation();
-            const char* what = PRODUCTION_CHAINS[BUILDING_TYPES[selected].chain].rule == LocationRule::Trees ? "trees" : "pasture";
-            std::snprintf(text, sizeof(text), "Productivity %d%% (%d/%d %s)%s", location.factor / 10, location.count, location.needed, what,
+            std::snprintf(text, sizeof(text), "OK: %s %d/%d for its %s", BUILDING_TYPES[selected].name, location.count, location.needed,
+                BUILDING_TYPES[BUILDING_TYPES[selected].moduleOf].name);
+            kind = 1;
+        } else if (ModuleTypeOf(selected) >= 0) {
+            std::snprintf(text, sizeof(text), "OK: then place its %s pens on the green tiles (%d for full speed)%s", BUILDING_TYPES[ModuleTypeOf(selected)].name,
+                PRODUCTION_CHAINS[BUILDING_TYPES[selected].chain].fullSpeedCount, tool.PreviewConnected() ? "" : ", no road to a warehouse");
+            kind = tool.PreviewConnected() ? 1 : 2;
+        } else if (tool.HasLocationPreview() && tool.PreviewLocation().needed > 0) {
+            // Producers with a trees rule: productivity from the surroundings
+            const LocationReport& location = tool.PreviewLocation();
+            std::snprintf(text, sizeof(text), "Productivity %d%% (%d/%d trees)%s", location.factor / 10, location.count, location.needed,
                 tool.PreviewConnected() ? "" : ", no road to a warehouse");
             kind = location.factor >= 1000 ? 1 : (location.factor >= 500 ? 2 : 3);
         } else if (role != BuildingRole::Storage && !tool.PreviewConnected()) {

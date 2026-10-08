@@ -20,6 +20,7 @@ struct BuildingComponent {
     IslandId island = NO_ISLAND;
     uint8_t rotation = 0;       // Quarter turns
     uint8_t variant = 0;        // Which of the type's models it is drawn with
+    GameObjectId owner = INVALID_GAME_OBJECT; // Modules: the farm they belong to
 };
 
 // Links an object to the voxels it occupies; the voxels are only its look
@@ -54,7 +55,7 @@ enum class ProducerStatus : uint8_t {
     Working,
     NoRoad,       // Not connected to a warehouse
     NoWorkforce,  // No residents of the tier it needs on the island
-    BadLocation,  // Its location rule gives nothing (no trees, no pasture)
+    BadLocation,  // Its location rule gives nothing (no trees, no modules)
     MissingInput, // An input buffer is empty
     OutputFull,   // The output buffer is full (waiting for a cart)
 };

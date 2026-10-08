@@ -6,6 +6,7 @@
 #include "Economy/Treasury.h"
 #include "Gameplay/BuildTool.h"
 #include "Simulation/BuildingTypes.h"
+#include "Simulation/ProducerLocation.h"
 #include "Simulation/Simulation.h"
 
 #include <RmlUi/Core.h>
@@ -157,8 +158,21 @@ void ProducerInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& o
 
     Tone tone = production.status == ProducerStatus::Working ? Tone::Good
               : (production.status == ProducerStatus::OutputFull || production.status == ProducerStatus::MissingInput) ? Tone::Warn : Tone::Bad;
-    InfoLine& status = lines.Add(StatusText(production.status), tone);
+    int module = ModuleTypeOf(objects.Building(id).type);
+    if (module >= 0 && production.status == ProducerStatus::BadLocation) std::snprintf(text, sizeof(text), "No %s pens: place them around it", BUILDING_TYPES[module].name);
+    else std::snprintf(text, sizeof(text), "%s", StatusText(production.status));
+    InfoLine& status = lines.Add(text, tone);
     if (tone != Tone::Good) status.icon = "icons/warning.tga";
+    if (module >= 0) {
+        // Its pens, as in Anno: productivity grows with each up to the full count
+        int count = CountModules(objects, id);
+        std::snprintf(text, sizeof(text), "%s pens", BUILDING_TYPES[module].name);
+        InfoLine& line = lines.Add(text);
+        std::snprintf(text, sizeof(text), "%d / %d", count, chain.fullSpeedCount);
+        line.value = text;
+        line.bar = (float)count / chain.fullSpeedCount;
+        line.tone = (int)(count >= chain.fullSpeedCount ? Tone::Good : Tone::Warn);
+    }
 
     // Productivity: workforce share x location factor, and the cycle under way
     const IslandStorage* storage = economy.Find(objects.Building(id).island);
@@ -209,6 +223,18 @@ void BuildingDetails(InfoLines& lines, GameObjectId building, const GameObjectRe
     case BuildingRole::Market: MarketInfo(lines, building, objects); break;
     case BuildingRole::Storage: WarehouseInfo(lines, building, objects, economy); break;
     case BuildingRole::Producer: ProducerInfo(lines, building, objects, economy); break;
+    case BuildingRole::Module: {
+        char text[64];
+        GameObjectId farm = objects.Building(building).owner;
+        if (objects.IsAlive(farm)) {
+            std::snprintf(text, sizeof(text), "Pen of a %s", BUILDING_TYPES[objects.Building(farm).type].name);
+            lines.Add(text, Tone::Good);
+        } else {
+            std::snprintf(text, sizeof(text), "No %s: this pen does nothing", BUILDING_TYPES[type.moduleOf].name);
+            lines.Add(text, Tone::Bad).icon = "icons/warning.tga";
+        }
+        break;
+    }
     }
 
     // Money
@@ -221,7 +247,7 @@ void BuildingDetails(InfoLines& lines, GameObjectId building, const GameObjectRe
         std::snprintf(text, sizeof(text), "+%lld.%lld / min", (long long)(tax / 1000), (long long)(tax % 1000 / 100));
         money.tone = (int)Tone::Good;
     } else {
-        std::snprintf(text, sizeof(text), "-%d / min", cost.upkeep);
+        std::snprintf(text, sizeof(text), cost.upkeep > 0 ? "-%d / min" : "none", cost.upkeep);
     }
     money.value = text;
     if (cost.planks / 2 > 0) std::snprintf(text, sizeof(text), "Demolish refunds %d coins, %d planks", cost.coins / 2, cost.planks / 2);
@@ -267,7 +293,7 @@ bool BuildingInfo::Init(Rml::Context* context) {
     });
     panel.BindEventCallback("close", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) { m_CloseRequest = true; });
     m_PanelModel = panel.GetModelHandle();
-    m_Actions.reserve(2);
+    m_Actions.reserve(3);
 
     m_Tooltip = context->LoadDocument("assets/ui/building_tooltip.rml");
     m_Panel = context->LoadDocument("assets/ui/building_panel.rml");
@@ -304,11 +330,17 @@ void BuildingInfo::Update(GameObjectId tooltip, GameObjectId panel, const Simula
     BuildingDetails(m_PanelLines, panel, objects, economy);
 
     char text[64];
-    Action actions[2];
+    Action actions[3];
     int count = 0;
     if (type.role == BuildingRole::Residence && type.tier + 1 < TIER_COUNT) {
         std::snprintf(text, sizeof(text), "Upgrade to %s (%d planks)", POPULATION_TIERS[type.tier + 1].name, UPGRADE_PLANKS);
         actions[count++] = { text, PopulationSystem::CanUpgrade(objects, economy, panel), UPGRADE };
+    }
+    if (int module = ModuleTypeOf(objects.Building(panel).type); module >= 0) {
+        // Farms: place their modules
+        const ProductionChain& chain = PRODUCTION_CHAINS[type.chain];
+        std::snprintf(text, sizeof(text), "Build %s (%d coins)", BUILDING_TYPES[module].name, BUILDING_COSTS[module].coins);
+        actions[count++] = { text, CountModules(objects, panel) < chain.fullSpeedCount, BUILD_MODULE };
     }
     if (type.role == BuildingRole::Storage && type.dockRows > 0) {
         // Harbors: ships are built here
@@ -344,6 +376,7 @@ void BuildingInfo::ApplyRequests(Simulation& simulation, BuildTool& tool) {
     if (enabled && simulation.Objects().IsAlive(m_PanelBuilding)) {
         if (m_ActionRequest == UPGRADE) simulation.Population().RequestUpgrade(m_PanelBuilding);
         if (m_ActionRequest == BUILD_SHIP) simulation.Ships().Build(m_PanelBuilding, simulation.Objects(), simulation.Economy(), simulation.Coins());
+        if (m_ActionRequest == BUILD_MODULE) tool.SelectModules(m_PanelBuilding);
     }
     m_ActionRequest = 0;
     m_CloseRequest = false;

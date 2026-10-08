@@ -1,9 +1,11 @@
 #include "Gameplay/BuildTool.h"
 
 #include "Gameplay/RoadTool.h"
+#include "Gameplay/Smoke.h"
 #include "Simulation/BuildingLook.h"
 #include "Simulation/BuildingModels.h"
 #include "Simulation/Logistics.h"
+#include "Simulation/ProducerLocation.h"
 #include "Simulation/Simulation.h"
 #include "World/BlockTypes.h"
 #include "World/Chunk.h"
@@ -36,6 +38,11 @@ BuildTool::BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& s
     m_LookBuffer.reserve(largest);
     m_GhostBuffer.reserve(largest);
     m_RestoreBuffer.reserve(largest);
+    m_ConstructionBuffer.reserve(largest);
+    m_Constructions.reserve(MAX_CONSTRUCTIONS);
+    m_Carried.reserve(8);
+    m_CarriedTiles.reserve(64);
+    m_CarriedValid.reserve(64);
     m_ChunkScratch.reserve(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
     m_LocationTiles.reserve(1024);
 }
@@ -65,6 +72,15 @@ static int MaxBuildingHeight() {
 void BuildTool::SelectType(int type) {
     if (m_SelectedType == ROAD && type != ROAD) m_RoadTool.Cancel();
     m_SelectedType = type;
+    m_ModuleFarm = INVALID_GAME_OBJECT;
+}
+
+void BuildTool::SelectModules(GameObjectId farm) {
+    if (!m_Simulation.Objects().IsAlive(farm)) return;
+    int module = ModuleTypeOf(m_Simulation.Objects().Building(farm).type);
+    if (module < 0) return;
+    SelectType(module);
+    m_ModuleFarm = farm;
 }
 
 void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFree, bool keyboardFree) {
@@ -157,11 +173,50 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         }
         m_MoveValid = m_LastCheck.error == PlacementError::None;
         m_MoveTile = minTile;
+        if (moving && !m_Carried.empty() && m_CarriedKey != glm::ivec3(minTile, m_Rotation)) {
+            // Where the farm's modules would go, green or red
+            m_CarriedKey = glm::ivec3(minTile, m_Rotation);
+            m_CarriedTiles.clear();
+            m_CarriedValid.clear();
+            for (const Carried& carried : m_Carried) {
+                glm::ivec2 moduleTile;
+                uint8_t moduleRotation;
+                CarriedTarget(carried, minTile, m_Rotation, moduleTile, moduleRotation);
+                bool fits = CarriedFits(carried.id, moduleTile, moduleRotation);
+                glm::ivec2 moduleTiles = FootprintTiles(BUILDING_TYPES[objects.Building(carried.id).type], moduleRotation);
+                for (int z = 0; z < moduleTiles.y; z++) {
+                    for (int x = 0; x < moduleTiles.x; x++) {
+                        m_CarriedTiles.push_back(moduleTile + glm::ivec2(x, z)); // Within the reserve for 5 pens
+                        m_CarriedValid.push_back(fits ? 1 : 0);
+                    }
+                }
+            }
+            m_LocationRevision++;
+        }
         m_PreviewConnected = LogisticsSystem::ConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
         m_PreviewInMarket = LogisticsSystem::MarketConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
 
-        // Producers: what the location rule makes of this spot
-        if (type.role == BuildingRole::Producer) {
+        // Producers: what the location rule makes of this spot. Modules: their farm, its range and its modules.
+        GameObjectId farm = INVALID_GAME_OBJECT;
+        if (type.role == BuildingRole::Module) {
+            farm = objects.IsAlive(m_ModuleFarm) ? m_ModuleFarm
+                                                 : FindModuleFarm(objects, (uint16_t)previewType, m_LastCheck.island, minTile, tiles);
+        }
+        if (farm != INVALID_GAME_OBJECT) {
+            const VoxelAnchorComponent& anchor = objects.Anchor(farm);
+            glm::ivec2 farmMin(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
+            LocationKey key{ previewType, m_Rotation, farmMin, m_Simulation.Trees().Revision(), m_Simulation.Roads().Revision(),
+                m_Simulation.BuildingsRevision() };
+            if (!hadLocation || !(key == m_LocationKey)) {
+                m_LocationKey = key;
+                const ProductionChain& chain = PRODUCTION_CHAINS[BUILDING_TYPES[objects.Building(farm).type].chain];
+                m_Location = EvaluateLocation(chain, farmMin, anchor.footprint / TILE_SIZE, m_Simulation.Islands(), m_Simulation.Occupancy(),
+                    m_Simulation.Roads(), m_Simulation.Trees(), &m_LocationTiles);
+                m_Location.count = CountModules(objects, farm);
+                m_LocationRevision++;
+            }
+            m_HasLocation = true;
+        } else if (type.role == BuildingRole::Producer) {
             LocationKey key{ previewType, m_Rotation, minTile, m_Simulation.Trees().Revision(), m_Simulation.Roads().Revision(),
                 m_Simulation.BuildingsRevision() };
             if (!hadLocation || !(key == m_LocationKey)) {
@@ -176,6 +231,7 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         if (!moving && leftClick && m_LastCheck.error == PlacementError::None) {
             m_HoveredBuilding = Place((uint16_t)previewType, m_Rotation, minTile);
             m_LastCheck.error = PlacementError::Occupied; // The spot is now taken
+            if (ModuleTypeOf(previewType) >= 0) SelectModules(m_HoveredBuilding); // A farm: its pens next, as in Anno
         }
 
         m_HasPlacement = true;
@@ -217,6 +273,7 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     component.island = check.island;
     component.rotation = rotation;
     component.variant = m_Models.PickVariant(type, id);
+    if (building.role == BuildingRole::Module) component.owner = FindModuleFarm(objects, type, check.island, minTile, tiles, m_ModuleFarm);
     VoxelAnchorComponent& anchor = objects.Anchor(id);
     anchor.origin = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y, minTile.y * TILE_SIZE);
     anchor.footprint = tiles * TILE_SIZE;
@@ -224,8 +281,40 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     m_Simulation.Ships().PayBuildCost(type, check.island, minTile, tiles, m_Simulation.Economy(), m_Simulation.Coins());
     if (building.role == BuildingRole::Storage) m_Simulation.Economy().OnWarehouseAdded(check.island);
     m_Simulation.MarkBuildingsChanged();
-    StampLook(id);
+    if (m_Constructions.size() < (size_t)MAX_CONSTRUCTIONS) {
+        m_Constructions.push_back({ id, 0.0f }); // Within the reserve
+        AnimateConstruction(0.0f, nullptr);
+    } else {
+        StampLook(id);
+    }
     return id;
+}
+
+void BuildTool::AnimateConstruction(float deltaTime, SmokeSystem* dust) {
+    GameObjectRegistry& objects = m_Simulation.Objects();
+    for (size_t i = 0; i < m_Constructions.size();) {
+        Construction& construction = m_Constructions[i];
+        construction.progress += deltaTime / CONSTRUCTION_SECONDS;
+        if (construction.progress >= 1.0f) {
+            StampLook(construction.id);
+            construction = m_Constructions.back();
+            m_Constructions.pop_back();
+            continue;
+        }
+        const VoxelAnchorComponent& anchor = objects.Anchor(construction.id);
+        const BuildingComponent& component = objects.Building(construction.id);
+        const BuildingType& building = BUILDING_TYPES[component.type];
+        glm::ivec3 origin = anchor.origin - glm::ivec3(0, building.belowGround, 0);
+        glm::ivec3 size(anchor.footprint.x, BuildingVolumeHeight(building), anchor.footprint.y);
+        m_Models.BuildVoxels(component.type, component.variant, component.rotation, m_LookBuffer);
+        ConstructionLook(m_LookBuffer, size, construction.progress, m_ConstructionBuffer);
+        m_Editor.WriteBox(origin, size, m_ConstructionBuffer, building.belowGround);
+        if (dust) {
+            float top = (float)origin.y + construction.progress * (float)size.y;
+            dust->Dust(deltaTime, glm::vec2(origin.x, origin.z), glm::vec2(origin.x + size.x, origin.z + size.z), std::max(top, (float)BUILD_GROUND_Y));
+        }
+        i++;
+    }
 }
 
 void BuildTool::StampLook(GameObjectId id) {
@@ -256,16 +345,93 @@ void BuildTool::StartMove(GameObjectId id) {
     m_MoveFromRotation = m_Simulation.Objects().Building(id).rotation;
     m_Rotation = m_MoveFromRotation;
     m_MoveValid = false;
+    // A lifted module leaves its farm (so it has room for it again) and finds one when set down
+    GameObjectRegistry& objects = m_Simulation.Objects();
+    BuildingComponent& building = objects.Building(id);
+    m_MoveOwner = building.owner;
+    building.owner = INVALID_GAME_OBJECT;
     ClearLook(id);
     m_Simulation.LiftBuilding(id);
+
+    // A farm lifts its modules with it
+    m_Carried.clear();
+    m_CarriedKey = glm::ivec3(-1);
+    if (ModuleTypeOf(building.type) < 0) return;
+    for (uint32_t slot = 0; slot < objects.SlotCount() && m_Carried.size() < m_Carried.capacity(); slot++) {
+        GameObjectId module = objects.IdAtSlot(slot);
+        if (module == INVALID_GAME_OBJECT || objects.Building(module).owner != id) continue;
+        const VoxelAnchorComponent& anchor = objects.Anchor(module);
+        m_Carried.push_back({ module, glm::ivec2(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z)), objects.Building(module).rotation });
+        ClearLook(module);
+        m_Simulation.LiftBuilding(module);
+    }
+}
+
+void BuildTool::CarriedTarget(const Carried& carried, glm::ivec2 farmTile, uint8_t farmRotation, glm::ivec2& minTile, uint8_t& rotation) const {
+    // Turn the module's rectangle about the farm's center, in doubled tile units so centers are whole
+    const GameObjectRegistry& objects = m_Simulation.Objects();
+    const BuildingType& farm = BUILDING_TYPES[objects.Building(m_Moving).type];
+    const BuildingType& module = BUILDING_TYPES[objects.Building(carried.id).type];
+    int turns = (farmRotation - m_MoveFromRotation) & 3;
+    glm::ivec2 offset = carried.minTile * 2 + FootprintTiles(module, carried.rotation) - (m_MoveFrom * 2 + FootprintTiles(farm, m_MoveFromRotation));
+    for (int i = 0; i < turns; i++) offset = glm::ivec2(-offset.y, offset.x); // A quarter turn: -z becomes +x
+    rotation = (uint8_t)((carried.rotation + turns) & 3);
+    minTile = (farmTile * 2 + FootprintTiles(farm, farmRotation) + offset - FootprintTiles(module, rotation)) / 2;
+}
+
+bool BuildTool::CarriedFits(GameObjectId id, glm::ivec2 minTile, uint8_t rotation) const {
+    // Ground, trees and buildings as for any building; the farm itself is still lifted, so no
+    // farm check (NeedsFarm comes only once everything else is fine)
+    PlacementContext context = m_Simulation.MakePlacementContext(m_World);
+    context.objects = nullptr;
+    const BuildingComponent& building = m_Simulation.Objects().Building(id);
+    PlacementCheck check = ValidatePlacement(context, building.type, rotation, minTile);
+    return (check.error == PlacementError::None || check.error == PlacementError::NeedsFarm) && check.island == building.island;
+}
+
+void BuildTool::DestroyLifted(GameObjectId id) {
+    GameObjectRegistry& objects = m_Simulation.Objects();
+    const BuildingComponent& building = objects.Building(id);
+    m_Simulation.Coins().Refund(building.type, building.island, m_Simulation.Economy());
+    objects.Destroy(id);
+    m_Simulation.MarkBuildingsChanged();
 }
 
 void BuildTool::EndMove(bool toPreview) {
     GameObjectId id = m_Moving;
-    m_Moving = INVALID_GAME_OBJECT;
-    if (!m_Simulation.Objects().IsAlive(id)) return;
+    if (!m_Simulation.Objects().IsAlive(id)) {
+        m_Moving = INVALID_GAME_OBJECT;
+        return;
+    }
     m_Simulation.PlaceLiftedBuilding(id, toPreview ? m_MoveTile : m_MoveFrom, toPreview ? m_Rotation : m_MoveFromRotation);
+    BuildingComponent& building = m_Simulation.Objects().Building(id);
+    if (BUILDING_TYPES[building.type].role == BuildingRole::Module) {
+        const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(id);
+        glm::ivec2 minTile(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
+        building.owner = FindModuleFarm(m_Simulation.Objects(), building.type, building.island, minTile, anchor.footprint / TILE_SIZE, m_MoveOwner);
+    }
     StampLook(id);
+
+    // The farm's modules: set down around it (or back where they stood); blocked ones are destroyed
+    for (const Carried& carried : m_Carried) {
+        if (!m_Simulation.Objects().IsAlive(carried.id)) continue; // CarriedTarget needs m_Moving: cleared after
+        glm::ivec2 tile = carried.minTile;
+        uint8_t rotation = carried.rotation;
+        if (toPreview) {
+            CarriedTarget(carried, m_MoveTile, m_Rotation, tile, rotation);
+            if (!CarriedFits(carried.id, tile, rotation)) {
+                DestroyLifted(carried.id);
+                continue;
+            }
+        }
+        m_Simulation.PlaceLiftedBuilding(carried.id, tile, rotation);
+        StampLook(carried.id);
+    }
+    if (!m_Carried.empty()) m_LocationRevision++; // The carried tiles go away
+    m_Moving = INVALID_GAME_OBJECT;
+    m_Carried.clear();
+    m_CarriedTiles.clear();
+    m_CarriedValid.clear();
 }
 
 void BuildTool::RestoreTerrain(glm::ivec3 minCorner, glm::ivec3 size) {
@@ -293,6 +459,7 @@ void BuildTool::RestoreTerrain(glm::ivec3 minCorner, glm::ivec3 size) {
 }
 
 void BuildTool::ClearLook(GameObjectId id) {
+    std::erase_if(m_Constructions, [id](const Construction& construction) { return construction.id == id; }); // Moved or demolished
     const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(id);
     const BuildingType& building = BUILDING_TYPES[m_Simulation.Objects().Building(id).type];
     m_Editor.FillBox(anchor.origin, glm::ivec3(anchor.footprint.x, BuildingHeight(building), anchor.footprint.y), Block::AIR);
@@ -311,6 +478,13 @@ void BuildTool::Demolish(GameObjectId id) {
     const BuildingComponent component = objects.Building(id);
     const BuildingType& building = BUILDING_TYPES[component.type];
     ClearLook(id);
+    // A farm's modules go with it
+    if (ModuleTypeOf(component.type) >= 0) {
+        for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
+            GameObjectId module = objects.IdAtSlot(slot);
+            if (module != INVALID_GAME_OBJECT && objects.Building(module).owner == id) Demolish(module);
+        }
+    }
 
     glm::ivec2 minTile(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
     m_Simulation.Occupancy().Release(minTile, anchor.footprint / TILE_SIZE, id);

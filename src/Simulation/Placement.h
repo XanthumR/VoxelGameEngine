@@ -7,6 +7,7 @@
 
 #include <cstdint>
 
+class GameObjectRegistry;
 class OccupancyGrid;
 class RoadNetwork;
 class VoxelWorld;
@@ -31,6 +32,7 @@ enum class PlacementError {
     NeedsStorage,     // An island not yet settled: its first building must be a warehouse or harbor
     NeedsShip,        // ...and that needs a ship nearby carrying its planks (ShipSystem::CheckBuildCost)
     OtherIsland,      // A moved building must stay on its island
+    NeedsFarm,        // A farm module must be near a farm of its kind that has room for it
 };
 
 const char* PlacementErrorText(PlacementError error);
@@ -46,6 +48,7 @@ struct PlacementContext {
     IslandRegistry& islands;
     const OccupancyGrid& occupancy;
     const RoadNetwork& roads;
+    const GameObjectRegistry* objects = nullptr; // For farm modules (no farms without it)
 };
 
 // Can a building of this type and rotation stand with its minimum corner on minTile?
