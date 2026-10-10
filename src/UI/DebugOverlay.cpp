@@ -72,9 +72,10 @@ void DebugOverlay::UpdateMinimap(const VoxelWorld& world, glm::vec3 playerPositi
 void DebugOverlay::Draw(const OverlayContext& c) {
     if (!m_Visible) return;
 
-    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(400, 560), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Voxel Anno: Debug", &m_Visible);
+    // Bottom left: the top left is the island bar's
+    ImGui::SetNextWindowPos(ImVec2(10, ImGui::GetIO().DisplaySize.y - 10), ImGuiCond_FirstUseEver, ImVec2(0.0f, 1.0f));
+    ImGui::SetNextWindowSize(ImVec2(360, 520), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Voxel Anno: Debug###debug2", &m_Visible); // A new ID: the bottom left applies once over a saved position
 
     const double minimapBytes = MINIMAP_SIZE * MINIMAP_SIZE * 4.0;
     double vramMB = (c.cache.PoolBytes() + c.cache.PageTableBytes() + minimapBytes + c.targets.MemoryBytes()) / (1024.0 * 1024.0);

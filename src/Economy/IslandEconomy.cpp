@@ -49,6 +49,26 @@ int IslandEconomyManager::Add(IslandId island, ItemType item, int amount) {
     return added;
 }
 
+int IslandStorage::TrendPerMinute(ItemType item) const {
+    if (stockSamples < 2) return 0;
+    int oldest = stockSamples < TREND_SAMPLES ? 0 : stockHead;
+    int intervals = std::min(stockSamples, TREND_SAMPLES) - 1;
+    int change = Amount(item) - stockHistory[oldest][(size_t)item];
+    return change * (TREND_SAMPLES - 1) / intervals; // Scaled to a minute
+}
+
+void IslandEconomyManager::RecordTrends(uint64_t tick) {
+    if (tick % TREND_INTERVAL_TICKS != 0) return;
+    for (IslandStorage& storage : m_Islands) {
+        if (storage.stockSamples < TREND_SAMPLES) {
+            storage.stockHistory[storage.stockSamples++] = storage.amounts;
+        } else {
+            storage.stockHistory[storage.stockHead] = storage.amounts; // Over the oldest
+            storage.stockHead = (storage.stockHead + 1) % TREND_SAMPLES;
+        }
+    }
+}
+
 void IslandEconomyManager::AddAll(IslandId island, int amount) {
     for (int i = 0; i < ITEM_COUNT; i++) Add(island, (ItemType)i, amount);
 }

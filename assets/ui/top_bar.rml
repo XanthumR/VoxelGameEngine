@@ -24,7 +24,9 @@
         .tier { position: relative; margin-right: 12dp; }
         .tier img { margin-right: 4dp; }
         .tier .count { font-family: Cinzel; font-weight: bold; font-size: 15dp; color: #f1e7cf; }
-        .tier .tooltip { display: none; position: absolute; top: 100%; left: 0; margin-top: 10dp; white-space: nowrap; }
+        .tier .tooltip { display: none; position: absolute; top: 100%; left: 0; margin-top: 10dp; white-space: nowrap; width: 220dp; }
+        .tier .tooltip .heading { display: block; font-family: Cinzel; font-weight: bold; color: #dcbc6e; margin-bottom: 4dp; }
+        .tier .tooltip .need img { margin-right: 4dp; }
         .tier:hover .tooltip { display: block; }
         .speed { width: 36dp; padding: 3dp 0; }
     </style>
@@ -44,7 +46,13 @@
         <div class="slot" data-for="tier : tiers"><div class="row tier" data-if="tier.shown">
             <img class="icon" data-attr-src="tier.icon"/>
             <span class="count">{{tier.residents}}</span>
-            <div class="tooltip">{{tier.name}}</div>
+            <div class="tooltip">
+                <span class="heading">{{tier.name}}: needs</span>
+                <div data-for="n : tier.needs"><div class="row need">
+                    <img class="icon small" data-attr-src="n.icon"/><span>{{n.name}}</span><span class="spacer"/>
+                    <span class="value" data-class-good="n.tone == 1" data-class-warn="n.tone == 2" data-class-bad="n.tone == 3" data-class-muted="n.tone == 4">{{n.supply}}</span>
+                </div></div>
+            </div>
         </div></div>
     </div>
     <div class="divider"/>

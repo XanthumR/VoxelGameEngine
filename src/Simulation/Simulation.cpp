@@ -38,6 +38,8 @@ void Simulation::FixedUpdate(float tickSeconds) {
     m_Treasury.Update(m_Objects);
     // Ships sail on
     m_Ships.Update(m_Objects, m_Occupancy, m_Economy);
+    // The stock trends of the islands' goods
+    m_Economy.RecordTrends(m_TickCount);
 
     m_TickCount++;
     m_SimulationSeconds += tickSeconds;

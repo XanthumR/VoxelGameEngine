@@ -329,6 +329,16 @@ def copy(d):
     d.point((2, 14), fill=(110, 170, 220))
 
 
+def trend_up(d):
+    green = (110, 190, 80)
+    d.polygon([(8, 2), (14, 10), (10, 10), (10, 14), (6, 14), (6, 10), (2, 10)], fill=green, outline=INK)
+
+
+def trend_down(d):
+    red = (220, 90, 70)
+    d.polygon([(8, 14), (14, 6), (10, 6), (10, 2), (6, 2), (6, 6), (2, 6)], fill=red, outline=INK)
+
+
 def theatre(d):
     # Comedy and tragedy masks
     light, dark = (240, 230, 200), (200, 170, 90)
@@ -350,7 +360,7 @@ ICONS = {
     "grain": grain, "flour": flour, "bread": bread, "tallow": tallow, "soap": soap, "clay": clay, "beef": beef,
     "iron": iron, "coal": coal, "steel": steel, "steel_beams": steel_beams, "canned_food": canned_food,
     "sewing_machines": sewing_machines, "artisan": artisan, "marketplace": marketplace, "school": school, "theatre": theatre,
-    "construction": construction, "demolish": demolish, "move": move, "copy": copy,
+    "construction": construction, "demolish": demolish, "move": move, "copy": copy, "trend_up": trend_up, "trend_down": trend_down,
 }
 
 if __name__ == "__main__":

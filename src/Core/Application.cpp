@@ -368,6 +368,10 @@ void Application::HandleKeys(float deltaTime) {
 void Application::UpdatePicking() {
     m_Hover = PickResult();
     m_HoverIsland = NO_ISLAND;
+    // The island bar shows the island at the camera's focus, as in Anno (the last one over open sea)
+    glm::vec3 focusVoxel = ActiveCamera().FocusPoint() * VOXELS_PER_UNIT;
+    IslandId focusIsland = m_Simulation.Islands().IslandIdAt((int)std::floor(focusVoxel.x), (int)std::floor(focusVoxel.z));
+    if (focusIsland != NO_ISLAND) m_PanelIsland = focusIsland;
     if (m_CameraMode == CameraMode::Strategy) {
         if (!MouseFree()) return; // Pointing at a UI window
         double cursorX, cursorY;
@@ -381,7 +385,6 @@ void Application::UpdatePicking() {
         m_Hover = PickUnderCursor(m_FreeFlyCamera, glm::vec2(width * 0.5f, height * 0.5f), glm::ivec2(width, height), m_World);
     }
     if (m_Hover.hit) m_HoverIsland = m_Simulation.Islands().IslandIdAt(m_Hover.voxel.x, m_Hover.voxel.z);
-    if (m_HoverIsland != NO_ISLAND) m_PanelIsland = m_HoverIsland;
 }
 
 // Rebuilds the per-tile ground highlights when anything they show changed: road range colors
@@ -532,7 +535,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     bool strategy = m_CameraMode == CameraMode::Strategy;
     m_TopBar.SetVisible(strategy);
     m_BuildMenu.SetVisible(strategy && m_BuildTool.InspectedBuilding() == INVALID_GAME_OBJECT); // The object menu takes its place
-    m_TopBar.Update(m_Simulation.Coins(), m_Simulation.Economy(), m_GameSpeed, m_RoutesOpen);
+    m_TopBar.Update(m_Simulation.Coins(), m_Simulation.Economy(), m_Simulation.Objects(), m_GameSpeed, m_RoutesOpen);
     double cursorX, cursorY;
     glfwGetCursorPos(m_Window, &cursorX, &cursorY);
     int windowWidth, windowHeight;

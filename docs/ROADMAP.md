@@ -807,6 +807,7 @@ Milestone 7 moved the UI to RmlUi and the last restyle gave it Anno 1800's look 
 - Island bar at the top left: the name of the island under the camera ("Island #1" until islands get names), its residents, and a storage button.
 - Inventory window: every good the island has, as a grid of icons with amounts and a trend arrow (net per minute from the statistics below); filters for materials, food, goods.
 - Top bar: hover a tier for its residents and the supply of each of its needs on all islands.
+- Done: the island bar follows the camera's focus (the last island while over open sea) and names islands from a list (`IslandName`); the details panel (the old island panel) opens from it, under the bar. Trends: every island's stock sampled every 10 s (`IslandEconomyManager::RecordTrends`), the change over the last minute. A tier's tooltip weighs each house's supply by its residents. The F3 window starts at the bottom left now. Test: the trend.
 
 **U5. Notifications**
 - A `NotificationSystem` in the simulation: events with a kind, an island and a place, deduplicated and rate-limited (one per kind and building a minute): a producer missing an input or without workers, a house about to downgrade, storage full, a ship idle or arrived, a tier reached, coins running out.

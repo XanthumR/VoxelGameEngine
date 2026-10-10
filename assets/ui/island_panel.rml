@@ -3,11 +3,14 @@
     <title>Island</title>
     <link type="text/rcss" href="theme.rcss"/>
     <style>
-        body { position: absolute; top: 12dp; right: 12dp; width: 300dp; }
+        /* The island's details, under the island bar */
+        body { position: absolute; top: 60dp; left: 492dp; width: 300dp; }
+        .title { display: flex; flex-direction: row; align-items: center; }
+        .title button.close { padding: 0 6dp; font-size: 13dp; }
     </style>
 </head>
 <body class="panel" data-model="island_panel">
-    <div class="title">{{title}}</div>
+    <div class="title"><span>{{title}}</span><span class="spacer"/><button class="close" data-event-click="close"><span>X</span></button></div>
     <div class="line" data-for="line : lines">
         <div class="row">
             <img class="icon small" data-if="line.icon != ''" data-attr-src="line.icon"/>

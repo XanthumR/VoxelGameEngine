@@ -1,0 +1,25 @@
+<rml>
+<head>
+    <title>Island bar</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        /* The island under the camera, at the top left as in Anno 1800 */
+        body { position: absolute; top: 0; left: 12dp; padding: 6dp 12dp 7dp; border-top-width: 0; border-radius: 0 0 8dp 8dp; }
+        .name { font-family: Cinzel; font-weight: bold; font-size: 17dp; color: #e2c275; margin-right: 12dp; }
+        .tier { margin-right: 10dp; }
+        .tier img { margin-right: 3dp; }
+        .tier span { font-family: Cinzel; font-weight: bold; color: #f1e7cf; }
+        button { padding: 3dp 8dp; font-size: 12dp; display: flex; flex-direction: row; align-items: center; margin-left: 4dp; }
+        button img { margin-right: 5dp; }
+    </style>
+</head>
+<body class="panel row" data-model="island_bar">
+    <span class="name">{{name}}</span>
+    <span class="muted" data-if="!settled">{{note}}</span>
+    <div class="row" data-if="settled">
+        <div data-for="t : tiers"><div class="row tier"><img class="icon small" data-attr-src="t.icon"/><span>{{t.residents}}</span></div></div>
+        <button data-class-selected="inventory_open" data-event-click="toggle_inventory"><img class="icon small" src="icons/planks.tga"/><span>Storage</span></button>
+    </div>
+    <button data-class-selected="details_open" data-event-click="toggle_details"><img class="icon small" src="icons/residents.tga"/><span>Details</span></button>
+</body>
+</rml>

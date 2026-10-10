@@ -9,6 +9,8 @@
 #include <vector>
 
 constexpr int WAREHOUSE_CAPACITY = 50; // Storage per good added by each warehouse on the island
+constexpr int TREND_INTERVAL_TICKS = 100; // The stock is sampled every 10 s...
+constexpr int TREND_SAMPLES = 7;          // ...and the trend is the change over the last minute (6 intervals)
 
 // The goods of one settled island. All warehouses on an island share one store (as in Anno).
 struct IslandStorage {
@@ -26,8 +28,14 @@ struct IslandStorage {
     // Goods owed per tier and need, in 1/60000 of a good (consumption is per minute, cycles per second)
     std::array<std::array<int32_t, MAX_NEEDS>, TIER_COUNT> owed = {};
 
+    // The stock of every good, the last TREND_SAMPLES samples (oldest at stockHead once full)
+    std::array<std::array<int, ITEM_COUNT>, TREND_SAMPLES> stockHistory = {};
+    int stockSamples = 0, stockHead = 0;
+
     int CapacityPerItem() const { return warehouseCount * WAREHOUSE_CAPACITY; }
     int Amount(ItemType item) const { return amounts[(size_t)item]; }
+    // How the stock of a good changed per minute, over the last minute (less, scaled, until a minute is sampled)
+    int TrendPerMinute(ItemType item) const;
 };
 
 // The per-island economies. An island gets its storage when its first warehouse is built; only the
@@ -53,6 +61,8 @@ public:
     int Add(IslandId island, ItemType item, int amount);
     int Remove(IslandId island, ItemType item, int amount);
     void AddAll(IslandId island, int amount); // Every good (debug button until production exists)
+    // Samples every island's stock every TREND_INTERVAL_TICKS (once per simulation tick)
+    void RecordTrends(uint64_t tick);
 
     // Settled islands in a stable order (for deterministic iteration)
     size_t IslandSlotCount() const { return m_Islands.size(); }

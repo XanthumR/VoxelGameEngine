@@ -11,6 +11,14 @@ class TerrainGenerator;
 using IslandId = uint32_t;
 constexpr IslandId NO_ISLAND = 0; // Water, or a sliver of coast too small to belong to an island
 
+// An island's name for the UI, from its ID (the same island keeps its name)
+inline const char* IslandName(IslandId id) {
+    static const char* const NAMES[] = { "Ashford", "Brightwater", "Cairnholm", "Dunmere", "Elderfen", "Foxhollow", "Greystone", "Harrowgate",
+        "Ivywick", "Juniper Bay", "Kestrel Point", "Larkspur", "Millbrook", "Northcliff", "Oakhaven", "Pebblestrand", "Queensreach",
+        "Ravensdale", "Saltmarsh", "Thornbury", "Underwood", "Valecrest", "Westholm", "Yarrowby" };
+    return id == NO_ISLAND ? "Open sea" : NAMES[(id - 1) % (sizeof(NAMES) / sizeof(NAMES[0]))];
+}
+
 struct IslandInfo {
     IslandId id = NO_ISLAND;
     int cellCount = 0;

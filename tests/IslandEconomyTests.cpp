@@ -65,3 +65,18 @@ TEST(IslandEconomyTest, NoIslandIsIgnored) {
     economy.OnWarehouseAdded(NO_ISLAND);
     EXPECT_EQ(economy.SettledIslandCount(), 0u);
 }
+
+TEST(IslandEconomyTest, TrendIsTheChangeOverTheLastMinute) {
+    IslandEconomyManager economy;
+    economy.OnWarehouseAdded(1);
+    IslandStorage& storage = *economy.Find(1);
+    storage.amounts[(size_t)ItemType::Fish] = 0;
+    for (uint64_t tick = 0; tick <= 6 * TREND_INTERVAL_TICKS; tick++) {
+        if (tick % 50 == 0) economy.Add(1, ItemType::Fish, 1); // 2 every 10 s: 12 a minute
+        economy.RecordTrends(tick);
+    }
+    EXPECT_EQ(storage.TrendPerMinute(ItemType::Fish), 12);
+    EXPECT_EQ(storage.TrendPerMinute(ItemType::Wood), 0); // Untouched
+    for (uint64_t tick = 6 * TREND_INTERVAL_TICKS + 1; tick <= 12 * TREND_INTERVAL_TICKS; tick++) economy.RecordTrends(tick);
+    EXPECT_EQ(storage.TrendPerMinute(ItemType::Fish), 0); // Steady for a minute now
+}

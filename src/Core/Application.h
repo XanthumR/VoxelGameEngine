@@ -101,7 +101,7 @@ private:
     DebugEditTool m_EditTool;
     PickResult m_Hover; // What the cursor (or the free-fly crosshair) points at
     IslandId m_HoverIsland = NO_ISLAND;
-    IslandId m_PanelIsland = NO_ISLAND; // Last island hovered: shown in the island panel
+    IslandId m_PanelIsland = NO_ISLAND; // The island at the camera's focus (the last one): the island bar's
 
     // Game simulation (fixed 10 Hz steps)
     GameClock m_Clock;

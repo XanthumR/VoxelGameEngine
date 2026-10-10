@@ -1,0 +1,43 @@
+<rml>
+<head>
+    <title>Inventory</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        /* The island's goods, under the island bar */
+        body { position: absolute; top: 60dp; left: 12dp; width: 460dp; }
+        .title { display: flex; flex-direction: row; align-items: center; }
+        .title button.close { padding: 0 6dp; font-size: 13dp; }
+        .tabs .tab { font-size: 12dp; padding: 3dp 4dp; }
+        .grid { display: flex; flex-direction: row; flex-wrap: wrap; max-height: 360dp; overflow-y: auto; }
+        .good { display: block; width: 100dp; margin: 0 6dp 6dp 0; padding: 4dp; border: 1dp #5d4b2a; border-radius: 2dp; background-color: #0f1317; text-align: center; }
+        .good img.icon { display: block; margin: 0 auto 2dp; }
+        .good .name { display: block; font-size: 11dp; white-space: normal; }
+        .good .amount { display: block; font-weight: bold; font-size: 13dp; color: #f1e7cf; }
+        .good .trend { display: flex; flex-direction: row; align-items: center; justify-content: center; font-size: 11dp; }
+        .good .trend img { margin-right: 2dp; }
+        .good progress { height: 4dp; margin-top: 3dp; }
+        .empty { display: block; margin: 8dp 0; }
+    </style>
+</head>
+<body class="panel" data-model="inventory">
+    <div class="title"><span>{{title}}: storage</span><span class="spacer"/><span class="muted">{{capacity}}</span>
+        <button class="close" data-event-click="close"><span>X</span></button></div>
+    <div class="tabs">
+        <div class="tab" data-class-selected="filter == 0" data-event-click="set_filter(0)">All</div>
+        <div class="tab" data-class-selected="filter == 1" data-event-click="set_filter(1)">Needs</div>
+        <div class="tab" data-class-selected="filter == 2" data-event-click="set_filter(2)">Construction</div>
+        <div class="tab" data-class-selected="filter == 3" data-event-click="set_filter(3)">Raw and parts</div>
+    </div>
+    <span class="empty muted" data-if="goods.size == 0">Nothing of this kind in storage.</span>
+    <div class="grid">
+        <div data-for="g : goods"><div class="good">
+            <img class="icon" data-attr-src="g.icon"/>
+            <span class="name">{{g.name}}</span>
+            <span class="amount">{{g.amount}}</span>
+            <div class="trend"><img class="icon small" data-if="g.trend_icon != ''" data-attr-src="g.trend_icon"/>
+                <span data-class-good="g.trend_tone == 1" data-class-bad="g.trend_tone == 3" data-class-muted="g.trend_tone == 4">{{g.trend}}</span></div>
+            <progress data-attr-value="g.fill" data-class-warn="g.fill >= 1"/>
+        </div></div>
+    </div>
+</body>
+</rml>
