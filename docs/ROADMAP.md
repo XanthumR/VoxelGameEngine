@@ -787,6 +787,7 @@ Milestone 7 moved the UI to RmlUi and the last restyle gave it Anno 1800's look 
 - A cost tag beside the cursor while placing: coins and materials, red where the island lacks them; the status line stays for errors.
 - Debug toggles move off the letters (chunk viewer, light visualizer to F-keys) so the letters are free for tools.
 - Tests: tool state changes (pure logic in `BuildTool` split into a testable `ToolState`).
+- Done: the tools are selections like the road (`BuildTool::DEMOLISH`, `MOVE`, `COPY`), with buttons beside the building cards; a building type already stayed selected after placing. Demolish outlines the building under the cursor in red and takes buildings and road tiles clicked or dragged over; right click no longer demolishes. Esc puts back a moved building or drops the selection (`BuildTool::Cancel`). The cost tag (`assets/ui/cost_tag.rml`) follows the cursor. Chunk viewer and light visualizer moved to F5 and F6; Space pauses too. The `ToolState` split and its tests were left out: the tool logic is a few branches on the selection, and it needs a window and the world to run.
 
 **U2. Construction menu**
 - Opens and closes on B and on a button at the bottom middle; the tier tabs as now, then within a tab small group headings (Public buildings, Production, Farm fields) as Anno sorts them.

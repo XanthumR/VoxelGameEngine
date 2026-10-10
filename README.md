@@ -21,14 +21,17 @@ A city-builder and trade game in the style of Anno 1800, built on a custom C++ v
 | WASD or arrow keys, screen edge | Pan the camera |
 | Q / E | Rotate the camera |
 | Mouse wheel | Zoom |
-| Tab, 1-9 | Switch build menu tab, pick a building |
-| R | Rotate the building to place |
+| Tab, 1-9, 0 | Switch build menu tab, pick a building (it stays picked to place more) |
+| R, Shift + mouse wheel | Rotate the building to place or move |
 | Left click | Place, select a building or ship |
-| Hold left click on a building | Move it |
-| Right click | Cancel; give a selected ship a move order |
-| P, + / - | Pause, change game speed |
-| Esc | Drop the build selection, or quit |
+| Delete | Demolish tool: click or drag over buildings and roads |
+| M | Move tool: click a building to pick it up, click again to set it down (or hold left click on it and drag) |
+| C | Copy tool: click a building to build another like it |
+| Right click | Cancel the tool or selection, close the building's panel; give a selected ship a move order |
+| P or Space, + / - | Pause, change game speed |
+| Esc | Put back a moved building, drop the tool or selection, or quit |
 | F3 | Debug overlay and minimap |
+| F5 / F6 | Debug: chunk viewer, light visualizer |
 | F1 | Free-fly debug camera (Tab frees the mouse) |
 
 ## Building

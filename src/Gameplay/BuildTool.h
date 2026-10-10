@@ -23,13 +23,17 @@ class Simulation;
 class VoxelWorld;
 class WorldEditor;
 
-// Placing and demolishing buildings from the strategy camera, and the build selection (a building
-// type, the road tool, or nothing). With a building type selected the footprint follows the
-// cursor, snapped to the tile grid; R rotates it and left click places it when the preview is
-// green. With nothing selected, right click demolishes the building or road tile under the cursor,
-// and holding the left button on a building and dragging moves it: it lifts out of the world, its
-// ghost follows the cursor (R rotates it), and letting go sets it down there when the ghost is green
-// (free of charge, on the same island) or back where it stood otherwise; right click cancels.
+// Placing and demolishing buildings from the strategy camera, and the build selection, as in Anno
+// 1800: a building type, the road tool, a tool (demolish, move, copy) or nothing. With a building
+// type selected the footprint follows the cursor, snapped to the tile grid; R (or Shift + wheel)
+// rotates it and left click places it when the preview is green, and the type stays selected to
+// place more. Right click or Esc drops the selection. The demolish tool (Delete) outlines the
+// building under the cursor in red and demolishes buildings and road tiles clicked or dragged over.
+// The move tool (M) picks a building up with a click and sets it down with the next; holding the
+// left button on a building and dragging moves it too, with nothing selected. A moved building lifts
+// out of the world, its ghost follows the cursor, and it is set down where the ghost is green (free
+// of charge, on the same island) or back where it stood otherwise. The copy tool (C) selects the
+// type (and rotation) of the building clicked.
 // Placing a farm selects its module type next, so its pens go around it; demolishing a farm
 // demolishes its modules. A moved farm carries its modules along (turning with it): set down, any
 // whose new spot is blocked (a tree, a building) is destroyed, as in Anno. A newly placed building goes up over CONSTRUCTION_SECONDS: a timber frame rises from the ground
@@ -40,6 +44,7 @@ class BuildTool {
 public:
     static constexpr int NO_TYPE = -1;
     static constexpr int ROAD = -2; // The road tool is selected (RoadTool handles the mouse)
+    static constexpr int DEMOLISH = -3, MOVE = -4, COPY = -5; // Tools
     static constexpr float CONSTRUCTION_SECONDS = 3.0f;
     static constexpr int MAX_CONSTRUCTIONS = 64; // More at once are finished straight away
     static constexpr float DEMOLITION_SECONDS = 2.0f;
@@ -60,9 +65,14 @@ public:
     BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models,
         TerrainGenerator& terrain);
 
-    void SelectType(int type);
+    void SelectType(int type); // A building type, ROAD, a tool or NO_TYPE; a building being moved goes back
     int SelectedType() const { return m_SelectedType; }
     uint8_t Rotation() const { return m_Rotation; }
+    // Turns the building being placed or moved; false when there is none (the wheel zooms then)
+    bool Rotate(int quarterTurns);
+    // Esc: puts a moved building back or drops the selection; false when there was neither
+    bool Cancel();
+    IslandId PreviewIsland() const { return m_LastCheck.island; } // The island the preview stands on
 
     // Once per frame in strategy mode. mouseFree / keyboardFree: the UI does not want the input.
     void Update(GLFWwindow* window, const PickResult& hover, bool mouseFree, bool keyboardFree);
@@ -200,5 +210,7 @@ private:
 
     bool m_LeftWasPressed = false, m_RightWasPressed = false, m_RWasPressed = false;
     std::array<bool, 10> m_NumberWasPressed = {}; // Keys 1-9, 0
+    bool m_DeleteWasPressed = false, m_MWasPressed = false, m_CWasPressed = false;
+    bool m_ClickMove = false; // The building being moved was picked up by the move tool: a click sets it down
     bool m_TabWasPressed = false;
 };

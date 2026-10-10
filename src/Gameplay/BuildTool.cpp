@@ -76,8 +76,21 @@ static int MaxBuildingHeight() {
 
 void BuildTool::SelectType(int type) {
     if (m_SelectedType == ROAD && type != ROAD) m_RoadTool.Cancel();
+    if (m_Moving != INVALID_GAME_OBJECT) EndMove(false);
     m_SelectedType = type;
     m_ModuleFarm = INVALID_GAME_OBJECT;
+}
+
+bool BuildTool::Rotate(int quarterTurns) {
+    if (m_SelectedType < 0 && m_Moving == INVALID_GAME_OBJECT) return false;
+    m_Rotation = (uint8_t)((m_Rotation + quarterTurns) & 3);
+    return true;
+}
+
+bool BuildTool::Cancel() {
+    if (m_Moving == INVALID_GAME_OBJECT && m_SelectedType == NO_TYPE) return false;
+    SelectType(NO_TYPE);
+    return true;
 }
 
 void BuildTool::SelectModules(GameObjectId farm) {
@@ -110,6 +123,11 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         if (Pressed(down, m_NumberWasPressed[key]) && key < entries) SelectType(EntryAt(m_Tab, key));
     }
     if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS, m_RWasPressed)) m_Rotation = (m_Rotation + 1) & 3;
+    // Tools: a second press puts them away
+    auto toggle = [this](int tool) { SelectType(m_SelectedType == tool ? NO_TYPE : tool); };
+    if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_DELETE) == GLFW_PRESS, m_DeleteWasPressed)) toggle(DEMOLISH);
+    if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS, m_MWasPressed)) toggle(MOVE);
+    if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS, m_CWasPressed)) toggle(COPY);
     bool leftClick = Pressed(mouseFree && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS, m_LeftWasPressed);
     bool rightClick = Pressed(mouseFree && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS, m_RightWasPressed);
 
@@ -129,11 +147,13 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         return;
     }
 
-    // A building being moved is set down when the left button is let go; right click cancels
+    // A building being moved is set down when the left button is let go (or clicked, when the move
+    // tool picked it up); right click cancels
     GameObjectRegistry& objects = m_Simulation.Objects();
     bool leftDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
     if (!leftDown) m_PressedBuilding = INVALID_GAME_OBJECT;
-    if (m_Moving != INVALID_GAME_OBJECT && (rightClick || !leftDown || !objects.IsAlive(m_Moving))) {
+    bool setDown = m_ClickMove ? leftClick : !leftDown;
+    if (m_Moving != INVALID_GAME_OBJECT && (rightClick || setDown || !objects.IsAlive(m_Moving))) {
         EndMove(!rightClick && m_MoveValid);
         return;
     }
@@ -143,6 +163,7 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         if (m_Moving != INVALID_GAME_OBJECT) return;
         if (rightClick) SelectType(NO_TYPE);
         if (leftClick && m_SelectedType == NO_TYPE) m_InspectedBuilding = INVALID_GAME_OBJECT;
+        if (rightClick && m_SelectedType == NO_TYPE) m_InspectedBuilding = INVALID_GAME_OBJECT;
         if (hadLocation) m_LocationRevision++; // The preview went away
         return;
     }
@@ -150,6 +171,51 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
     glm::ivec2 hoverTile(ColumnToTile(hover.voxel.x), ColumnToTile(hover.voxel.z));
     GameObjectId under = m_Simulation.Occupancy().At(hoverTile);
     if (m_Simulation.Objects().IsAlive(under)) m_HoveredBuilding = under;
+
+    // Demolish tool: the building under the cursor outlined in red; buildings and road tiles clicked
+    // or dragged over come down
+    if (m_SelectedType == DEMOLISH) {
+        if (rightClick) {
+            SelectType(NO_TYPE);
+            return;
+        }
+        if (mouseFree && leftDown) {
+            if (m_HoveredBuilding != INVALID_GAME_OBJECT) {
+                Demolish(m_HoveredBuilding);
+                m_HoveredBuilding = INVALID_GAME_OBJECT;
+            } else {
+                m_RoadTool.Demolish(hoverTile); // Nothing happens if it is not road
+            }
+        }
+        if (m_HoveredBuilding != INVALID_GAME_OBJECT) {
+            const VoxelAnchorComponent& anchor = objects.Anchor(m_HoveredBuilding);
+            const BuildingType& type = BUILDING_TYPES[objects.Building(m_HoveredBuilding).type];
+            m_Preview.state = BuildPreview::INVALID; // No ghost: a red box
+            m_Preview.min = anchor.origin - glm::ivec3(0, type.belowGround, 0);
+            m_Preview.max = m_Preview.min + glm::ivec3(anchor.footprint.x, BuildingVolumeHeight(type), anchor.footprint.y);
+        }
+        return;
+    }
+    // Copy tool: the clicked building's type and rotation are selected (an upgraded house builds a
+    // farmer house; a farm module its farm's modules)
+    if (m_SelectedType == COPY && leftClick && m_HoveredBuilding != INVALID_GAME_OBJECT) {
+        const BuildingComponent& building = objects.Building(m_HoveredBuilding);
+        const BuildingType& type = BUILDING_TYPES[building.type];
+        uint8_t rotation = building.rotation;
+        if (type.role == BuildingRole::Module) {
+            if (objects.IsAlive(building.owner)) SelectModules(building.owner);
+        } else {
+            SelectType(type.role == BuildingRole::Residence ? (int)RESIDENCE_FOR_TIER[0] : type.buildable ? (int)building.type : NO_TYPE);
+        }
+        m_Rotation = rotation;
+        leftClick = false; // Not also a placement
+    }
+    // Move tool: a click picks the building up
+    if (m_SelectedType == MOVE && leftClick && m_Moving == INVALID_GAME_OBJECT && m_HoveredBuilding != INVALID_GAME_OBJECT) {
+        StartMove(m_HoveredBuilding);
+        m_ClickMove = true;
+        leftClick = false;
+    }
 
     // Nothing selected: a click opens the building's panel, or closes it on open ground; holding the
     // button and dragging to another tile picks the building up
@@ -161,15 +227,10 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
     if (m_Moving == INVALID_GAME_OBJECT && objects.IsAlive(m_PressedBuilding) && hoverTile != m_PressedTile) StartMove(m_PressedBuilding);
     bool moving = m_Moving != INVALID_GAME_OBJECT;
 
+    // Right click drops the selection, or closes the building panel (demolishing is the demolish tool's)
     if (rightClick) {
-        if (m_HoveredBuilding != INVALID_GAME_OBJECT) {
-            Demolish(m_HoveredBuilding);
-            m_HoveredBuilding = INVALID_GAME_OBJECT;
-        } else if (m_SelectedType != NO_TYPE) {
-            SelectType(NO_TYPE);
-        } else {
-            m_RoadTool.Demolish(hoverTile); // Nothing happens if it is not road
-        }
+        if (m_SelectedType != NO_TYPE) SelectType(NO_TYPE);
+        else m_InspectedBuilding = INVALID_GAME_OBJECT;
     }
 
     // The type to preview: the selected one, or the building being moved
@@ -438,6 +499,7 @@ void BuildTool::DestroyLifted(GameObjectId id) {
 
 void BuildTool::EndMove(bool toPreview) {
     GameObjectId id = m_Moving;
+    m_ClickMove = false;
     if (!m_Simulation.Objects().IsAlive(id)) {
         m_Moving = INVALID_GAME_OBJECT;
         return;

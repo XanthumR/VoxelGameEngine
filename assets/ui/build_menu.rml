@@ -39,7 +39,9 @@
         .entry .cost img { margin-right: 3dp; }
         .entry .hotkey { position: absolute; top: 4dp; right: 6dp; font-size: 11dp; color: #a8874a; }
         .entry.selected .hotkey { color: #3a2a10; }
-        #cancel { align-self: center; }
+        #tools { display: flex; flex-direction: column; align-self: stretch; justify-content: center; margin-left: 4dp; }
+        #tools button { display: flex; flex-direction: row; align-items: center; margin-bottom: 4dp; padding: 4dp 8dp; text-align: left; }
+        #tools button img { margin-right: 6dp; }
         #status { margin-top: 8dp; }
         #status .hint { margin-left: 12dp; }
     </style>
@@ -66,7 +68,12 @@
             <div class="cost" data-if="entry.coins == 0"><span>1x1 tiles</span></div>
             <span class="hotkey">{{entry.hotkey}}</span>
         </button></div>
-        <button id="cancel" data-attrif-disabled="!any_selected" data-event-click="select(-1)">Cancel</button>
+        <div id="tools">
+            <button data-class-selected="tool == -3" data-event-click="select(-3)"><img class="icon small" src="icons/demolish.tga"/><span>Demolish</span></button>
+            <button data-class-selected="tool == -4" data-event-click="select(-4)"><img class="icon small" src="icons/move.tga"/><span>Move</span></button>
+            <button data-class-selected="tool == -5" data-event-click="select(-5)"><img class="icon small" src="icons/copy.tga"/><span>Copy</span></button>
+            <button id="cancel" data-attrif-disabled="!any_selected" data-event-click="select(-1)"><span>Cancel</span></button>
+        </div>
     </div>
     <div id="status" class="row">
         <span data-class-muted="status_kind == 0" data-class-good="status_kind == 1" data-class-warn="status_kind == 2"

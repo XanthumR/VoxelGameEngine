@@ -2,8 +2,10 @@
 
 #include "Economy/ProductionChains.h"
 #include "Economy/Treasury.h"
+#include "Economy/IslandEconomy.h"
 #include "Gameplay/BuildTool.h"
 #include "Simulation/BuildingTypes.h"
+#include "Simulation/Simulation.h"
 
 #include <RmlUi/Core.h>
 
@@ -16,7 +18,8 @@ constexpr int MAX_ENTRIES = 20;
 constexpr std::array<const char*, (int)BuildCategory::Count> TAB_NAMES = { "Farmers", "Workers", "Artisans", "Infrastructure" };
 constexpr std::array<const char*, (int)BuildCategory::Count> TAB_ICONS = { "icons/farmer.tga", "icons/worker.tga", "icons/artisan.tga",
     "icons/construction.tga" };
-constexpr int REQUEST_OFFSET = 3; // Keeps ROAD (-2) and NO_TYPE (-1) above the "no request" 0
+constexpr int REQUEST_OFFSET = 6; // Keeps the tools (-3 to -5), ROAD (-2) and NO_TYPE (-1) above the "no request" 0
+constexpr const char* COST_NAMES[4] = { "coins", "planks", "bricks", "steel_beams" };
 
 } // namespace
 
@@ -48,6 +51,7 @@ bool BuildMenu::Init(Rml::Context* context) {
     model.Bind("status", &m_Status);
     model.Bind("status_kind", &m_StatusKind);
     model.Bind("hint", &m_Hint);
+    model.Bind("tool", &m_Tool);
     model.BindEventCallback("set_tab", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& arguments) {
         if (!arguments.empty()) m_TabRequest = arguments[0].Get<int>();
     });
@@ -59,7 +63,16 @@ bool BuildMenu::Init(Rml::Context* context) {
     for (size_t i = 0; i < TAB_NAMES.size(); i++) m_Tabs.push_back({ TAB_NAMES[i], TAB_ICONS[i], false });
 
     m_Document = context->LoadDocument("assets/ui/build_menu.rml");
-    return m_Document != nullptr;
+
+    Rml::DataModelConstructor cost = context->CreateDataModel("cost_tag");
+    if (!cost) return false;
+    for (int i = 0; i < 4; i++) {
+        cost.Bind(COST_NAMES[i], &m_Cost[i]);
+        cost.Bind(Rml::String("lack_") + COST_NAMES[i], &m_Lacking[i]);
+    }
+    m_CostModel = cost.GetModelHandle();
+    m_CostTag = context->LoadDocument("assets/ui/cost_tag.rml");
+    return m_Document != nullptr && m_CostTag != nullptr;
 }
 
 void BuildMenu::SetVisible(bool visible) {
@@ -104,7 +117,45 @@ void BuildMenu::FillEntries(const BuildTool& tool) {
     }
 }
 
-void BuildMenu::Update(const BuildTool& tool, uint32_t buildingCount) {
+void BuildMenu::UpdateCostTag(const BuildTool& tool, const Simulation& simulation, glm::vec2 cursor, glm::ivec2 size) {
+    int type = tool.SelectedType();
+    bool visible = m_Document && m_Document->IsVisible() && type >= 0 && tool.HasPlacementPreview() && tool.MovingBuilding() == INVALID_GAME_OBJECT;
+    if (m_CostTag->IsVisible() != visible) {
+        if (visible) m_CostTag->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        else m_CostTag->Hide();
+    }
+    if (!visible) return;
+
+    const BuildingCost& cost = BUILDING_COSTS[type];
+    const IslandStorage* storage = simulation.Economy().Find(tool.PreviewIsland());
+    std::array<int, MATERIAL_COUNT> materials = cost.Materials();
+    int values[4] = { cost.coins, materials[0], materials[1], materials[2] };
+    bool lacking[4] = { simulation.Coins().Coins() < cost.coins, false, false, false };
+    for (int i = 0; i < MATERIAL_COUNT; i++) lacking[i + 1] = materials[i] > 0 && (!storage || storage->Amount(MATERIALS[i]) < materials[i]);
+    for (int i = 0; i < 4; i++) {
+        if (m_Cost[i] != values[i]) {
+            m_Cost[i] = values[i];
+            m_CostModel.DirtyVariable(COST_NAMES[i]);
+        }
+        if (m_Lacking[i] != lacking[i]) {
+            m_Lacking[i] = lacking[i];
+            m_CostModel.DirtyVariable(Rml::String("lack_") + COST_NAMES[i]);
+        }
+    }
+    // Below and right of the cursor, kept on the screen
+    Rml::Vector2f box = m_CostTag->GetBox().GetSize(Rml::BoxArea::Border);
+    m_CostTag->SetProperty("left", Rml::ToString(std::max(0.0f, std::min(cursor.x + 24.0f, size.x - box.x - 8.0f))) + "px");
+    m_CostTag->SetProperty("top", Rml::ToString(std::max(0.0f, std::min(cursor.y + 24.0f, size.y - box.y - 8.0f))) + "px");
+}
+
+void BuildMenu::Update(const BuildTool& tool, const Simulation& simulation, glm::vec2 cursor, glm::ivec2 size) {
+    UpdateCostTag(tool, simulation, cursor, size);
+    uint32_t buildingCount = simulation.Objects().AliveCount();
+    int toolSelected = tool.SelectedType() <= BuildTool::DEMOLISH ? tool.SelectedType() : 0;
+    if (m_Tool != toolSelected) {
+        m_Tool = toolSelected;
+        m_Model.DirtyVariable("tool");
+    }
     for (int i = 0; i < (int)m_Tabs.size(); i++) {
         bool locked = !tool.TabUnlocked((BuildCategory)i);
         if (m_Tabs[i].locked == locked) continue;
@@ -128,11 +179,25 @@ void BuildMenu::Update(const BuildTool& tool, uint32_t buildingCount) {
     char text[160];
     int kind = 0;
     const char* hint = "";
-    if (selected == BuildTool::ROAD) {
+    if (tool.MovingBuilding() != INVALID_GAME_OBJECT) {
+        std::snprintf(text, sizeof(text), "%s", tool.LastError() == PlacementError::None ? "Moving: free of charge" : PlacementErrorText(tool.LastError()));
+        kind = tool.LastError() == PlacementError::None ? 1 : 3;
+        hint = "R or Shift + wheel rotates | click sets it down | right click puts it back";
+    } else if (selected == BuildTool::DEMOLISH) {
+        std::snprintf(text, sizeof(text), "Demolish: click or drag over buildings and roads (half the cost back)");
+        kind = 3;
+        hint = "Delete or right click ends";
+    } else if (selected == BuildTool::MOVE) {
+        std::snprintf(text, sizeof(text), "Move: click a building to pick it up");
+        hint = "M or right click ends";
+    } else if (selected == BuildTool::COPY) {
+        std::snprintf(text, sizeof(text), "Copy: click a building to build another like it");
+        hint = "C or right click ends";
+    } else if (selected == BuildTool::ROAD) {
         std::snprintf(text, sizeof(text), "Drag to build road");
         hint = "Right-drag removes road | right click cancels";
     } else if (selected != BuildTool::NO_TYPE) {
-        hint = "R rotates | left click places | right click cancels";
+        hint = "R or Shift + wheel rotates | left click places | right click cancels";
         PlacementError error = tool.LastError();
         BuildingRole role = BUILDING_TYPES[selected].role;
         if (!tool.HasPlacementPreview()) {
@@ -168,7 +233,7 @@ void BuildMenu::Update(const BuildTool& tool, uint32_t buildingCount) {
         }
     } else {
         std::snprintf(text, sizeof(text), "Buildings: %u", buildingCount);
-        hint = "Right click demolishes | hold left click and drag to move";
+        hint = "Delete demolishes | M moves | C copies | hold left click and drag to move";
     }
     if (m_Status != text) {
         m_Status = text;

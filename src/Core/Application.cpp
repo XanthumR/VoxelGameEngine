@@ -56,7 +56,10 @@ void Application::OnScroll(GLFWwindow* window, double /*xOffset*/, double yOffse
     // ImGui chains this callback; ignore the wheel while it scrolls a UI window
     bool usedByUi = app->m_Ui.OnScroll(yOffset);
     bool uiWantsMouse = usedByUi || (app->m_ImGuiReady && !app->MouseFree());
-    if (app->m_CameraMode == CameraMode::Strategy && !uiWantsMouse) app->m_StrategyCamera.OnScroll(yOffset);
+    // Shift + wheel turns the building being placed or moved; otherwise the wheel zooms
+    bool shift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    bool rotated = app->m_CameraMode == CameraMode::Strategy && !uiWantsMouse && shift && app->m_BuildTool.Rotate(yOffset > 0 ? 1 : -1);
+    if (app->m_CameraMode == CameraMode::Strategy && !uiWantsMouse && !rotated) app->m_StrategyCamera.OnScroll(yOffset);
 }
 
 void Application::OnMouseButton(GLFWwindow* window, int button, int action, int mods) {
@@ -304,10 +307,10 @@ bool Application::KeyPressed(int key, bool& wasPressed) {
 }
 
 void Application::HandleKeys(float deltaTime) {
-    // Escape drops the build selection first; with nothing selected it quits
+    // Escape puts a moved building back or drops the build selection or tool first; with nothing
+    // selected it quits
     if (KeyPressed(GLFW_KEY_ESCAPE, m_EscapeWasPressed)) {
-        if (m_CameraMode == CameraMode::Strategy && m_BuildTool.SelectedType() != BuildTool::NO_TYPE) {
-            m_BuildTool.SelectType(BuildTool::NO_TYPE);
+        if (m_CameraMode == CameraMode::Strategy && m_BuildTool.Cancel()) {
         } else if (m_CameraMode == CameraMode::Strategy && m_ShipControl.Selected() != INVALID_SHIP) {
             m_ShipControl.Deselect();
         } else if (m_CameraMode == CameraMode::Strategy && m_BuildTool.InspectedBuilding() != INVALID_GAME_OBJECT) {
@@ -329,10 +332,12 @@ void Application::HandleKeys(float deltaTime) {
     }
 
     if (KeyPressed(GLFW_KEY_F3, m_F3WasPressed)) m_Overlay.Visible() = !m_Overlay.Visible();
-    // Game speed: P pauses, + and - step through 1x, 2x, 4x
+    // Game speed: P or Space pauses, + and - step through 1x, 2x, 4x
     bool plus = glfwGetKey(m_Window, GLFW_KEY_EQUAL) == GLFW_PRESS || glfwGetKey(m_Window, GLFW_KEY_KP_ADD) == GLFW_PRESS;
     bool minus = glfwGetKey(m_Window, GLFW_KEY_MINUS) == GLFW_PRESS || glfwGetKey(m_Window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS;
-    if (KeyPressed(GLFW_KEY_P, m_PWasPressed)) {
+    bool pausePressed = KeyPressed(GLFW_KEY_P, m_PWasPressed);
+    pausePressed |= KeyPressed(GLFW_KEY_SPACE, m_SpaceWasPressed) && m_CameraMode == CameraMode::Strategy; // Space flies up in free-fly
+    if (pausePressed) {
         if (m_GameSpeed > 0) m_SpeedBeforePause = m_GameSpeed;
         m_GameSpeed = m_GameSpeed > 0 ? 0 : m_SpeedBeforePause;
     }
@@ -340,8 +345,9 @@ void Application::HandleKeys(float deltaTime) {
     if (minus && !m_MinusWasPressed) m_GameSpeed = m_GameSpeed <= 1 ? 1 : m_GameSpeed / 2;
     m_PlusWasPressed = plus;
     m_MinusWasPressed = minus;
-    if (KeyPressed(GLFW_KEY_C, m_CWasPressed)) m_Settings.chunkViewer = !m_Settings.chunkViewer;
-    if (KeyPressed(GLFW_KEY_L, m_LWasPressed)) m_Settings.lightVisualizer = !m_Settings.lightVisualizer;
+    // Debug views on F-keys (the letters are the build tools')
+    if (KeyPressed(GLFW_KEY_F5, m_F5WasPressed)) m_Settings.chunkViewer = !m_Settings.chunkViewer;
+    if (KeyPressed(GLFW_KEY_F6, m_F6WasPressed)) m_Settings.lightVisualizer = !m_Settings.lightVisualizer;
 
     if (m_CameraMode == CameraMode::FreeFly) m_EditTool.HandleBlockSelectKeys(m_Window);
 
@@ -526,19 +532,19 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_TopBar.SetVisible(strategy);
     m_BuildMenu.SetVisible(strategy);
     m_TopBar.Update(m_Simulation.Coins(), m_Simulation.Economy(), m_GameSpeed, m_RoutesOpen);
-    m_BuildMenu.Update(m_BuildTool, m_Simulation.Objects().AliveCount());
+    double cursorX, cursorY;
+    glfwGetCursorPos(m_Window, &cursorX, &cursorY);
+    int windowWidth, windowHeight;
+    glfwGetWindowSize(m_Window, &windowWidth, &windowHeight);
+    // Cursor positions are in window coordinates, the UI in framebuffer pixels
+    glm::vec2 cursor((float)cursorX * m_WindowWidth / std::max(1, windowWidth), (float)cursorY * m_WindowHeight / std::max(1, windowHeight));
+    m_BuildMenu.Update(m_BuildTool, m_Simulation, cursor, glm::ivec2(m_WindowWidth, m_WindowHeight));
     m_IslandPanel.Update(m_PanelIsland, m_Simulation.Economy(), strategy);
     {
         // The hovered building's tooltip, unless the build tool has a selection or its panel is open
         GameObjectId hovered = m_BuildTool.HoveredBuilding();
         bool tooltip = strategy && m_BuildTool.SelectedType() == BuildTool::NO_TYPE && m_BuildTool.MovingBuilding() == INVALID_GAME_OBJECT &&
                        MouseFree() && hovered != m_BuildTool.InspectedBuilding();
-        double cursorX, cursorY;
-        glfwGetCursorPos(m_Window, &cursorX, &cursorY);
-        int windowWidth, windowHeight;
-        glfwGetWindowSize(m_Window, &windowWidth, &windowHeight);
-        // Cursor positions are in window coordinates, the UI in framebuffer pixels
-        glm::vec2 cursor((float)cursorX * m_WindowWidth / std::max(1, windowWidth), (float)cursorY * m_WindowHeight / std::max(1, windowHeight));
         m_BuildingInfo.Update(tooltip ? hovered : INVALID_GAME_OBJECT, strategy ? m_BuildTool.InspectedBuilding() : INVALID_GAME_OBJECT,
             m_Simulation, cursor, glm::ivec2(m_WindowWidth, m_WindowHeight));
     }

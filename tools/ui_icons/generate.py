@@ -301,6 +301,34 @@ def construction(d):
     d.polygon([(2, 6), (7, 6), (9, 9), (4, 11)], fill=(200, 205, 212), outline=INK)
 
 
+def demolish(d):
+    # A pickaxe over a broken wall
+    red = (170, 70, 50)
+    for x, y in ((1, 11), (6, 11), (3, 8)):
+        d.rectangle((x, y, x + 4, y + 2), fill=red, outline=INK)
+    d.line((5, 10, 13, 2), fill=WOOD, width=2)
+    d.arc((7, 0, 16, 9), 200, 340, fill=(160, 166, 176), width=2)
+
+
+def move(d):
+    # Four arrows from the middle
+    gold = (226, 190, 100)
+    d.polygon([(8, 0), (11, 4), (5, 4)], fill=gold, outline=INK)
+    d.polygon([(8, 15), (11, 11), (5, 11)], fill=gold, outline=INK)
+    d.polygon([(0, 8), (4, 5), (4, 11)], fill=gold, outline=INK)
+    d.polygon([(15, 8), (11, 5), (11, 11)], fill=gold, outline=INK)
+    d.rectangle((7, 4, 8, 11), fill=gold)
+    d.rectangle((4, 7, 11, 8), fill=gold)
+
+
+def copy(d):
+    # A pipette
+    d.line((2, 13, 9, 6), fill=(190, 200, 210), width=2)
+    d.polygon([(9, 3), (12, 6), (9, 9), (6, 6)], fill=(70, 80, 95), outline=INK)
+    d.ellipse((10, 1, 14, 5), fill=(70, 80, 95), outline=INK)
+    d.point((2, 14), fill=(110, 170, 220))
+
+
 def theatre(d):
     # Comedy and tragedy masks
     light, dark = (240, 230, 200), (200, 170, 90)
@@ -322,7 +350,7 @@ ICONS = {
     "grain": grain, "flour": flour, "bread": bread, "tallow": tallow, "soap": soap, "clay": clay, "beef": beef,
     "iron": iron, "coal": coal, "steel": steel, "steel_beams": steel_beams, "canned_food": canned_food,
     "sewing_machines": sewing_machines, "artisan": artisan, "marketplace": marketplace, "school": school, "theatre": theatre,
-    "construction": construction,
+    "construction": construction, "demolish": demolish, "move": move, "copy": copy,
 }
 
 if __name__ == "__main__":

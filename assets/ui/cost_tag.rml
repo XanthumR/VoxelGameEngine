@@ -1,0 +1,20 @@
+<rml>
+<head>
+    <title>Cost tag</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        /* Beside the cursor while placing (BuildMenu moves it); it never takes the mouse */
+        body { position: absolute; pointer-events: none; padding: 4dp 8dp; }
+        .pair { margin-right: 8dp; }
+        .pair img { margin-right: 3dp; }
+        .pair span { font-weight: bold; color: #f1e7cf; }
+        .pair span.bad { color: #ec6b55; }
+    </style>
+</head>
+<body class="tooltip row" data-model="cost_tag">
+    <div class="row pair" data-if="coins > 0"><img class="icon small" src="icons/coin.tga"/><span data-class-bad="lack_coins">{{coins}}</span></div>
+    <div class="row pair" data-if="planks > 0"><img class="icon small" src="icons/planks.tga"/><span data-class-bad="lack_planks">{{planks}}</span></div>
+    <div class="row pair" data-if="bricks > 0"><img class="icon small" src="icons/bricks.tga"/><span data-class-bad="lack_bricks">{{bricks}}</span></div>
+    <div class="row pair" data-if="steel_beams > 0"><img class="icon small" src="icons/steel_beams.tga"/><span data-class-bad="lack_steel_beams">{{steel_beams}}</span></div>
+</body>
+</rml>
