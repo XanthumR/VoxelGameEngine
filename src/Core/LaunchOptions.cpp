@@ -13,6 +13,8 @@ LaunchOptions LaunchOptions::Parse(int argc, char** argv) {
         int remaining = argc - 1 - i;
         if (arg == "--render-distance" && remaining >= 1) {
             options.renderDistance = std::clamp(std::atoi(argv[++i]), ChunkStreamer::MIN_RENDER_DISTANCE, ChunkStreamer::MAX_RENDER_DISTANCE);
+        } else if (arg == "--no-vsync") {
+            options.vsync = false;
         } else if (arg == "--render-scale" && remaining >= 1) {
             options.renderScale = std::clamp((float)std::atof(argv[++i]), RenderSettings::MIN_RENDER_SCALE, 1.0f);
         } else if (arg == "--fixed-time" && remaining >= 1) {

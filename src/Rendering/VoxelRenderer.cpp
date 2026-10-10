@@ -65,6 +65,10 @@ void VoxelRenderer::PassUniforms::Locate(GLuint program) {
     overlayOrigin = loc("overlayOrigin");
     overlayGroundY = loc("overlayGroundY");
     overlayTileSize = loc("overlayTileSize");
+    viewProj = loc("viewProj");
+    previousViewProj = loc("previousViewProj");
+    shadowFrame = loc("shadowFrame");
+    shadowHistory = loc("shadowHistory");
 }
 
 bool VoxelRenderer::LoadPass(Pass& pass, const char* path) {
@@ -109,6 +113,7 @@ void VoxelRenderer::ResizeTargets(int windowWidth, int windowHeight, float rende
     int targetHeight = std::max(1, (int)std::lround(windowHeight * renderScale));
     if (targetWidth != m_Targets.Width() || targetHeight != m_Targets.Height()) {
         m_Targets.Resize(targetWidth, targetHeight);
+        m_ShadowHistoryValid = false; // New, empty images
     }
 }
 
@@ -277,10 +282,14 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     glBindTexture(GL_TEXTURE_2D, frame.overlay ? frame.overlay->Texture() : 0);
     glm::ivec2 overlayOrigin = frame.overlay ? frame.overlay->Origin() : glm::ivec2(0);
 
+    // Last frame's shadows become the history the shadow pass reuses (only if it ran last frame)
+    if (!settings.halfResShadows) m_ShadowHistoryValid = false;
+    m_Targets.SwapShadowHistory();
     m_Targets.BindImages();
 
     SkyLighting sky = SkyLighting::At(frame.time);
     glm::mat4 inverseView = glm::inverse(view);
+    glm::mat4 currentViewProj = projection * view;
     glm::mat4 inverseProjection = glm::inverse(projection);
 
     // Uniforms are per program, so each pass gets the same set
@@ -330,6 +339,10 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
         // Buildings and roads stand on SEA_LEVEL + ISLAND_HEIGHT; no overlay draws below the world
         glUniform1i(u.overlayGroundY, frame.overlay ? SEA_LEVEL + ISLAND_HEIGHT : -1000);
         glUniform1i(u.overlayTileSize, frame.overlay ? frame.overlay->TileSize() : 1);
+        glUniformMatrix4fv(u.viewProj, 1, GL_FALSE, glm::value_ptr(currentViewProj));
+        glUniformMatrix4fv(u.previousViewProj, 1, GL_FALSE, glm::value_ptr(m_PreviousViewProj));
+        glUniform1i(u.shadowFrame, (int)(m_ShadowFrame & 3));
+        glUniform1i(u.shadowHistory, m_ShadowHistoryValid ? 1 : 0);
     };
 
     GLuint fullGroupsX = (m_Targets.Width() + 7) / 8, fullGroupsY = (m_Targets.Height() + 7) / 8;
@@ -368,5 +381,8 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
 
     // Make the image writes visible to the blit
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_FRAMEBUFFER_BARRIER_BIT);
+    m_PreviousViewProj = currentViewProj;
+    m_ShadowHistoryValid = settings.halfResShadows;
+    m_ShadowFrame++;
     m_Targets.BlitToWindow(frame.windowWidth, frame.windowHeight);
 }

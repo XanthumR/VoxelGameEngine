@@ -1,7 +1,13 @@
 #version 440 core
 // Render pass 2 of 3 (VoxelRenderer): soft shadows at half resolution. One invocation per 2x2
-// pixel quad picks the first pixel of the quad that hit a face which can see the light,
-// computes its soft shadow once, and records which voxel/face it is for. shade.comp reuses it.
+// pixel quad picks the first pixel of the quad that hit a face which can see the light, finds
+// its soft shadow once, and records which voxel/face it is for. shade.comp reuses it.
+//
+// A face's shadow depends on the voxel, the face and the light, not on the camera, so last
+// frame's result is reused when last frame computed one for the same voxel and face (found by
+// projecting the voxel with last frame's camera). Each quad still traces its rays at least every
+// MAX_AGE + 1 frames, and a quarter of the workgroups trace each frame (taking turns), so the cost
+// is spread out and a changed world (a building going up, the sun moving) shows within a few frames.
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -10,8 +16,50 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "include/lighting.glsl"
 
 layout(rgba32i, binding = 2) uniform readonly iimage2D gBuffer;
-layout(r32f, binding = 3) uniform writeonly image2D shadowValue;
+layout(rg32f, binding = 3) uniform writeonly image2D shadowValue; // Shadow, frames since traced
 layout(rgba32i, binding = 4) uniform writeonly iimage2D shadowKey;
+layout(rg32f, binding = 5) uniform readonly image2D previousShadowValue;
+layout(rgba32i, binding = 6) uniform readonly iimage2D previousShadowKey;
+
+uniform mat4 viewProj;         // This frame's camera (world units)
+uniform mat4 previousViewProj; // Last frame's
+uniform int shadowFrame;       // 0-3: which quarter of the quads traces this frame
+uniform int shadowHistory;     // 1 when last frame's shadow images are usable
+
+const float MAX_AGE = 3.0; // A reused shadow is at most this many frames old
+
+vec2 screenPixel(mat4 camera, vec3 world, out bool visible) {
+    vec4 clip = camera * vec4(world, 1.0);
+    visible = clip.w > 0.0;
+    return (clip.xy / max(clip.w, 1e-6) * 0.5 + 0.5) * vec2(renderSize);
+}
+
+// Last frame's shadow for this voxel face, seen at pixel this frame; age < 0 when there is none.
+// The voxel's motion on screen since last frame (a motion vector) moves the pixel back to where
+// that spot was: with a still camera the same pixel.
+float previousShadow(ivec4 key, ivec2 currentPixel, out float age) {
+    age = -1.0;
+    vec3 world = (vec3(key.xyz) + 0.5) / float(dimX);
+    bool visibleNow, visibleBefore;
+    vec2 now = screenPixel(viewProj, world, visibleNow);
+    vec2 before = screenPixel(previousViewProj, world, visibleBefore);
+    if (!visibleNow || !visibleBefore) return 1.0;
+    vec2 pixel = vec2(currentPixel) + 0.5 + (before - now);
+    ivec2 quad = ivec2(floor(pixel)) / 2;
+    // The quad it falls in, and the neighbours on the side the pixel is nearest to
+    ivec2 toward = ivec2(fract(pixel.x * 0.5) < 0.5 ? -1 : 1, fract(pixel.y * 0.5) < 0.5 ? -1 : 1);
+    ivec2 candidates[4] = ivec2[](quad, quad + ivec2(toward.x, 0), quad + ivec2(0, toward.y), quad + toward);
+    ivec2 quadDims = (renderSize + 1) / 2;
+    for (int i = 0; i < 4; i++) {
+        ivec2 q = candidates[i];
+        if (q.x < 0 || q.y < 0 || q.x >= quadDims.x || q.y >= quadDims.y) continue;
+        if (imageLoad(previousShadowKey, q) != key) continue;
+        vec2 previous = imageLoad(previousShadowValue, q).rg;
+        age = previous.g;
+        return previous.r;
+    }
+    return 1.0;
+}
 
 void main() {
     ivec2 quad = ivec2(gl_GlobalInvocationID.xy);
@@ -20,6 +68,7 @@ void main() {
 
     ivec4 key = ivec4(0, 0, 0, NO_HIT);
     float shadow = 1.0;
+    float age = 0.0;
 
     for (int i = 0; i < 4; i++) {
         ivec2 p = quad * 2 + ivec2(i & 1, i >> 1);
@@ -31,10 +80,20 @@ void main() {
         if (dot(indexToNormal(normalIndex), lightDir) <= 0.0) continue;
 
         key = ivec4(g.xyz, normalIndex);
-        shadow = softShadow(g.xyz, indexToNormal(normalIndex));
+        // Turns go by workgroup, not by quad: the GPU runs a workgroup's invocations together, so
+        // one tracing quad would make the whole group wait for its rays anyway
+        bool myTurn = int((gl_WorkGroupID.x & 1u) | ((gl_WorkGroupID.y & 1u) << 1)) == shadowFrame;
+        float previousAge = -1.0;
+        if (shadowHistory != 0 && !myTurn) shadow = previousShadow(key, p, previousAge);
+        if (previousAge >= 0.0 && previousAge < MAX_AGE) {
+            age = previousAge + 1.0;
+        } else {
+            shadow = softShadow(g.xyz, indexToNormal(normalIndex));
+            age = 0.0;
+        }
         break;
     }
 
-    imageStore(shadowValue, quad, vec4(shadow));
+    imageStore(shadowValue, quad, vec4(shadow, age, 0.0, 0.0));
     imageStore(shadowKey, quad, key);
 }

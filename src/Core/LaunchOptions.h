@@ -10,6 +10,8 @@
 //   --fixed-time T             freeze time of day, waves and grass at T seconds
 //   --camera X Y Z YAW PITCH   hold the camera at this voxel position and direction
 //   --screenshot FILE SECONDS  save the window as a PPM after SECONDS, then quit
+//   --no-vsync                 draw as fast as possible (for measuring: with vsync the GPU idles,
+//                              clocks down and its per-pass times in F3 stretch)
 // The last three make runs reproducible, for before/after screenshot comparisons.
 struct LaunchOptions {
     int renderDistance = 24;
@@ -21,6 +23,7 @@ struct LaunchOptions {
     float cameraPitch = 0.0f;
     std::string screenshotPath;
     double screenshotDelay = -1.0; // < 0: no screenshot
+    bool vsync = true;
 
     static LaunchOptions Parse(int argc, char** argv);
 };

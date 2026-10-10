@@ -73,6 +73,7 @@ private:
         GLint sunDir, moonDir, lightDir, lightColor, skyColor, ambient;
         GLint previewState, previewMin, previewMax, previewGhost, numObjects, objectTilesX, shadowGridOrigin;
         GLint overlayOrigin, overlayGroundY, overlayTileSize;
+        GLint viewProj, previousViewProj, shadowFrame, shadowHistory;
 
         void Locate(GLuint program);
     };
@@ -107,4 +108,8 @@ private:
     bool m_AtlasDirty = false;
     uint32_t m_GhostRevision = 0;
     RenderTargets m_Targets;
+    // Shadows reused from last frame (shadow.comp): its camera, and whether its shadows are usable
+    glm::mat4 m_PreviousViewProj = glm::mat4(1.0f);
+    bool m_ShadowHistoryValid = false;
+    uint32_t m_ShadowFrame = 0;
 };

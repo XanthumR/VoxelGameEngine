@@ -109,7 +109,7 @@ bool Application::Init() {
         return false;
     }
     glfwMakeContextCurrent(m_Window);
-    glfwSwapInterval(1);
+    glfwSwapInterval(m_Options.vsync ? 1 : 0);
     glfwSetWindowUserPointer(m_Window, this);
     // Installed before ImGui, which chains them
     glfwSetCursorPosCallback(m_Window, OnMouseMove);
