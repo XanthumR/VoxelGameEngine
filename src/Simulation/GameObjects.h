@@ -58,6 +58,7 @@ enum class ProducerStatus : uint8_t {
     BadLocation,  // Its location rule gives nothing (no trees, no modules)
     MissingInput, // An input buffer is empty
     OutputFull,   // The output buffer is full (waiting for a cart)
+    Paused,       // Stopped by the player: no work, its jobs freed
 };
 
 // Where a producer's cart is
@@ -69,6 +70,8 @@ enum class CartState : uint8_t {
 };
 
 constexpr int CART_PATH_MAX = 32; // Road tiles of a cart's route; more than the warehouse road range
+constexpr int PRODUCTIVITY_SAMPLES = 20;          // Productivity history: the last 10 minutes...
+constexpr int PRODUCTIVITY_SAMPLE_TICKS = 300;    // ...one sample (the average) every 30 s
 
 // A producer (BuildingRole::Producer): its cycle, buffers and how fast it runs, and its cart
 // (ProductionSystem)
@@ -80,6 +83,13 @@ struct ProductionComponent {
     int16_t productivity = 0;            // Per mille: workforce share x location factor
     ProducerStatus status = ProducerStatus::NoRoad;
     uint32_t cycles = 0;                 // Goods made so far
+    bool paused = false;                 // Stopped by the player
+
+    // Productivity history: averages in percent, oldest first from historyHead; historyCount filled
+    std::array<uint8_t, PRODUCTIVITY_SAMPLES> history = {};
+    uint8_t historyHead = 0, historyCount = 0;
+    int32_t sampleSum = 0;   // Productivity per mille summed over the current sample's ticks
+    uint16_t sampleTicks = 0;
 
     CartState cartState = CartState::Idle;
     uint8_t cartPathLength = 0;              // Road tiles in cartPath

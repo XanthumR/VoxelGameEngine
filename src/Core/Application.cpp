@@ -531,7 +531,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     // --- UI ---
     bool strategy = m_CameraMode == CameraMode::Strategy;
     m_TopBar.SetVisible(strategy);
-    m_BuildMenu.SetVisible(strategy);
+    m_BuildMenu.SetVisible(strategy && m_BuildTool.InspectedBuilding() == INVALID_GAME_OBJECT); // The object menu takes its place
     m_TopBar.Update(m_Simulation.Coins(), m_Simulation.Economy(), m_GameSpeed, m_RoutesOpen);
     double cursorX, cursorY;
     glfwGetCursorPos(m_Window, &cursorX, &cursorY);

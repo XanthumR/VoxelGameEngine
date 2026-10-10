@@ -429,3 +429,31 @@ TEST(FigureModelTest, EveryModelHasItsVoxels) {
     VoxelObjectModel artisan = BuildPersonModel(TIER_ARTISANS, 0, 0);
     EXPECT_NE(std::count(artisan.ids.begin(), artisan.ids.end(), Block::PERSON_BOWLER), 0);
 }
+
+TEST(ProductionTest, PausedProducerStopsAndFreesItsJobs) {
+    ProductionFixture f;
+    f.SetFarmers(10);
+    GameObjectId sawmill = f.AddSawmill(12);
+    f.Run(10);
+    EXPECT_EQ(f.Storage().jobs[TIER_FARMERS], SawmillChain().workforce);
+    f.objects.Production(sawmill).paused = true;
+    f.Run(SawmillChain().cycleTicks * 2);
+    EXPECT_EQ(f.objects.Production(sawmill).status, ProducerStatus::Paused);
+    EXPECT_EQ(f.objects.Production(sawmill).output, 0);
+    EXPECT_EQ(f.Storage().jobs[TIER_FARMERS], 0);
+    f.objects.Production(sawmill).paused = false;
+    f.Run(1);
+    EXPECT_EQ(f.objects.Production(sawmill).status, ProducerStatus::Working);
+}
+
+TEST(ProductionTest, ProductivityHistoryKeepsTheLastSamples) {
+    ProductionComponent production;
+    production.productivity = 1000;
+    for (int i = 0; i < PRODUCTIVITY_SAMPLE_TICKS; i++) ProductionSystem::SampleProductivity(production);
+    ASSERT_EQ(production.historyCount, 1);
+    EXPECT_EQ(production.history[0], 100);
+    production.productivity = 500;
+    for (int i = 0; i < PRODUCTIVITY_SAMPLE_TICKS * PRODUCTIVITY_SAMPLES; i++) ProductionSystem::SampleProductivity(production);
+    EXPECT_EQ(production.historyCount, PRODUCTIVITY_SAMPLES);
+    EXPECT_EQ(production.history[production.historyHead], 50); // The 100 is gone
+}

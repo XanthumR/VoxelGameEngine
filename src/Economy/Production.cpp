@@ -63,11 +63,26 @@ void ProductionSystem::Update(GameObjectRegistry& objects, IslandEconomyManager&
         GameObjectId id = objects.IdAtSlot(slot);
         if (id == INVALID_GAME_OBJECT || !IsProducer(objects, id)) continue;
         Produce(objects, economy, trees, id, tick);
+        SampleProductivity(objects.Production(id));
         UpdateCart(objects, economy, roads, id);
         m_Producers++;
         if (objects.Production(id).status == ProducerStatus::Working) m_Working++;
         if (objects.Production(id).cartState != CartState::Idle) m_CartsOnRoad++;
     }
+}
+
+void ProductionSystem::SampleProductivity(ProductionComponent& production) {
+    production.sampleSum += production.productivity;
+    if (++production.sampleTicks < PRODUCTIVITY_SAMPLE_TICKS) return;
+    uint8_t percent = (uint8_t)(production.sampleSum / PRODUCTIVITY_SAMPLE_TICKS / 10);
+    if (production.historyCount < PRODUCTIVITY_SAMPLES) {
+        production.history[production.historyCount++] = percent;
+    } else {
+        production.history[production.historyHead] = percent; // Over the oldest
+        production.historyHead = (uint8_t)((production.historyHead + 1) % PRODUCTIVITY_SAMPLES);
+    }
+    production.sampleSum = 0;
+    production.sampleTicks = 0;
 }
 
 void ProductionSystem::RecallCart(ProductionComponent& production) {
@@ -219,6 +234,7 @@ void ProductionSystem::UpdateWorkforce(const GameObjectRegistry& objects, Island
     for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
         GameObjectId id = objects.IdAtSlot(slot);
         if (id == INVALID_GAME_OBJECT || !IsProducer(objects, id) || !objects.Logistics(id).connected) continue;
+        if (objects.Production(id).paused) continue; // Its workers are free
         IslandStorage* storage = economy.Find(objects.Building(id).island);
         if (!storage) continue;
         const ProductionChain& chain = ChainOf(objects, id);
@@ -239,6 +255,10 @@ void ProductionSystem::Produce(GameObjectRegistry& objects, IslandEconomyManager
     const IslandStorage* storage = economy.Find(objects.Building(id).island);
     production.productivity = 0;
 
+    if (production.paused) {
+        production.status = ProducerStatus::Paused;
+        return;
+    }
     if (!objects.Logistics(id).connected || !storage) {
         production.status = ProducerStatus::NoRoad;
         return;

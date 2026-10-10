@@ -24,6 +24,8 @@ class TreeRegistry;
 //    island has), drives downhill on the warehouse road distance to the warehouse, unloads into
 //    island storage (waiting while it is full), loads the inputs the producer lacks and drives back
 //    the same way. A cut road ahead turns it around; with the road home cut it is home at once.
+//  - a paused producer (the player's choice) does nothing and frees its jobs; its cart still runs
+//  - each producer's productivity history: the average of every 30 s, the last 10 minutes
 // Integer math only, so a run is reproducible.
 class ProductionSystem {
 public:
@@ -39,6 +41,8 @@ public:
     static bool FindCartPath(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, ProductionComponent& production);
     // The cart is home at once with what it carries (its producer moved)
     static void RecallCart(ProductionComponent& production);
+    // Adds this tick's productivity to the history (a sample every PRODUCTIVITY_SAMPLE_TICKS)
+    static void SampleProductivity(ProductionComponent& production);
 
 private:
     void UpdateLocations(GameObjectRegistry& objects, IslandRegistry& islands, const OccupancyGrid& occupancy, const RoadNetwork& roads, TreeRegistry& trees);

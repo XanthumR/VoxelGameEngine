@@ -1,0 +1,101 @@
+<rml>
+<head>
+    <title>Object menu</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        /* The selected building's menu, docked at the bottom middle as in Anno 1800 */
+        body { position: absolute; bottom: 12dp; left: 50%; transform: translateX(-50%); width: 900dp; }
+        /* Header: picture, name and status, the tools, close */
+        .title { display: flex; flex-direction: row; align-items: center; }
+        .title .picture { width: 64dp; height: 48dp; margin: -4dp 10dp -4dp 0; }
+        .title .name { display: block; font-size: 18dp; }
+        .title .status { display: block; font-family: "Libre Baskerville"; font-weight: normal; font-size: 12dp; }
+        .title button { padding: 3dp 8dp; margin-left: 4dp; display: flex; flex-direction: row; align-items: center; font-size: 12dp; }
+        .title button img { margin-right: 5dp; }
+        .title button.close { margin-left: 10dp; padding: 3dp 8dp; }
+        #content { display: flex; flex-direction: row; align-items: flex-start; }
+        #big { width: 200dp; margin-right: 16dp; }
+        #big .label { display: block; font-family: Cinzel; font-weight: bold; font-size: 12dp; color: #dcbc6e; }
+        #big .value { display: block; font-family: Cinzel; font-size: 30dp; color: #f1e7cf; }
+        #big .unit { display: block; font-size: 12dp; color: #9c9584; margin-bottom: 4dp; }
+        #big progress { height: 6dp; margin-bottom: 8dp; }
+        /* The last 10 minutes of productivity, a bar every 30 s */
+        #history { display: flex; flex-direction: row; align-items: flex-end; height: 52dp; padding: 2dp; border: 1dp #5d4b2a; background-color: #0b0e12; }
+        #history .bar { width: 8dp; margin-right: 1dp; decorator: linear-gradient(to bottom, #a6d66f, #5f9a36); }
+        #history .bar.low { decorator: linear-gradient(to bottom, #f2c35d, #b9842a); }
+        #history .bar.bad { decorator: linear-gradient(to bottom, #f07b62, #a63a26); }
+        #history-caption { display: block; font-size: 11dp; color: #9c9584; margin-top: 2dp; }
+        /* Slots: needs, storage, inventory */
+        #slots { flex: 1; margin-right: 16dp; }
+        #slots h3 { margin-top: 0; }
+        /* At most two rows; a full inventory scrolls (mouse wheel or the bar) */
+        .grid { display: flex; flex-direction: row; flex-wrap: wrap; max-height: 184dp; overflow-y: auto; }
+        .slotbox { display: block; width: 92dp; margin: 0 6dp 6dp 0; padding: 4dp; border: 1dp #5d4b2a; border-radius: 2dp; background-color: #0f1317; text-align: center; }
+        .slotbox img { display: block; margin: 0 auto 2dp; }
+        .slotbox .label { display: block; font-size: 11dp; white-space: normal; }
+        .slotbox .amount { display: block; font-weight: bold; font-size: 12dp; }
+        .slotbox progress { height: 4dp; margin-top: 3dp; }
+        #details { width: 280dp; }
+        #actions { display: flex; flex-direction: row; margin-top: 8dp; }
+        #actions button { margin-right: 6dp; }
+    </style>
+</head>
+<body class="panel" data-model="object_menu">
+    <div class="title">
+        <img class="picture" data-attr-src="image"/>
+        <div>
+            <span class="name">{{title}}</span>
+            <span class="status" data-class-good="subtitle_tone == 1" data-class-warn="subtitle_tone == 2" data-class-bad="subtitle_tone == 3"
+                  data-class-muted="subtitle_tone == 4">{{subtitle}}</span>
+        </div>
+        <span class="spacer"/>
+        <button data-event-click="tool(1)"><img class="icon small" src="icons/move.tga"/><span>Move</span></button>
+        <button data-event-click="tool(2)"><img class="icon small" src="icons/copy.tga"/><span>Copy</span></button>
+        <button data-if="can_pause" data-class-selected="paused" data-event-click="tool(3)"><span>{{paused ? 'Resume' : 'Pause'}}</span></button>
+        <button data-event-click="tool(4)"><img class="icon small" src="icons/demolish.tga"/><span>Demolish</span></button>
+        <button class="close" data-event-click="close"><span>X</span></button>
+    </div>
+    <div id="content">
+        <div id="big" data-if="big_label != ''">
+            <span class="label">{{big_label}}</span>
+            <span class="value">{{big_value}}</span>
+            <span class="unit" data-if="big_unit != ''">{{big_unit}}</span>
+            <progress data-if="big_bar >= 0" data-attr-value="big_bar"/>
+            <div data-if="history.size > 0">
+                <div id="history">
+                    <div data-for="bar : history"><div class="bar" data-style-height="bar.height" data-class-low="bar.percent < 90"
+                         data-class-bad="bar.percent < 50"/></div>
+                </div>
+                <span id="history-caption">Last 10 minutes</span>
+            </div>
+        </div>
+        <div id="slots" data-if="slots.size > 0">
+            <h3>{{slots_title}}</h3>
+            <div class="grid">
+                <div data-for="s : slots"><div class="slotbox">
+                    <img class="icon" data-attr-src="s.icon"/>
+                    <span class="label">{{s.label}}</span>
+                    <span class="amount" data-class-good="s.tone == 1" data-class-warn="s.tone == 2" data-class-bad="s.tone == 3">{{s.value}}</span>
+                    <progress data-if="s.fill >= 0" data-attr-value="s.fill" data-class-warn="s.tone == 2" data-class-bad="s.tone == 3"/>
+                </div></div>
+            </div>
+        </div>
+        <div id="details">
+            <div class="line" data-for="line : lines">
+                <div class="row">
+                    <img class="icon small" data-if="line.icon != ''" data-attr-src="line.icon"/>
+                    <span data-class-good="line.tone == 1" data-class-warn="line.tone == 2" data-class-bad="line.tone == 3"
+                          data-class-muted="line.tone == 4" data-class-heading="line.tone == 5">{{line.text}}</span>
+                    <span class="spacer"/>
+                    <span class="value" data-if="line.value != ''">{{line.value}}</span>
+                </div>
+                <progress data-if="line.bar >= 0" data-attr-value="line.bar"/>
+            </div>
+        </div>
+    </div>
+    <div id="actions" data-if="actions.size > 0">
+        <div data-for="act : actions"><button data-class-primary="act.enabled" data-attrif-disabled="!act.enabled"
+                data-event-click="do_action(act.id)"><span>{{act.label}}</span></button></div>
+    </div>
+</body>
+</rml>

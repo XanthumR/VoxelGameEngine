@@ -82,6 +82,28 @@ void BuildTool::SelectType(int type) {
     m_ModuleFarm = INVALID_GAME_OBJECT;
 }
 
+void BuildTool::BeginMove(GameObjectId id) {
+    if (!m_Simulation.Objects().IsAlive(id)) return;
+    if (m_SelectedType != MOVE) SelectType(MOVE);
+    StartMove(id);
+    m_ClickMove = true;
+}
+
+// An upgraded house builds a farmer house; a farm module its farm's modules
+void BuildTool::CopyBuilding(GameObjectId id) {
+    const GameObjectRegistry& objects = m_Simulation.Objects();
+    if (!objects.IsAlive(id)) return;
+    const BuildingComponent& building = objects.Building(id);
+    const BuildingType& type = BUILDING_TYPES[building.type];
+    uint8_t rotation = building.rotation;
+    if (type.role == BuildingRole::Module) {
+        if (objects.IsAlive(building.owner)) SelectModules(building.owner);
+    } else {
+        SelectType(type.role == BuildingRole::Residence ? (int)RESIDENCE_FOR_TIER[0] : type.buildable ? (int)building.type : NO_TYPE);
+    }
+    m_Rotation = rotation;
+}
+
 bool BuildTool::Rotate(int quarterTurns) {
     if (m_SelectedType < 0 && m_Moving == INVALID_GAME_OBJECT) return false;
     m_Rotation = (uint8_t)((m_Rotation + quarterTurns) & 3);
@@ -196,24 +218,14 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         }
         return;
     }
-    // Copy tool: the clicked building's type and rotation are selected (an upgraded house builds a
-    // farmer house; a farm module its farm's modules)
+    // Copy tool: the clicked building's type and rotation are selected
     if (m_SelectedType == COPY && leftClick && m_HoveredBuilding != INVALID_GAME_OBJECT) {
-        const BuildingComponent& building = objects.Building(m_HoveredBuilding);
-        const BuildingType& type = BUILDING_TYPES[building.type];
-        uint8_t rotation = building.rotation;
-        if (type.role == BuildingRole::Module) {
-            if (objects.IsAlive(building.owner)) SelectModules(building.owner);
-        } else {
-            SelectType(type.role == BuildingRole::Residence ? (int)RESIDENCE_FOR_TIER[0] : type.buildable ? (int)building.type : NO_TYPE);
-        }
-        m_Rotation = rotation;
+        CopyBuilding(m_HoveredBuilding);
         leftClick = false; // Not also a placement
     }
     // Move tool: a click picks the building up
     if (m_SelectedType == MOVE && leftClick && m_Moving == INVALID_GAME_OBJECT && m_HoveredBuilding != INVALID_GAME_OBJECT) {
-        StartMove(m_HoveredBuilding);
-        m_ClickMove = true;
+        BeginMove(m_HoveredBuilding);
         leftClick = false;
     }
 

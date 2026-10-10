@@ -111,6 +111,10 @@ public:
 
     GameObjectId Place(uint16_t type, uint8_t rotation, glm::ivec2 minTile); // INVALID if not placeable
     void Demolish(GameObjectId id);
+    // Picks a building up as the move tool does: the next click sets it down (the object menu's Move)
+    void BeginMove(GameObjectId id);
+    // Selects a building's type and rotation as the copy tool does (the object menu's Copy)
+    void CopyBuilding(GameObjectId id);
 
     // Selects the module type of a farm, to place its modules (they go to this farm first)
     void SelectModules(GameObjectId farm);

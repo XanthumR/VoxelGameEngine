@@ -801,6 +801,7 @@ Milestone 7 moved the UI to RmlUi and the last restyle gave it Anno 1800's look 
 - Houses: residents bar, the needs as a grid of icons each with a fill ring and its +residents, the upgrade button with its materials.
 - Warehouse and harbor: the island inventory (below), the harbor's ships and "Build ship".
 - Pause stops a producer: a new `ProductionComponent` flag the simulation honours (status Paused, its jobs freed, upkeep still paid).
+- Done: `assets/ui/object_menu.rml` replaces the building panel; the construction menu hides while it is open. History: 20 samples of the average productivity, one every 30 s (`ProductionSystem::SampleProductivity`). Move and Copy in the header use `BuildTool::BeginMove` / `CopyBuilding`. Tests: pausing, the history ring.
 
 **U4. Island bar, inventory and top bar**
 - Island bar at the top left: the name of the island under the camera ("Island #1" until islands get names), its residents, and a storage button.
