@@ -149,8 +149,9 @@ bool Application::Init() {
     m_CartModelBase = -1;
     for (int frame = 0; frame < CART_FRAMES; frame++) {
         for (int load = 0; load < CART_LOADS; load++) {
-            int item = load == 0 ? 0 : (load - 1) / 4, amount = load == 0 ? 0 : (load - 1) % 4 + 1;
-            int index = m_Renderer.AddObjectModel(BuildCartModel(frame, item, amount));
+            bool piled = load > 4;
+            int amount = load == 0 ? 0 : (load - 1) % 4 + 1;
+            int index = m_Renderer.AddObjectModel(BuildCartModel(frame, piled, amount));
             if (m_CartModelBase < 0) m_CartModelBase = index;
         }
     }
@@ -313,8 +314,9 @@ void Application::UpdatePicking() {
 }
 
 // Rebuilds the per-tile ground highlights when anything they show changed: road range colors
-// while building (warehouse reach, or marketplace reach for houses and marketplaces), the reach of
-// a hovered or previewed warehouse or marketplace, and the road tool's path
+// while building (warehouse reach; for houses the marketplaces' reach, for service buildings the
+// reach of their type), the reach of a hovered or previewed warehouse or service building, and the
+// road tool's path
 void Application::UpdateTileOverlay() {
     glm::ivec3 focus = glm::ivec3(glm::floor(m_StrategyCamera.FocusPoint() * VOXELS_PER_UNIT));
     bool moved = m_TileOverlay.Recenter(glm::ivec2(ColumnToTile(focus.x), ColumnToTile(focus.z)));
@@ -330,9 +332,10 @@ void Application::UpdateTileOverlay() {
     if (objects.IsAlive(hovered)) {
         BuildingRole role = BUILDING_TYPES[objects.Building(hovered).type].role;
         if (role == BuildingRole::Storage) key.highlightedWarehouse = hovered;
-        if (role == BuildingRole::Market) key.highlightedMarket = hovered;
+        if (role == BuildingRole::Service) key.highlightedService = hovered;
     }
-    bool reachPreview = key.selection >= 0 && (BUILDING_TYPES[key.selection].role == BuildingRole::Storage || key.selection == BUILDING_MARKETPLACE) &&
+    bool reachPreview = key.selection >= 0 &&
+        (BUILDING_TYPES[key.selection].role == BuildingRole::Storage || BUILDING_TYPES[key.selection].role == BuildingRole::Service) &&
         m_BuildTool.HasPlacementPreview();
     if (reachPreview) {
         key.previewReachType = key.selection;
@@ -344,24 +347,33 @@ void Application::UpdateTileOverlay() {
     m_TileOverlayKey = key;
 
     m_TileOverlay.Clear();
-    bool anyHighlight = key.highlightedWarehouse != INVALID_GAME_OBJECT || key.highlightedMarket != INVALID_GAME_OBJECT;
+    bool anyHighlight = key.highlightedWarehouse != INVALID_GAME_OBJECT || key.highlightedService != INVALID_GAME_OBJECT;
     if (key.selection != BuildTool::NO_TYPE || anyHighlight) {
-        // Houses and marketplaces care about marketplace reach, everything else about warehouse reach
-        bool marketView = key.selection == BUILDING_FARMER_HOUSE || key.selection == BUILDING_MARKETPLACE || key.highlightedMarket != INVALID_GAME_OBJECT;
+        // Houses care about marketplace reach, service buildings about the reach of their type,
+        // everything else about warehouse reach
+        ServiceType service = ServiceType::Count;
+        if (key.selection >= 0 && BUILDING_TYPES[key.selection].role == BuildingRole::Residence) service = ServiceType::Marketplace;
+        if (key.selection >= 0 && BUILDING_TYPES[key.selection].role == BuildingRole::Service) service = BUILDING_TYPES[key.selection].service;
+        if (key.highlightedService != INVALID_GAME_OBJECT) service = BUILDING_TYPES[objects.Building(key.highlightedService).type].service;
         roads.ForEach([&](glm::ivec2 tile, const RoadTile& road) {
             uint8_t color;
-            if (marketView) color = road.marketDistance <= MARKET_ROAD_RANGE ? TileOverlay::MARKET_IN_RANGE : TileOverlay::ROAD_OUT_OF_RANGE;
-            else color = road.distance <= WAREHOUSE_ROAD_RANGE ? TileOverlay::ROAD_IN_RANGE : TileOverlay::ROAD_OUT_OF_RANGE;
+            if (service != ServiceType::Count) {
+                size_t s = (size_t)service;
+                color = road.serviceDistance[s] <= SERVICE_ROAD_RANGE[s] ? TileOverlay::MARKET_IN_RANGE : TileOverlay::ROAD_OUT_OF_RANGE;
+                if (key.highlightedService != INVALID_GAME_OBJECT && road.service[s] == key.highlightedService) color = TileOverlay::MARKET_REACH;
+            } else {
+                color = road.distance <= WAREHOUSE_ROAD_RANGE ? TileOverlay::ROAD_IN_RANGE : TileOverlay::ROAD_OUT_OF_RANGE;
+            }
             if (key.highlightedWarehouse != INVALID_GAME_OBJECT && road.warehouse == key.highlightedWarehouse) color = TileOverlay::WAREHOUSE_REACH;
-            if (key.highlightedMarket != INVALID_GAME_OBJECT && road.market == key.highlightedMarket) color = TileOverlay::MARKET_REACH;
             m_TileOverlay.Set(tile, color);
         });
     }
     if (key.previewReachType >= 0) {
-        bool market = key.previewReachType == BUILDING_MARKETPLACE;
+        const BuildingType& previewed = BUILDING_TYPES[key.previewReachType];
+        bool service = previewed.role == BuildingRole::Service;
         m_Simulation.Logistics().PreviewReach(roads, key.previewMinTile, key.previewTiles,
-            market ? MARKET_ROAD_RANGE : WAREHOUSE_ROAD_RANGE, m_ReachScratch);
-        for (const glm::ivec2& tile : m_ReachScratch) m_TileOverlay.Set(tile, market ? TileOverlay::MARKET_REACH : TileOverlay::WAREHOUSE_REACH);
+            service ? SERVICE_ROAD_RANGE[(size_t)previewed.service] : WAREHOUSE_ROAD_RANGE, m_ReachScratch);
+        for (const glm::ivec2& tile : m_ReachScratch) m_TileOverlay.Set(tile, service ? TileOverlay::MARKET_REACH : TileOverlay::WAREHOUSE_REACH);
     }
     if (m_BuildTool.HasLocationPreview()) {
         for (const glm::ivec2& tile : m_BuildTool.PreviewLocationTiles()) m_TileOverlay.Set(tile, TileOverlay::LOCATION_COUNTED);

@@ -51,7 +51,7 @@ void IslandPanel::Update(IslandId island, const IslandEconomyManager& economy, b
         const PopulationTier& definition = POPULATION_TIERS[tier];
         if (tier > 0 && storage->population[tier] == 0 && storage->jobs[tier] == 0) continue; // Upper tiers once they matter
         InfoLine& heading = m_Lines.Add(definition.name, Tone::Heading);
-        heading.icon = tier == 0 ? "icons/farmer.tga" : "icons/worker.tga";
+        heading.icon = TierIcon(tier);
         heading.value = Rml::ToString(storage->population[tier]);
         if (storage->jobs[tier] > 0) {
             std::snprintf(text, sizeof(text), "Jobs %d, %d%% filled", storage->jobs[tier], storage->workforce[tier] / 10);
@@ -60,7 +60,7 @@ void IslandPanel::Update(IslandId island, const IslandEconomyManager& economy, b
         for (int n = 0; n < definition.needCount; n++) {
             const Need& need = definition.needs[n];
             if (need.kind != NeedKind::Good) continue;
-            InfoLine& line = m_Lines.Add(need.name);
+            InfoLine& line = m_Lines.Add(NeedName(need));
             line.icon = ItemIcon(need.item);
             std::snprintf(text, sizeof(text), "%d%%", storage->supply[tier][n] / 10);
             line.value = text;
@@ -74,7 +74,8 @@ void IslandPanel::Update(IslandId island, const IslandEconomyManager& economy, b
     std::snprintf(text, sizeof(text), "%d warehouse%s", storage->warehouseCount, storage->warehouseCount == 1 ? "" : "s");
     m_Lines.Add(text, Tone::Muted);
     for (int i = 0; i < ITEM_COUNT; i++) {
-        InfoLine& line = m_Lines.Add(ITEM_NAMES[i], storage->amounts[i] == 0 ? Tone::Muted : Tone::Normal);
+        if (storage->amounts[i] == 0) continue; // Only what is in stock: there are many goods
+        InfoLine& line = m_Lines.Add(ITEM_NAMES[i]);
         line.icon = ItemIcon((ItemType)i);
         line.value = Rml::ToString(storage->amounts[i]);
     }

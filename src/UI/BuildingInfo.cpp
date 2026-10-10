@@ -16,6 +16,19 @@
 
 namespace {
 
+// "2 Planks, 3 Bricks"; false (and empty) when the cost takes no materials
+bool MaterialsText(const BuildingCost& cost, char* text, size_t size) {
+    std::array<int, MATERIAL_COUNT> materials = cost.Materials();
+    int written = 0;
+    text[0] = 0;
+    for (int i = 0; i < MATERIAL_COUNT; i++) {
+        if (materials[i] <= 0) continue;
+        written += std::snprintf(text + written, size - written, "%s%d %s", written > 0 ? ", " : "", materials[i], ItemName(MATERIALS[i]));
+        if (written >= (int)size) break;
+    }
+    return written > 0;
+}
+
 void HouseInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
     char text[96];
     const BuildingType& type = BUILDING_TYPES[objects.Building(id).type];
@@ -24,14 +37,14 @@ void HouseInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& obje
     const LogisticsComponent& logistics = objects.Logistics(id);
 
     InfoLine& residents = lines.Add(tier.name);
-    residents.icon = type.tier == 0 ? "icons/farmer.tga" : "icons/worker.tga";
+    residents.icon = TierIcon(type.tier);
     std::snprintf(text, sizeof(text), "%d / %d", residence.residents, tier.maxResidents);
     residents.value = text;
     if (!logistics.connected) {
         lines.Add("No road to a warehouse", Tone::Bad).icon = "icons/warning.tga";
         return;
     }
-    if (!logistics.inMarketRange) {
+    if (!logistics.InReach(ServiceType::Marketplace)) {
         lines.Add("No marketplace in reach", Tone::Warn).icon = "icons/warning.tga";
         return;
     }
@@ -41,9 +54,9 @@ void HouseInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& obje
         const Need& need = tier.needs[n];
         int supply = residence.needSupply[n];
         if (supply < PopulationSystem::UPGRADE_SUPPLY) allMet = false;
-        std::snprintf(text, sizeof(text), "%s (+%d residents)", need.name, need.residentsGranted);
+        std::snprintf(text, sizeof(text), "%s (+%d residents)", NeedName(need), need.residentsGranted);
         InfoLine& line = lines.Add(text);
-        if (need.kind == NeedKind::Good) line.icon = ItemIcon(need.item);
+        line.icon = NeedIcon(need);
         std::snprintf(text, sizeof(text), "%d%%", supply / 10);
         line.value = text;
         line.bar = supply / 1000.0f;
@@ -51,7 +64,6 @@ void HouseInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& obje
 
     // Upgrade progress, or what is missing
     if (type.tier + 1 >= TIER_COUNT) return;
-    const IslandStorage* storage = economy.Find(objects.Building(id).island);
     const char* next = POPULATION_TIERS[type.tier + 1].name;
     if (residence.residents < tier.maxResidents) {
         lines.Add("Upgrade: needs a full house", Tone::Muted);
@@ -62,8 +74,10 @@ void HouseInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& obje
         std::snprintf(text, sizeof(text), "Upgrade to %s: getting ready", next);
         InfoLine& line = lines.Add(text);
         line.bar = (float)residence.upgradeTicks / PopulationSystem::UPGRADE_TICKS;
-    } else if (!storage || storage->Amount(ItemType::Planks) < UPGRADE_PLANKS) {
-        std::snprintf(text, sizeof(text), "Ready to upgrade, needs %d planks", UPGRADE_PLANKS);
+    } else if (!PopulationSystem::CanUpgrade(objects, economy, id)) {
+        char cost[64];
+        MaterialsText(UpgradeCost(type.tier), cost, sizeof(cost));
+        std::snprintf(text, sizeof(text), "Ready to upgrade, needs %s", cost);
         lines.Add(text, Tone::Warn).icon = "icons/upgrade.tga";
     } else {
         std::snprintf(text, sizeof(text), "Ready to upgrade to %s", next);
@@ -71,15 +85,16 @@ void HouseInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& obje
     }
 }
 
-void MarketInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& objects) {
+void ServiceInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& objects) {
     if (!objects.Logistics(id).connected) {
         lines.Add("No road to a warehouse: serves nobody", Tone::Bad).icon = "icons/warning.tga";
         return;
     }
+    ServiceType service = BUILDING_TYPES[objects.Building(id).type].service;
     int houses = 0, residents = 0;
     for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
         GameObjectId other = objects.IdAtSlot(slot);
-        if (other == INVALID_GAME_OBJECT || objects.Logistics(other).market != id) continue;
+        if (other == INVALID_GAME_OBJECT || objects.Logistics(other).services[(size_t)service] != id) continue;
         if (BUILDING_TYPES[objects.Building(other).type].role != BuildingRole::Residence) continue;
         houses++;
         residents += objects.Residence(other).residents;
@@ -153,20 +168,21 @@ void ProducerInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& o
     const ProductionChain& chain = PRODUCTION_CHAINS[BUILDING_TYPES[objects.Building(id).type].chain];
     const ProductionComponent& production = objects.Production(id);
     if (chain.inputCount == 0) std::snprintf(text, sizeof(text), "Makes %s", ItemName(chain.output));
-    else std::snprintf(text, sizeof(text), "Makes %s from %s", ItemName(chain.output), ItemName(chain.inputs[0]));
+    else if (chain.inputCount == 1) std::snprintf(text, sizeof(text), "Makes %s from %s", ItemName(chain.output), ItemName(chain.inputs[0]));
+    else std::snprintf(text, sizeof(text), "Makes %s from %s and %s", ItemName(chain.output), ItemName(chain.inputs[0]), ItemName(chain.inputs[1]));
     lines.Add(text).icon = ItemIcon(chain.output);
 
     Tone tone = production.status == ProducerStatus::Working ? Tone::Good
               : (production.status == ProducerStatus::OutputFull || production.status == ProducerStatus::MissingInput) ? Tone::Warn : Tone::Bad;
     int module = ModuleTypeOf(objects.Building(id).type);
-    if (module >= 0 && production.status == ProducerStatus::BadLocation) std::snprintf(text, sizeof(text), "No %s pens: place them around it", BUILDING_TYPES[module].name);
+    if (module >= 0 && production.status == ProducerStatus::BadLocation) std::snprintf(text, sizeof(text), "Needs %s modules around it", BUILDING_TYPES[module].name);
     else std::snprintf(text, sizeof(text), "%s", StatusText(production.status));
     InfoLine& status = lines.Add(text, tone);
     if (tone != Tone::Good) status.icon = "icons/warning.tga";
     if (module >= 0) {
-        // Its pens, as in Anno: productivity grows with each up to the full count
+        // Its modules, as in Anno: productivity grows with each up to the full count
         int count = CountModules(objects, id);
-        std::snprintf(text, sizeof(text), "%s pens", BUILDING_TYPES[module].name);
+        std::snprintf(text, sizeof(text), "%s modules", BUILDING_TYPES[module].name);
         InfoLine& line = lines.Add(text);
         std::snprintf(text, sizeof(text), "%d / %d", count, chain.fullSpeedCount);
         line.value = text;
@@ -220,17 +236,17 @@ void BuildingDetails(InfoLines& lines, GameObjectId building, const GameObjectRe
     const BuildingType& type = BUILDING_TYPES[objects.Building(building).type];
     switch (type.role) {
     case BuildingRole::Residence: HouseInfo(lines, building, objects, economy); break;
-    case BuildingRole::Market: MarketInfo(lines, building, objects); break;
+    case BuildingRole::Service: ServiceInfo(lines, building, objects); break;
     case BuildingRole::Storage: WarehouseInfo(lines, building, objects, economy); break;
     case BuildingRole::Producer: ProducerInfo(lines, building, objects, economy); break;
     case BuildingRole::Module: {
         char text[64];
         GameObjectId farm = objects.Building(building).owner;
         if (objects.IsAlive(farm)) {
-            std::snprintf(text, sizeof(text), "Pen of a %s", BUILDING_TYPES[objects.Building(farm).type].name);
+            std::snprintf(text, sizeof(text), "Belongs to a %s", BUILDING_TYPES[objects.Building(farm).type].name);
             lines.Add(text, Tone::Good);
         } else {
-            std::snprintf(text, sizeof(text), "No %s: this pen does nothing", BUILDING_TYPES[type.moduleOf].name);
+            std::snprintf(text, sizeof(text), "No %s: this does nothing", BUILDING_TYPES[type.moduleOf].name);
             lines.Add(text, Tone::Bad).icon = "icons/warning.tga";
         }
         break;
@@ -250,8 +266,10 @@ void BuildingDetails(InfoLines& lines, GameObjectId building, const GameObjectRe
         std::snprintf(text, sizeof(text), cost.upkeep > 0 ? "-%d / min" : "none", cost.upkeep);
     }
     money.value = text;
-    if (cost.planks / 2 > 0) std::snprintf(text, sizeof(text), "Demolish refunds %d coins, %d planks", cost.coins / 2, cost.planks / 2);
-    else std::snprintf(text, sizeof(text), "Demolish refunds %d coins", cost.coins / 2);
+    BuildingCost refund = { (int16_t)(cost.coins / 2), (int16_t)(cost.planks / 2), 0, (int16_t)(cost.bricks / 2), (int16_t)(cost.steelBeams / 2) };
+    char materials[64];
+    if (MaterialsText(refund, materials, sizeof(materials))) std::snprintf(text, sizeof(text), "Demolish refunds %d coins, %s", refund.coins, materials);
+    else std::snprintf(text, sizeof(text), "Demolish refunds %d coins", refund.coins);
     if (cost.coins > 0) lines.Add(text, Tone::Muted);
 }
 
@@ -333,7 +351,9 @@ void BuildingInfo::Update(GameObjectId tooltip, GameObjectId panel, const Simula
     Action actions[3];
     int count = 0;
     if (type.role == BuildingRole::Residence && type.tier + 1 < TIER_COUNT) {
-        std::snprintf(text, sizeof(text), "Upgrade to %s (%d planks)", POPULATION_TIERS[type.tier + 1].name, UPGRADE_PLANKS);
+        char cost[64];
+        MaterialsText(UpgradeCost(type.tier), cost, sizeof(cost));
+        std::snprintf(text, sizeof(text), "Upgrade to %s (%s)", POPULATION_TIERS[type.tier + 1].name, cost);
         actions[count++] = { text, PopulationSystem::CanUpgrade(objects, economy, panel), UPGRADE };
     }
     if (int module = ModuleTypeOf(objects.Building(panel).type); module >= 0) {

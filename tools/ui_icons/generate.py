@@ -153,11 +153,166 @@ def ship(d):
     d.polygon([(7, 3), (3, 8), (7, 8)], fill=(236, 228, 205), outline=INK)
 
 
+
+# --- Milestone 8.1 goods, the Artisans and the service buildings ---
+
+def grain(d):
+    # Three ears of wheat with long stalks
+    gold, dark = (226, 186, 80), (170, 130, 50)
+    for x in (4, 8, 12):
+        d.line((x, 8, x - 1, 15), fill=(160, 150, 60))
+        d.ellipse((x - 2, 1, x + 1, 9), fill=gold, outline=INK)
+        d.line((x - 1, 3, x - 1, 7), fill=dark)
+
+
+def flour(d):
+    sack, tie = (236, 230, 214), (160, 130, 90)
+    d.polygon([(3, 5), (12, 5), (14, 14), (1, 14)], fill=sack, outline=INK)
+    d.polygon([(5, 1), (10, 1), (12, 5), (3, 5)], fill=sack, outline=INK)
+    d.line((4, 5, 11, 5), fill=tie)
+    d.line((6, 9, 9, 9), fill=(200, 190, 170))
+    d.line((5, 11, 10, 11), fill=(200, 190, 170))
+
+
+def bread(d):
+    crust, light = (190, 120, 50), (230, 170, 90)
+    d.ellipse((1, 5, 15, 14), fill=crust, outline=INK)
+    for x in (4, 7, 10):
+        d.line((x, 7, x + 2, 10), fill=light)
+
+
+def tallow(d):
+    # A barrel of fat
+    d.rectangle((3, 3, 12, 14), fill=WOOD, outline=INK)
+    d.line((3, 6, 12, 6), fill=INK)
+    d.line((3, 11, 12, 11), fill=INK)
+    d.ellipse((3, 1, 12, 5), fill=(240, 226, 170), outline=INK)
+
+
+def soap(d):
+    bar, shine = (200, 222, 205), (240, 250, 240)
+    d.rounded_rectangle((1, 6, 14, 13), radius=2, fill=bar, outline=INK)
+    d.line((3, 8, 9, 8), fill=shine)
+    for x, y in ((11, 2), (6, 1), (13, 4)):
+        d.ellipse((x - 1, y, x + 1, y + 2), outline=(140, 180, 210))
+
+
+def clay(d):
+    lump, light = (176, 100, 60), (210, 140, 95)
+    d.polygon([(1, 13), (4, 6), (9, 4), (14, 8), (15, 13)], fill=lump, outline=INK)
+    d.line((5, 8, 9, 6), fill=light)
+    d.line((0, 14, 15, 14), fill=INK)
+
+
+def beef(d):
+    meat, fat = (180, 50, 45), (240, 220, 200)
+    d.ellipse((1, 3, 14, 13), fill=meat, outline=INK)
+    d.arc((3, 5, 12, 11), 200, 340, fill=fat)
+    d.ellipse((10, 9, 15, 15), fill=fat, outline=INK)
+
+
+def iron(d):
+    # A heap of rusty ore lumps
+    ore, rust = (110, 80, 70), (170, 90, 50)
+    for x, y in ((1, 8), (8, 8), (4, 3)):
+        d.polygon([(x, y + 3), (x + 2, y), (x + 6, y + 1), (x + 7, y + 5), (x + 3, y + 7)], fill=ore, outline=INK)
+        d.point((x + 3, y + 3), fill=rust)
+
+
+def coal(d):
+    lump, shine = (40, 40, 44), (110, 110, 120)
+    for x, y in ((1, 8), (8, 9), (4, 3)):
+        d.polygon([(x, y + 3), (x + 2, y), (x + 6, y + 1), (x + 7, y + 5), (x + 3, y + 6)], fill=lump, outline=INK)
+        d.point((x + 2, y + 2), fill=shine)
+
+
+def steel(d):
+    # An ingot
+    face, top = (140, 150, 162), (190, 198, 210)
+    d.polygon([(1, 9), (5, 5), (15, 5), (11, 9)], fill=top, outline=INK)
+    d.rectangle((1, 9, 11, 13), fill=face, outline=INK)
+    d.polygon([(11, 9), (15, 5), (15, 9), (11, 13)], fill=(110, 118, 130), outline=INK)
+
+
+def steel_beams(d):
+    # Two I-beams end on
+    steel = (120, 130, 145)
+    for x in (1, 9):
+        d.rectangle((x, 2, x + 5, 4), fill=steel, outline=INK)
+        d.rectangle((x + 2, 4, x + 3, 11), fill=steel, outline=INK)
+        d.rectangle((x, 11, x + 5, 13), fill=steel, outline=INK)
+
+
+def canned_food(d):
+    tin, label = (190, 196, 205), (180, 60, 50)
+    d.rectangle((3, 3, 12, 14), fill=tin, outline=INK)
+    d.ellipse((3, 1, 12, 5), fill=(220, 225, 232), outline=INK)
+    d.rectangle((4, 7, 11, 11), fill=label)
+    d.point((7, 9), fill=(240, 220, 120))
+
+
+def sewing_machines(d):
+    black, brass = (36, 36, 40), (214, 170, 60)
+    d.rectangle((0, 12, 15, 14), fill=WOOD, outline=INK)
+    d.rectangle((2, 3, 4, 12), fill=black, outline=INK)
+    d.rectangle((2, 3, 13, 6), fill=black, outline=INK)
+    d.rectangle((11, 6, 12, 10), fill=black, outline=INK)
+    d.line((5, 4, 10, 4), fill=brass)
+    d.ellipse((5, 7, 9, 11), outline=brass)
+
+
+def artisan(d):
+    hat = (36, 30, 26)
+    d.ellipse((4, 6, 11, 14), fill=SKIN, outline=INK)
+    d.rectangle((2, 5, 13, 6), fill=hat, outline=INK)
+    d.chord((4, 0, 11, 8), 180, 360, fill=hat, outline=INK)
+    d.point((6, 10), fill=INK)
+    d.point((9, 10), fill=INK)
+    d.line((6, 12, 9, 12), fill=(120, 80, 60))
+
+
+def marketplace(d):
+    red, white = (190, 50, 45), (236, 228, 205)
+    for i, x in enumerate(range(1, 15, 3)):
+        d.rectangle((x, 2, x + 2, 6), fill=red if i % 2 == 0 else white, outline=INK)
+    d.line((2, 6, 2, 14), fill=INK)
+    d.line((13, 6, 13, 14), fill=INK)
+    d.rectangle((3, 10, 12, 12), fill=WOOD, outline=INK)
+    d.point((5, 9), fill=(90, 160, 60))
+    d.point((9, 9), fill=(220, 170, 60))
+
+
+def school(d):
+    brick = (170, 80, 55)
+    d.rectangle((2, 7, 13, 14), fill=brick, outline=INK)
+    d.polygon([(1, 7), (8, 2), (14, 7)], fill=(80, 88, 100), outline=INK)
+    d.rectangle((7, 0, 8, 2), fill=(220, 180, 70))
+    d.rectangle((7, 10, 8, 14), fill=WOOD_DARK)
+    d.rectangle((3, 9, 5, 11), fill=(60, 90, 130))
+    d.rectangle((10, 9, 12, 11), fill=(60, 90, 130))
+
+
+def theatre(d):
+    # Comedy and tragedy masks
+    light, dark = (240, 230, 200), (200, 170, 90)
+    d.ellipse((1, 2, 9, 11), fill=light, outline=INK)
+    d.ellipse((7, 5, 15, 14), fill=dark, outline=INK)
+    d.point((3, 5), fill=INK)
+    d.point((6, 5), fill=INK)
+    d.arc((3, 6, 7, 9), 20, 160, fill=INK)
+    d.point((9, 8), fill=INK)
+    d.point((12, 8), fill=INK)
+    d.arc((9, 10, 13, 13), 200, 340, fill=INK)
+
+
 ICONS = {
     "wood": wood, "planks": planks, "fish": fish, "wool": wool, "work_clothes": work_clothes,
     "bricks": bricks, "sausages": sausages, "pigs": pigs,
     "coin": coin, "farmer": farmer, "worker": worker, "residents": residents,
     "upgrade": upgrade, "warning": warning, "ship": ship,
+    "grain": grain, "flour": flour, "bread": bread, "tallow": tallow, "soap": soap, "clay": clay, "beef": beef,
+    "iron": iron, "coal": coal, "steel": steel, "steel_beams": steel_beams, "canned_food": canned_food,
+    "sewing_machines": sewing_machines, "artisan": artisan, "marketplace": marketplace, "school": school, "theatre": theatre,
 }
 
 if __name__ == "__main__":

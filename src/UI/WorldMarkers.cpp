@@ -51,7 +51,7 @@ void DrawBuildingMarkers(const ICamera& camera, const GameObjectRegistry& object
 
         // Red: no road to a warehouse. Amber: a house no marketplace serves.
         bool noRoad = !logistics.connected;
-        bool noMarket = type.role == BuildingRole::Residence && !logistics.inMarketRange;
+        bool noMarket = type.role == BuildingRole::Residence && !logistics.InReach(ServiceType::Marketplace);
         // Producers: grey when nobody can work there (no workers, nothing to work with), orange when an input is missing
         ProducerStatus status = type.role == BuildingRole::Producer ? objects.Production(id).status : ProducerStatus::Working;
         bool idle = status == ProducerStatus::NoWorkforce || status == ProducerStatus::BadLocation;

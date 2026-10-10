@@ -55,9 +55,13 @@ int BuildTool::EntryCount(BuildCategory tab) {
 }
 
 int BuildTool::EntryAt(BuildCategory tab, int index) {
-    for (int type = 0; type < (int)BUILDING_TYPES.size(); type++) {
-        if (!BUILDING_TYPES[type].buildable || BUILDING_TYPES[type].category != tab) continue;
-        if (index-- == 0) return type;
+    for (int pass = 0; pass < 2; pass++) { // Houses and service buildings, then the rest
+        for (int type = 0; type < (int)BUILDING_TYPES.size(); type++) {
+            const BuildingType& building = BUILDING_TYPES[type];
+            if (!building.buildable || building.category != tab) continue;
+            bool first = building.role == BuildingRole::Residence || building.role == BuildingRole::Service;
+            if (first == (pass == 0) && index-- == 0) return type;
+        }
     }
     if (tab == BuildCategory::Infrastructure && index == 0) return ROAD;
     return NO_TYPE;
@@ -85,13 +89,24 @@ void BuildTool::SelectModules(GameObjectId farm) {
 }
 
 void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFree, bool keyboardFree) {
-    // Hotkeys (shown on the build menu buttons): Tab switches tabs, 1, 2, ... pick from the open tab
+    // Tabs of the tiers reached so far
+    for (size_t i = 0; i < m_Simulation.Economy().IslandSlotCount(); i++) {
+        const IslandStorage& storage = m_Simulation.Economy().IslandAt(i);
+        for (int tier = m_UnlockedTier + 1; tier < TIER_COUNT; tier++) {
+            if (storage.population[tier] > 0) m_UnlockedTier = tier;
+        }
+    }
+
+    // Hotkeys (shown on the build menu buttons): Tab switches to the next open tab, 1-9 and 0 pick
+    // from the open tab
     if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS, m_TabWasPressed)) {
-        m_Tab = (BuildCategory)(((int)m_Tab + 1) % (int)BuildCategory::Count);
+        do {
+            m_Tab = (BuildCategory)(((int)m_Tab + 1) % (int)BuildCategory::Count);
+        } while (!TabUnlocked(m_Tab));
     }
     int entries = EntryCount(m_Tab);
     for (int key = 0; key < (int)m_NumberWasPressed.size(); key++) {
-        bool down = keyboardFree && glfwGetKey(window, GLFW_KEY_1 + key) == GLFW_PRESS;
+        bool down = keyboardFree && glfwGetKey(window, key == 9 ? GLFW_KEY_0 : GLFW_KEY_1 + key) == GLFW_PRESS;
         if (Pressed(down, m_NumberWasPressed[key]) && key < entries) SelectType(EntryAt(m_Tab, key));
     }
     if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS, m_RWasPressed)) m_Rotation = (m_Rotation + 1) & 3;
@@ -195,7 +210,7 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
             m_LocationRevision++;
         }
         m_PreviewConnected = LogisticsSystem::ConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
-        m_PreviewInMarket = LogisticsSystem::MarketConnectionOf(m_Simulation.Roads(), minTile, tiles).connected;
+        m_PreviewInMarket = LogisticsSystem::ServiceConnectionOf(m_Simulation.Roads(), ServiceType::Marketplace, minTile, tiles).connected;
 
         // Producers: what the location rule makes of this spot. Modules: their farm, its range and its modules.
         GameObjectId farm = INVALID_GAME_OBJECT;

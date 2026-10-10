@@ -1,5 +1,6 @@
 #include "Economy/IslandEconomy.h"
 #include "Economy/PopulationSystem.h"
+#include "Economy/Treasury.h"
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/GameObjects.h"
 #include "Simulation/Logistics.h"
@@ -168,7 +169,7 @@ TEST(PopulationTest, FullySuppliedHouseWaitsForThePlayerToUpgrade) {
     f.population.RequestUpgrade(house);
     f.Run(1);
     EXPECT_EQ(f.objects.Building(house).type, BUILDING_WORKER_HOUSE);
-    EXPECT_EQ(f.Amount(ItemType::Planks), 10 - UPGRADE_PLANKS);
+    EXPECT_EQ(f.Amount(ItemType::Planks), 10 - UpgradeCost(TIER_FARMERS).planks);
     EXPECT_EQ(f.population.Upgrades(), 1u);
     ASSERT_EQ(f.population.LookChanges().size(), 1u);
     EXPECT_EQ(f.population.LookChanges()[0], house);
@@ -190,7 +191,7 @@ TEST(PopulationTest, NoUpgradeWithoutPlanks) {
     EXPECT_EQ(f.Amount(ItemType::Planks), 1);
 
     // A request does not wait: with the planks there, the player asks again
-    f.Stock(ItemType::Planks, UPGRADE_PLANKS);
+    f.Stock(ItemType::Planks, UpgradeCost(TIER_FARMERS).planks);
     f.Run(1);
     EXPECT_EQ(f.objects.Building(house).type, BUILDING_FARMER_HOUSE);
     f.population.RequestUpgrade(house);
@@ -231,4 +232,32 @@ TEST(PopulationTest, TargetResidentsFromSupply) {
     EXPECT_EQ(TargetResidents(farmers, { 1000, 1000, 1000, 0 }), 10);
     EXPECT_EQ(TargetResidents(farmers, { 1000, 500, 0, 0 }), 4);
     EXPECT_EQ(TargetResidents(farmers, { 0, 0, 0, 0 }), 0);
+}
+
+// A worker house: every good and the marketplace, but no school in reach until one is built
+TEST(PopulationTest, ServiceNeedsComeFromTheirBuildingsReach) {
+    PopulationFixture f;
+    for (ItemType item : { ItemType::Fish, ItemType::WorkClothes, ItemType::Sausages, ItemType::Bread, ItemType::Soap }) f.Stock(item, 200);
+    GameObjectId house = f.AddBuilding(BUILDING_WORKER_HOUSE, { 12, 2 });
+    constexpr int SCHOOL_NEED = 6; // Need index of the School for Workers
+    ASSERT_EQ(POPULATION_TIERS[TIER_WORKERS].needs[SCHOOL_NEED].service, ServiceType::School);
+    f.Run(30 * 10);
+    EXPECT_EQ(f.objects.Residence(house).needSupply[SCHOOL_NEED], 0);
+    EXPECT_GT(f.objects.Residence(house).needSupply[0], 0); // The marketplace
+
+    f.AddBuilding(BUILDING_SCHOOL, { 16, 2 });
+    f.Run(30 * 10);
+    EXPECT_EQ(f.objects.Residence(house).needSupply[SCHOOL_NEED], 1000);
+}
+
+TEST(PopulationTest, ArtisanUpgradeTakesBricks) {
+    const BuildingCost& cost = UpgradeCost(TIER_WORKERS);
+    EXPECT_GT(cost.bricks, 0);
+    PopulationFixture f;
+    GameObjectId house = f.AddBuilding(BUILDING_WORKER_HOUSE, { 12, 2 });
+    f.objects.Residence(house).upgradeTicks = PopulationSystem::UPGRADE_TICKS;
+    f.Stock(ItemType::Planks, cost.planks);
+    EXPECT_FALSE(PopulationSystem::CanUpgrade(f.objects, f.economy, house)); // No bricks
+    f.Stock(ItemType::Bricks, cost.bricks);
+    EXPECT_TRUE(PopulationSystem::CanUpgrade(f.objects, f.economy, house));
 }

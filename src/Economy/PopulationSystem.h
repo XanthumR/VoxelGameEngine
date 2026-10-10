@@ -16,7 +16,7 @@ class IslandEconomyManager;
 //    ready to upgrade (full house, every need met for a while), and the downgrade (too few
 //    residents for too long)
 //  - upgrades happen when the player asks (RequestUpgrade), carried out on the next tick if the
-//    house is still ready and the island has the planks
+//    house is still ready and the island has the materials
 // All integer math, so a run is reproducible.
 class PopulationSystem {
 public:
@@ -34,7 +34,7 @@ public:
 
     // A house that may move up a tier: every need met long enough, full, a next tier exists
     static bool IsReadyToUpgrade(const GameObjectRegistry& objects, GameObjectId id);
-    // ...and the island has the planks for it
+    // ...and the island has the materials for it (UpgradeCost)
     static bool CanUpgrade(const GameObjectRegistry& objects, const IslandEconomyManager& economy, GameObjectId id);
     // The player asks for an upgrade; it happens on the next tick if the house can still upgrade
     void RequestUpgrade(GameObjectId id);

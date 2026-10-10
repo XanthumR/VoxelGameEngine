@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cmath>
 
+static_assert(Block::CARGO_FIRST + ITEM_COUNT - 1 == 128, "a cargo color per good: CART_PALETTE in shaders/render/shade.comp");
+
 namespace {
 
 int DirectionIndex(glm::ivec2 step) {
@@ -98,7 +100,8 @@ void AppendCartObjects(const GameObjectRegistry& objects, float alpha, int model
 
         int frame = placement.moving ? (int)(placement.travelled / CART_TROT_STRIDE) & 3 : 1;
         VoxelObject object;
-        object.model = modelBase + CartModelOffset(frame, item, std::min(amount, CART_CAPACITY));
+        object.model = modelBase + CartModelOffset(frame, CargoIsPiled((ItemType)item), std::min(amount, CART_CAPACITY));
+        object.cargo = (uint8_t)(Block::CARGO_FIRST + item);
         object.position = glm::vec3(placement.column.x + 0.5f, (float)BUILD_GROUND_Y, placement.column.y + 0.5f);
         object.yaw = placement.yaw;
         out.push_back(object); // Within the caller's reserve

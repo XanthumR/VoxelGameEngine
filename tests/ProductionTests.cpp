@@ -384,7 +384,8 @@ TEST(CartPlacementTest, CartObjectForEveryCartOnTheRoad) {
     ASSERT_EQ(objects.size(), 1u);
     EXPECT_EQ(objects[0].position.y, (float)BUILD_GROUND_Y);
     int offset = objects[0].model - 100;
-    EXPECT_EQ(offset % CART_LOADS, CartModelOffset(0, (int)ItemType::Planks, CART_CAPACITY)); // A full load of planks
+    EXPECT_EQ(offset % CART_LOADS, CartModelOffset(0, false, CART_CAPACITY)); // A full load of crates...
+    EXPECT_EQ(objects[0].cargo, Block::CARGO_FIRST + (int)ItemType::Planks);  // ...of planks
 }
 
 TEST(CartPlacementTest, TurnsSmoothlyThroughACorner) {
@@ -423,6 +424,8 @@ TEST(FigureModelTest, EveryModelHasItsVoxels) {
         EXPECT_GT(std::count_if(person.ids.begin(), person.ids.end(), [](uint8_t id) { return id != 0; }), 40);
     }
     auto filled = [](const VoxelObjectModel& model) { return std::count_if(model.ids.begin(), model.ids.end(), [](uint8_t id) { return id != 0; }); };
-    EXPECT_GT(filled(BuildCartModel(0, (int)ItemType::Fish, 4)), filled(BuildCartModel(0, 0, 0))); // Cargo adds voxels
-    EXPECT_EQ(CartModelOffset(CART_FRAMES - 1, ITEM_COUNT - 1, 4), CART_MODEL_COUNT - 1);       // Offsets cover every model
+    EXPECT_GT(filled(BuildCartModel(0, false, 4)), filled(BuildCartModel(0, false, 0))); // Cargo adds voxels
+    EXPECT_EQ(CartModelOffset(CART_FRAMES - 1, true, 4), CART_MODEL_COUNT - 1);         // Offsets cover every model
+    VoxelObjectModel artisan = BuildPersonModel(TIER_ARTISANS, 0, 0);
+    EXPECT_NE(std::count(artisan.ids.begin(), artisan.ids.end(), Block::PERSON_BOWLER), 0);
 }

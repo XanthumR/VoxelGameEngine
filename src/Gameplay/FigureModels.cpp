@@ -34,13 +34,15 @@ int Swing(int frame) {
 
 } // namespace
 
-// About 11 voxels tall: legs and arms swinging, a straw hat (Farmers) or a cap (Workers)
+// About 11 voxels tall: legs and arms swinging, a straw hat (Farmers), a cap (Workers) or a long
+// coat and a bowler hat (Artisans)
 VoxelObjectModel BuildPersonModel(int tier, int variant, int frame) {
     VoxelObjectModel model = Empty(glm::ivec3(5, 11, 4));
     ModelWriter w{ model, 2, 2 }; // s -2..2, t -2..1
     uint8_t skin = (variant & 1) ? Block::PERSON_SKIN_DARK : Block::PERSON_SKIN;
-    uint8_t shirt = tier == 0 ? ((variant & 2) ? Block::PERSON_SHIRT_FARMER_GREEN : Block::PERSON_SHIRT_FARMER)
-                              : ((variant & 2) ? Block::PERSON_SHIRT_WORKER_GREY : Block::PERSON_SHIRT_WORKER);
+    uint8_t shirt = tier == TIER_FARMERS ? ((variant & 2) ? Block::PERSON_SHIRT_FARMER_GREEN : Block::PERSON_SHIRT_FARMER)
+                  : tier == TIER_WORKERS ? ((variant & 2) ? Block::PERSON_SHIRT_WORKER_GREY : Block::PERSON_SHIRT_WORKER)
+                                         : ((variant & 2) ? Block::PERSON_COAT_ARTISAN_GREEN : Block::PERSON_COAT_ARTISAN);
     uint8_t trousers = (variant & 4) ? Block::PERSON_TROUSERS_BLUE : Block::PERSON_TROUSERS;
     int swing = Swing(frame);
 
@@ -52,9 +54,10 @@ VoxelObjectModel BuildPersonModel(int tier, int variant, int frame) {
         w.Put(leg, 0, 2, trousers);
         w.Put(leg, 0, 3, trousers);
     }
-    // Hips and torso, two deep
+    // Hips and torso, two deep (an Artisan's coat reaches down over the hips)
     for (int s = -1; s <= 1; s++) {
-        w.Put(s, 0, 4, trousers);
+        w.Put(s, 0, 4, tier == TIER_ARTISANS ? shirt : trousers);
+        if (tier == TIER_ARTISANS) w.Put(s, -1, 4, shirt);
         for (int y = 5; y <= 7; y++) {
             w.Put(s, 0, y, shirt);
             w.Put(s, -1, y, shirt);
@@ -72,7 +75,7 @@ VoxelObjectModel BuildPersonModel(int tier, int variant, int frame) {
         w.Put(s, 0, 8, skin);
         w.Put(s, -1, 8, skin);
     }
-    if (tier == 0) {
+    if (tier == TIER_FARMERS) {
         for (int s = -2; s <= 2; s++) {
             for (int t = -2; t <= 1; t++) w.Put(s, t, 9, Block::PERSON_STRAW_HAT); // Brim
         }
@@ -80,6 +83,14 @@ VoxelObjectModel BuildPersonModel(int tier, int variant, int frame) {
             w.Put(s, 0, 10, Block::PERSON_STRAW_HAT);
             w.Put(s, -1, 10, Block::PERSON_STRAW_HAT);
         }
+    } else if (tier == TIER_ARTISANS) {
+        for (int s = -1; s <= 1; s++) {
+            for (int t = -2; t <= 1; t++) w.Put(s, t, 9, Block::PERSON_BOWLER); // Brim
+            w.Put(s, 0, 10, Block::PERSON_BOWLER);
+            w.Put(s, -1, 10, Block::PERSON_BOWLER);
+        }
+        w.Put(-2, 0, 9, Block::PERSON_BOWLER);
+        w.Put(2, 0, 9, Block::PERSON_BOWLER);
     } else {
         for (int s = -1; s <= 1; s++) {
             for (int t = -1; t <= 1; t++) w.Put(s, t, 9, Block::PERSON_CAP); // Cap with a visor
@@ -90,7 +101,7 @@ VoxelObjectModel BuildPersonModel(int tier, int variant, int frame) {
 
 // About 23 voxels long: a trotting horse in harness (t 1..12), shafts and reins, a four-wheeled
 // wagon (t -10..-2) with a driver at the front and a row of crates per good carried
-VoxelObjectModel BuildCartModel(int frame, int item, int amount) {
+VoxelObjectModel BuildCartModel(int frame, bool piled, int amount) {
     VoxelObjectModel model = Empty(glm::ivec3(7, 12, 23));
     ModelWriter w{ model, 3, 10 }; // s -3..3, t -10..12
     int swing = Swing(frame);
@@ -208,17 +219,13 @@ VoxelObjectModel BuildCartModel(int frame, int item, int amount) {
         w.Put(s, -5, 11, Block::PERSON_STRAW_HAT);
     }
 
-    // Cargo: a row per good behind the driver; wood and pigs are piled, the rest in crates
-    if (amount > 0) {
-        uint8_t cargo = (uint8_t)(Block::CARGO_FIRST + item);
-        bool pile = item == (int)ItemType::Wood || item == (int)ItemType::Pigs;
-        for (int row = 0; row < std::min(amount, 4); row++) {
-            int t = -6 - row;
-            for (int s = -1; s <= 1; s++) {
-                w.Put(s, t, 5, cargo);
-                if (!pile || s == 0) w.Put(s, t, 6, cargo);
-                if (!pile && s == 0 && (row & 1) == 0) w.Put(s, t, 7, cargo);
-            }
+    // Cargo: a row per good behind the driver, piled (logs, pigs, ore) or in crates
+    for (int row = 0; row < std::min(amount, 4); row++) {
+        int t = -6 - row;
+        for (int s = -1; s <= 1; s++) {
+            w.Put(s, t, 5, Block::CARGO);
+            if (!piled || s == 0) w.Put(s, t, 6, Block::CARGO);
+            if (!piled && s == 0 && (row & 1) == 0) w.Put(s, t, 7, Block::CARGO);
         }
     }
     return model;

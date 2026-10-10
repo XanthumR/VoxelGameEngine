@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Economy/PopulationNeeds.h"
 #include "Simulation/ItemType.h"
 
 #include <RmlUi/Core/DataModelHandle.h>
@@ -45,3 +46,5 @@ private:
 
 // The icon of a good, e.g. "icons/fish.tga"
 const char* ItemIcon(ItemType item);
+const char* TierIcon(int tier);         // Farmer, worker, artisan
+const char* NeedIcon(const Need& need); // The good's icon, or the service building's

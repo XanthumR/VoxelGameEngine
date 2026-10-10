@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 
+#include <array>
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
@@ -13,8 +14,15 @@ struct RoadTile {
     static constexpr uint16_t UNREACHED = 0xFFFF;
     uint16_t distance = UNREACHED;                // Road tiles from the nearest warehouse (1 = touching it)
     GameObjectId warehouse = INVALID_GAME_OBJECT; // That warehouse
-    uint16_t marketDistance = UNREACHED;          // Road tiles from the nearest (connected) marketplace
-    GameObjectId market = INVALID_GAME_OBJECT;    // That marketplace
+    // Per service type (ServiceType): road tiles from the nearest connected building of that type, and that building
+    std::array<uint16_t, SERVICE_COUNT> serviceDistance = AllUnreached();
+    std::array<GameObjectId, SERVICE_COUNT> service = {};
+
+    static constexpr std::array<uint16_t, SERVICE_COUNT> AllUnreached() {
+        std::array<uint16_t, SERVICE_COUNT> distances{};
+        for (uint16_t& distance : distances) distance = UNREACHED;
+        return distances;
+    }
 };
 
 // The set of build tiles (see TILE_SIZE) that are road. Only the data: the road voxels are written

@@ -7,11 +7,13 @@
 
 #include <RmlUi/Core.h>
 
+#include <array>
 #include <cstdio>
 
 namespace {
 
-constexpr int MAX_ENTRIES = 16;
+constexpr int MAX_ENTRIES = 20;
+constexpr std::array<const char*, (int)BuildCategory::Count> TAB_NAMES = { "Farmers", "Workers", "Artisans", "Infrastructure" };
 constexpr int REQUEST_OFFSET = 3; // Keeps ROAD (-2) and NO_TYPE (-1) above the "no request" 0
 
 } // namespace
@@ -26,9 +28,17 @@ bool BuildMenu::Init(Rml::Context* context) {
         entry.RegisterMember("image", &Entry::image);
         entry.RegisterMember("coins", &Entry::coins);
         entry.RegisterMember("planks", &Entry::planks);
+        entry.RegisterMember("bricks", &Entry::bricks);
+        entry.RegisterMember("steel_beams", &Entry::steelBeams);
         entry.RegisterMember("selected", &Entry::selected);
     }
     model.RegisterArray<std::vector<Entry>>();
+    if (Rml::StructHandle<Tab> tab = model.RegisterStruct<Tab>()) {
+        tab.RegisterMember("name", &Tab::name);
+        tab.RegisterMember("locked", &Tab::locked);
+    }
+    model.RegisterArray<std::vector<Tab>>();
+    model.Bind("tabs", &m_Tabs);
     model.Bind("tab", &m_Tab);
     model.Bind("entries", &m_Entries);
     model.Bind("any_selected", &m_AnySelected);
@@ -43,6 +53,7 @@ bool BuildMenu::Init(Rml::Context* context) {
     });
     m_Model = model.GetModelHandle();
     m_Entries.reserve(MAX_ENTRIES);
+    for (const char* name : TAB_NAMES) m_Tabs.push_back({ name, false });
 
     m_Document = context->LoadDocument("assets/ui/build_menu.rml");
     return m_Document != nullptr;
@@ -72,7 +83,8 @@ void BuildMenu::FillEntries(const BuildTool& tool) {
     for (int i = 0; i < count; i++) {
         Entry entry;
         entry.type = BuildTool::EntryAt(tool.Tab(), i);
-        std::snprintf(hotkey, sizeof(hotkey), "%d", i + 1);
+        if (i < 10) std::snprintf(hotkey, sizeof(hotkey), "%d", (i + 1) % 10);
+        else hotkey[0] = 0;
         entry.hotkey = hotkey;
         if (entry.type == BuildTool::ROAD) {
             entry.name = "Road";
@@ -82,12 +94,20 @@ void BuildMenu::FillEntries(const BuildTool& tool) {
             entry.image = Rml::String("buildings/") + BUILDING_TYPES[entry.type].modelName + ".tga"; // tools/ui_icons/buildings.py
             entry.coins = BUILDING_COSTS[entry.type].coins;
             entry.planks = BUILDING_COSTS[entry.type].planks;
+            entry.bricks = BUILDING_COSTS[entry.type].bricks;
+            entry.steelBeams = BUILDING_COSTS[entry.type].steelBeams;
         }
         m_Entries.push_back(entry);
     }
 }
 
 void BuildMenu::Update(const BuildTool& tool, uint32_t buildingCount) {
+    for (int i = 0; i < (int)m_Tabs.size(); i++) {
+        bool locked = !tool.TabUnlocked((BuildCategory)i);
+        if (m_Tabs[i].locked == locked) continue;
+        m_Tabs[i].locked = locked;
+        m_Model.DirtyVariable("tabs");
+    }
     if ((int)tool.Tab() != m_Tab) {
         m_Tab = (int)tool.Tab();
         FillEntries(tool);

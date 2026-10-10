@@ -9,25 +9,28 @@
             left: 50%;
             transform: translateX(-50%);
             min-width: 560dp;
+            max-width: 1440dp;
         }
-        .tabs .tab { width: 160dp; flex: 0 0 auto; }
+        .tabs .tab { width: 130dp; flex: 0 0 auto; }
+        .tabs .tab.locked { color: #8a7a60; }
         .tab-hint { margin-left: 8dp; }
-        #entries { display: flex; flex-direction: row; align-items: stretch; }
+        #entries { display: flex; flex-direction: row; flex-wrap: wrap; align-items: stretch; }
         /* One building: name on top, its cost below, the hotkey in the corner */
         .entry {
             display: block;
             position: relative;
-            width: 148dp;
+            width: 120dp;
             height: 100%;
-            padding: 6dp 8dp;
+            padding: 6dp 6dp;
             text-align: left;
         }
-        .slot { display: block; margin-right: 6dp; }
-        .entry .picture { display: block; width: 120dp; height: 90dp; margin: 0 auto 2dp; }
-        .entry .name { display: block; margin-bottom: 4dp; }
-        .entry .cost { display: flex; flex-direction: row; align-items: center; font-weight: normal; }
+        .slot { display: block; margin: 0 6dp 6dp 0; }
+        .entry .picture { display: block; width: 104dp; height: 78dp; margin: 0 auto 2dp; }
+        .entry .name { display: block; margin-bottom: 4dp; white-space: normal; }
+        .entry .cost { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; font-weight: normal; }
+        /* An icon and its amount wrap together */
+        .entry .cost .pair { display: flex; flex-direction: row; align-items: center; margin-right: 8dp; white-space: nowrap; }
         .entry .cost img { margin-right: 3dp; }
-        .entry .cost span { margin-right: 8dp; }
         .entry .hotkey { position: absolute; top: 4dp; right: 6dp; font-size: 12dp; color: #d9c49a; }
         .entry.selected .hotkey { color: #5a3d16; }
         #cancel { align-self: center; }
@@ -38,9 +41,8 @@
 <body class="panel" data-model="build_menu">
     <div class="row">
         <div class="tabs">
-            <div class="tab" data-class-selected="tab == 0" data-event-click="set_tab(0)">Housing</div>
-            <div class="tab" data-class-selected="tab == 1" data-event-click="set_tab(1)">Production</div>
-            <div class="tab" data-class-selected="tab == 2" data-event-click="set_tab(2)">Infrastructure</div>
+            <div class="tab" data-for="t, i : tabs" data-class-selected="tab == i" data-class-locked="t.locked"
+                 data-event-click="set_tab(i)">{{t.name}}</div>
         </div>
         <span class="tab-hint muted">[Tab]</span>
     </div>
@@ -50,8 +52,10 @@
             <img class="picture" data-attr-src="entry.image"/>
             <span class="name">{{entry.name}}</span>
             <div class="cost" data-if="entry.coins > 0">
-                <img class="icon small" src="icons/coin.tga"/><span>{{entry.coins}}</span>
-                <img class="icon small" src="icons/planks.tga" data-if="entry.planks > 0"/><span data-if="entry.planks > 0">{{entry.planks}}</span>
+                <div class="pair"><img class="icon small" src="icons/coin.tga"/><span>{{entry.coins}}</span></div>
+                <div class="pair" data-if="entry.planks > 0"><img class="icon small" src="icons/planks.tga"/><span>{{entry.planks}}</span></div>
+                <div class="pair" data-if="entry.bricks > 0"><img class="icon small" src="icons/bricks.tga"/><span>{{entry.bricks}}</span></div>
+                <div class="pair" data-if="entry.steel_beams > 0"><img class="icon small" src="icons/steel_beams.tga"/><span>{{entry.steel_beams}}</span></div>
             </div>
             <div class="cost" data-if="entry.coins == 0"><span>1x1 tiles</span></div>
             <span class="hotkey">{{entry.hotkey}}</span>

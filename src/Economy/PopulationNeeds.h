@@ -8,23 +8,46 @@
 // What each population tier needs, how many residents each need lets move in, and how fast goods
 // are consumed. Tiers are processed in this order (Farmers first get scarce goods first).
 
+// Public buildings (BuildingRole::Service) whose reach along the roads meets a need
+enum class ServiceType : uint8_t {
+    Marketplace, // Also brings the goods: a house outside every marketplace's reach gets none
+    School,
+    Theatre,
+    Count
+};
+
+constexpr int SERVICE_COUNT = (int)ServiceType::Count;
+constexpr std::array<const char*, SERVICE_COUNT> SERVICE_NAMES = { "Marketplace", "School", "Variety Theatre" };
+constexpr std::array<int, SERVICE_COUNT> SERVICE_ROAD_RANGE = { 20, 16, 24 }; // Road tiles each type reaches
+
 enum class NeedKind : uint8_t {
-    Service, // Met by being in a building's reach (the marketplace)
+    Service, // Met by being in a service building's reach
     Good,    // Consumed from island storage
 };
 
 struct Need {
-    const char* name;
-    NeedKind kind;
-    ItemType item;            // Good needs only
-    uint8_t residentsGranted; // Residents this need allows when fully supplied
-    uint16_t consumption;     // Good needs: thousandths of a good per resident per minute
+    NeedKind kind = NeedKind::Good;
+    ItemType item = ItemType::Wood;                 // Good needs
+    ServiceType service = ServiceType::Marketplace; // Service needs
+    uint8_t residentsGranted = 0;                   // Residents this need allows when fully supplied
+    uint16_t consumption = 0;                       // Good needs: thousandths of a good per resident per minute
 };
 
-constexpr int MAX_NEEDS = 4;
-constexpr int TIER_COUNT = 2;
+constexpr Need GoodNeed(ItemType item, int residents, int consumption) {
+    return { NeedKind::Good, item, ServiceType::Marketplace, (uint8_t)residents, (uint16_t)consumption };
+}
+constexpr Need ServiceNeed(ServiceType service, int residents) {
+    return { NeedKind::Service, ItemType::Wood, service, (uint8_t)residents, 0 };
+}
+constexpr const char* NeedName(const Need& need) {
+    return need.kind == NeedKind::Good ? ItemName(need.item) : SERVICE_NAMES[(size_t)need.service];
+}
+
+constexpr int MAX_NEEDS = 8;
+constexpr int TIER_COUNT = 3;
 constexpr int TIER_FARMERS = 0;
 constexpr int TIER_WORKERS = 1;
+constexpr int TIER_ARTISANS = 2;
 
 struct PopulationTier {
     const char* name;
@@ -35,20 +58,30 @@ struct PopulationTier {
 
 constexpr std::array<PopulationTier, TIER_COUNT> POPULATION_TIERS = { {
     { "Farmers", 10, 3, { {
-        { "Marketplace", NeedKind::Service, ItemType::Wood, 2, 0 },
-        { "Fish", NeedKind::Good, ItemType::Fish, 4, 50 },
-        { "Work Clothes", NeedKind::Good, ItemType::WorkClothes, 4, 40 },
-        {},
+        ServiceNeed(ServiceType::Marketplace, 2),
+        GoodNeed(ItemType::Fish, 4, 50),
+        GoodNeed(ItemType::WorkClothes, 4, 40),
     } } },
-    { "Workers", 20, 4, { {
-        { "Marketplace", NeedKind::Service, ItemType::Wood, 2, 0 },
-        { "Fish", NeedKind::Good, ItemType::Fish, 6, 50 },
-        { "Work Clothes", NeedKind::Good, ItemType::WorkClothes, 6, 40 },
-        { "Sausages", NeedKind::Good, ItemType::Sausages, 6, 30 },
+    { "Workers", 20, 7, { {
+        ServiceNeed(ServiceType::Marketplace, 2),
+        GoodNeed(ItemType::Fish, 3, 50),
+        GoodNeed(ItemType::WorkClothes, 3, 40),
+        GoodNeed(ItemType::Sausages, 3, 30),
+        GoodNeed(ItemType::Bread, 3, 40),
+        GoodNeed(ItemType::Soap, 3, 25),
+        ServiceNeed(ServiceType::School, 3),
+    } } },
+    { "Artisans", 30, 8, { {
+        ServiceNeed(ServiceType::Marketplace, 3),
+        ServiceNeed(ServiceType::School, 3),
+        GoodNeed(ItemType::Sausages, 3, 30),
+        GoodNeed(ItemType::Bread, 3, 40),
+        GoodNeed(ItemType::Soap, 3, 25),
+        GoodNeed(ItemType::CannedFood, 5, 25),
+        GoodNeed(ItemType::SewingMachines, 5, 15),
+        ServiceNeed(ServiceType::Theatre, 5),
     } } },
 } };
-
-constexpr int UPGRADE_PLANKS = 2; // Planks a house upgrade takes from island storage
 
 // Sum of the residents each need grants
 constexpr int GrantedResidents(const PopulationTier& tier) {
@@ -56,8 +89,13 @@ constexpr int GrantedResidents(const PopulationTier& tier) {
     for (int i = 0; i < tier.needCount; i++) total += tier.needs[i].residentsGranted;
     return total;
 }
-static_assert(GrantedResidents(POPULATION_TIERS[TIER_FARMERS]) == POPULATION_TIERS[TIER_FARMERS].maxResidents, "Farmer needs must add up to a full house");
-static_assert(GrantedResidents(POPULATION_TIERS[TIER_WORKERS]) == POPULATION_TIERS[TIER_WORKERS].maxResidents, "Worker needs must add up to a full house");
+constexpr bool NeedsFillHouses() {
+    for (const PopulationTier& tier : POPULATION_TIERS) {
+        if (GrantedResidents(tier) != tier.maxResidents) return false;
+    }
+    return true;
+}
+static_assert(NeedsFillHouses(), "Each tier's needs must add up to a full house");
 
 // Residents a house of this tier can hold with these need supplies (per mille, one per need)
 int TargetResidents(const PopulationTier& tier, const std::array<int16_t, MAX_NEEDS>& needSupply);

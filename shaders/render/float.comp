@@ -48,7 +48,7 @@ void main() {
     vec3 rolledUp = pitchedUp * cos(roll) - right * sin(roll);
 
     objects[index].position.y = float(seaLevel) + 1.0 + heave - waterline;
-    objects[index].axisX = vec4(rolledRight, 0.0);
+    objects[index].axisX = vec4(rolledRight, object.axisX.w); // w: the cargo block
     objects[index].axisY = vec4(rolledUp, 0.0);
     objects[index].axisZ = vec4(pitchedForward, 0.0);
 }

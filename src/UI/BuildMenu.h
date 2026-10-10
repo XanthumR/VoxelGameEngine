@@ -20,8 +20,12 @@ public:
     struct Entry {
         int type = 0; // Building type, or BuildTool::ROAD
         Rml::String name, hotkey, image; // image: its picture, relative to assets/ui
-        int coins = 0, planks = 0;
+        int coins = 0, planks = 0, bricks = 0, steelBeams = 0;
         bool selected = false;
+    };
+    struct Tab {
+        Rml::String name;
+        bool locked = false;
     };
 
     bool Init(Rml::Context* context);
@@ -37,6 +41,7 @@ private:
 
     // Bound to the document
     int m_Tab = -1;
+    std::vector<Tab> m_Tabs;
     std::vector<Entry> m_Entries;
     bool m_AnySelected = false;
     Rml::String m_Status, m_Hint;

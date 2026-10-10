@@ -20,6 +20,7 @@ struct VoxelObject {
     // GPU then sets its height, pitch and roll from the waves under it (shaders/render/float.comp);
     // position.y, pitch and roll here are ignored.
     float waterline = 0.0f;
+    uint8_t cargo = 0; // The block its model's Block::CARGO voxels are drawn as (carts)
 };
 
 // Where an object's shadow can fall: the xz rectangle (low, high) of its box and of the box pushed

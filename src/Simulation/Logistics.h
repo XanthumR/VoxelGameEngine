@@ -10,20 +10,21 @@
 #include <vector>
 
 constexpr int WAREHOUSE_ROAD_RANGE = 30; // Road tiles a warehouse reaches (120 voxels)
-constexpr int MARKET_ROAD_RANGE = 20;    // Road tiles a marketplace reaches (80 voxels)
+constexpr int MARKET_ROAD_RANGE = SERVICE_ROAD_RANGE[(size_t)ServiceType::Marketplace]; // Road tiles a marketplace reaches (80 voxels)
 
 // The best reached road tile touching a footprint
 struct FootprintConnection {
     bool connected = false;
-    GameObjectId source = INVALID_GAME_OBJECT; // The warehouse or marketplace
+    GameObjectId source = INVALID_GAME_OBJECT; // The warehouse or service building
     uint16_t roadDistance = 0xFFFF;
 };
 
 // Reach along roads, and which buildings it connects. A warehouse reaches the road tiles touching
 // its footprint (distance 1) and spreads along the road up to WAREHOUSE_ROAD_RANGE; a building is
-// connected when a reached road tile touches it. Marketplaces that are connected spread the same
-// way (MARKET_ROAD_RANGE) and serve the houses their reach touches. Recomputed from scratch (a
-// multi-source breadth-first search per kind) whenever roads or buildings change.
+// connected when a reached road tile touches it. Service buildings (marketplaces, schools, ...) that
+// are connected spread the same way (SERVICE_ROAD_RANGE of their type) and serve the buildings
+// their reach touches. Recomputed from scratch (a multi-source breadth-first search per kind)
+// whenever roads or buildings change.
 class LogisticsSystem {
 public:
     LogisticsSystem();
@@ -34,9 +35,9 @@ public:
 
     // Use the road distances of the last rebuild
     static FootprintConnection ConnectionOf(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles);
-    static FootprintConnection MarketConnectionOf(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles);
+    static FootprintConnection ServiceConnectionOf(const RoadNetwork& roads, ServiceType service, glm::ivec2 minTile, glm::ivec2 tiles);
 
-    // The road tiles a warehouse or marketplace with this footprint would reach (placement
+    // The road tiles a warehouse or service building with this footprint would reach (placement
     // preview). Does not allocate when out has capacity for the result.
     void PreviewReach(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, int range, std::vector<glm::ivec2>& out);
 
@@ -50,11 +51,10 @@ private:
         uint16_t distance;
     };
 
-    // Seeds the road tiles around a footprint (distance 1) for one kind of reach
-    void Seed(RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, GameObjectId source,
-        uint16_t RoadTile::*distance, GameObjectId RoadTile::*owner);
+    // Seeds the road tiles around a footprint (distance 1) for one kind of reach (WAREHOUSE_REACH or a ServiceType)
+    void Seed(RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, GameObjectId source, int kind);
     // Breadth-first from the seeded queue; the first source to reach a tile owns it
-    void Spread(RoadNetwork& roads, int range, uint16_t RoadTile::*distance, GameObjectId RoadTile::*owner);
+    void Spread(RoadNetwork& roads, int range, int kind);
 
     // Preview search area: every tile within range of a footprint of up to MAX_PREVIEW_FOOTPRINT tiles
     static constexpr int MAX_PREVIEW_FOOTPRINT = 8;

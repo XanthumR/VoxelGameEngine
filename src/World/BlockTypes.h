@@ -42,15 +42,17 @@ constexpr uint8_t SMOKE_LIGHT = 58; // Smoke puffs, and sails
 constexpr uint8_t BOAT_WOOD = 59;
 constexpr uint8_t FIGURE_FIRST = PERSON_SKIN, FIGURE_LAST = BOAT_WOOD;
 
-// Horse carts, drawn on the GPU like the other figures (shaders/people/figures.glsl); the cargo
-// blocks follow ItemType order. 100 and 101 are building model markers, never in the world.
+// Horse carts (voxel objects, FigureModels). 100 and 101 are building model markers, never in the world.
 constexpr uint8_t HORSE_COAT = 102;
 constexpr uint8_t HORSE_DARK = 103;  // Mane, tail, hooves
 constexpr uint8_t HARNESS = 104;     // Collar, saddle pad, reins
 constexpr uint8_t WAGON_WOOD = 105;
 constexpr uint8_t WHEEL_IRON = 106;
-constexpr uint8_t CARGO_FIRST = 107; // + (int)ItemType: wood, planks, fish, wool, work clothes, bricks, sausages, pigs
-constexpr uint8_t CARGO_LAST = 114;
+// The cargo voxels of a cart model: the shade pass draws them as the carried good's block,
+// CARGO_FIRST + (int)ItemType (VoxelObject::cargo), so one model serves every good
+constexpr uint8_t CARGO = 107;
+constexpr uint8_t CARGO_FIRST = 108;
+constexpr uint8_t CARGO_LAST = 159; // Room for 52 goods
 constexpr uint8_t CART_FIRST = HORSE_COAT, CART_LAST = CARGO_LAST;
 
 // Building materials of the .vox building models (assets/buildings): palette index = block ID, so
@@ -97,6 +99,32 @@ constexpr uint8_t PIG_PINK = 97;
 constexpr uint8_t SAUSAGE = 98;
 constexpr uint8_t MUD = 99;
 constexpr uint8_t MODEL_MATERIALS_LAST = 99;
+
+// More building model materials (Milestone 8), and the upper tiers' clothes
+constexpr uint8_t EXTRA_MATERIALS_FIRST = 160;
+constexpr uint8_t WHEAT = 160;
+constexpr uint8_t WHEAT_STALK = 161;
+constexpr uint8_t CLAY = 162;
+constexpr uint8_t COAL = 163;
+constexpr uint8_t IRON_ORE = 164;
+constexpr uint8_t STEEL = 165;
+constexpr uint8_t FIRE = 166; // Glows: furnace and kiln mouths
+constexpr uint8_t CATTLE_BROWN = 167;
+constexpr uint8_t CATTLE_WHITE = 168;
+constexpr uint8_t BREAD = 169;
+constexpr uint8_t SOAP = 170;
+constexpr uint8_t BRASS = 171;
+constexpr uint8_t VELVET = 172;
+constexpr uint8_t BRICK_RED = 173;
+constexpr uint8_t PLASTER_BLUE = 174;
+constexpr uint8_t PLASTER_PINK = 175;
+constexpr uint8_t ROOF_GREEN = 176; // Copper roofs
+constexpr uint8_t SACK = 177;
+constexpr uint8_t CANVAS = 178;     // Windmill sails
+constexpr uint8_t PERSON_COAT_ARTISAN = 179;
+constexpr uint8_t PERSON_COAT_ARTISAN_GREEN = 180;
+constexpr uint8_t PERSON_BOWLER = 181;
+constexpr uint8_t EXTRA_MATERIALS_LAST = 181;
 } // namespace Block
 
 // Grass tufts and water are drawn, but the player, raycasts and projectiles pass through them

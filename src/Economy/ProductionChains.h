@@ -29,7 +29,7 @@ struct ProductionChain {
     uint8_t fullSpeedCount;  // Trees or modules for full productivity
 };
 
-constexpr std::array<ProductionChain, 7> PRODUCTION_CHAINS = { {
+constexpr std::array<ProductionChain, 21> PRODUCTION_CHAINS = { {
     { TIER_FARMERS, 5, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Fish, 300, LocationRule::Coast, 2, 0 },              // Fishery
     { TIER_FARMERS, 5, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Wood, 200, LocationRule::Trees, 6, 6 },              // Lumberjack
     { TIER_FARMERS, 5, 1, { ItemType::Wood, ItemType::Wood }, ItemType::Planks, 200, LocationRule::None, 0, 0 },             // Sawmill
@@ -37,6 +37,20 @@ constexpr std::array<ProductionChain, 7> PRODUCTION_CHAINS = { {
     { TIER_FARMERS, 10, 1, { ItemType::Wool, ItemType::Wool }, ItemType::WorkClothes, 300, LocationRule::None, 0, 0 },       // Framework Knitter
     { TIER_WORKERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Pigs, 600, LocationRule::Modules, 3, 5 },          // Pig Farm
     { TIER_WORKERS, 15, 1, { ItemType::Pigs, ItemType::Pigs }, ItemType::Sausages, 300, LocationRule::None, 0, 0 },          // Slaughterhouse
+    { TIER_FARMERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Grain, 300, LocationRule::Modules, 3, 4 },         // Grain Farm
+    { TIER_FARMERS, 10, 1, { ItemType::Grain, ItemType::Grain }, ItemType::Flour, 300, LocationRule::None, 0, 0 },           // Flour Mill
+    { TIER_WORKERS, 15, 1, { ItemType::Flour, ItemType::Flour }, ItemType::Bread, 300, LocationRule::None, 0, 0 },           // Bakery
+    { TIER_WORKERS, 10, 1, { ItemType::Pigs, ItemType::Pigs }, ItemType::Tallow, 300, LocationRule::None, 0, 0 },            // Rendering Works
+    { TIER_WORKERS, 15, 1, { ItemType::Tallow, ItemType::Tallow }, ItemType::Soap, 300, LocationRule::None, 0, 0 },          // Soap Factory
+    { TIER_WORKERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Clay, 300, LocationRule::Coast, 2, 0 },             // Clay Pit
+    { TIER_WORKERS, 15, 1, { ItemType::Clay, ItemType::Clay }, ItemType::Bricks, 300, LocationRule::None, 0, 0 },            // Brick Factory
+    { TIER_FARMERS, 5, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Beef, 600, LocationRule::Modules, 3, 3 },            // Cattle Farm
+    { TIER_WORKERS, 15, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Iron, 300, LocationRule::None, 0, 0 },              // Iron Mine
+    { TIER_FARMERS, 5, 1, { ItemType::Wood, ItemType::Wood }, ItemType::Coal, 300, LocationRule::None, 0, 0 },               // Charcoal Kiln
+    { TIER_WORKERS, 20, 2, { ItemType::Iron, ItemType::Coal }, ItemType::Steel, 300, LocationRule::None, 0, 0 },             // Furnace
+    { TIER_WORKERS, 20, 1, { ItemType::Steel, ItemType::Steel }, ItemType::SteelBeams, 450, LocationRule::None, 0, 0 },      // Steelworks
+    { TIER_ARTISANS, 20, 2, { ItemType::Beef, ItemType::Iron }, ItemType::CannedFood, 300, LocationRule::None, 0, 0 },       // Cannery
+    { TIER_ARTISANS, 20, 2, { ItemType::Wood, ItemType::Steel }, ItemType::SewingMachines, 300, LocationRule::None, 0, 0 },  // Sewing Machine Factory
 } };
 
 constexpr int PRODUCER_BUFFER = 4; // Goods a producer holds of its output and of each input

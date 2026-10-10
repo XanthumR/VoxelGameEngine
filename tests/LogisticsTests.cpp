@@ -136,6 +136,8 @@ TEST(LogisticsTest, PreviewReachMatchesARealWarehouse) {
     EXPECT_EQ(std::find(reach.begin(), reach.end(), glm::ivec2(4 + WAREHOUSE_ROAD_RANGE, 1)), reach.end());
 }
 
+constexpr size_t MARKET = (size_t)ServiceType::Marketplace;
+
 // Marketplace: 4x3 tiles at (6, 2)-(9, 4), touching the road at z = 1 along x 6..9
 TEST(LogisticsTest, MarketReachSpreadsFromAConnectedMarketplace) {
     LogisticsFixture f;
@@ -143,10 +145,10 @@ TEST(LogisticsTest, MarketReachSpreadsFromAConnectedMarketplace) {
     f.AddRoadX(4, 40, 1);
     GameObjectId market = f.AddBuilding(BUILDING_MARKETPLACE, { 6, 2 });
     f.Run();
-    EXPECT_EQ(f.roads.Find({ 9, 1 })->marketDistance, 1);
-    EXPECT_EQ(f.roads.Find({ 9, 1 })->market, market);
-    EXPECT_EQ(f.roads.Find({ 9 + MARKET_ROAD_RANGE - 1, 1 })->marketDistance, MARKET_ROAD_RANGE);
-    EXPECT_EQ(f.roads.Find({ 9 + MARKET_ROAD_RANGE, 1 })->marketDistance, RoadTile::UNREACHED);
+    EXPECT_EQ(f.roads.Find({ 9, 1 })->serviceDistance[MARKET], 1);
+    EXPECT_EQ(f.roads.Find({ 9, 1 })->service[MARKET], market);
+    EXPECT_EQ(f.roads.Find({ 9 + MARKET_ROAD_RANGE - 1, 1 })->serviceDistance[MARKET], MARKET_ROAD_RANGE);
+    EXPECT_EQ(f.roads.Find({ 9 + MARKET_ROAD_RANGE, 1 })->serviceDistance[MARKET], RoadTile::UNREACHED);
 }
 
 TEST(LogisticsTest, HouseInMarketReachIsServed) {
@@ -157,10 +159,10 @@ TEST(LogisticsTest, HouseInMarketReachIsServed) {
     GameObjectId near = f.AddBuilding(BUILDING_FARMER_HOUSE, { 12, 2 });
     GameObjectId far = f.AddBuilding(BUILDING_FARMER_HOUSE, { 9 + MARKET_ROAD_RANGE + 1, 2 });
     f.Run();
-    EXPECT_TRUE(f.objects.Logistics(near).inMarketRange);
-    EXPECT_EQ(f.objects.Logistics(near).market, market);
+    EXPECT_TRUE(f.objects.Logistics(near).InReach(ServiceType::Marketplace));
+    EXPECT_EQ(f.objects.Logistics(near).services[MARKET], market);
     EXPECT_TRUE(f.objects.Logistics(far).connected);       // Still within the warehouse's reach
-    EXPECT_FALSE(f.objects.Logistics(far).inMarketRange);  // But no marketplace reaches it
+    EXPECT_FALSE(f.objects.Logistics(far).InReach(ServiceType::Marketplace));  // But no marketplace reaches it
 }
 
 TEST(LogisticsTest, MarketplaceWithoutWarehouseServesNobody) {
@@ -169,8 +171,8 @@ TEST(LogisticsTest, MarketplaceWithoutWarehouseServesNobody) {
     f.AddBuilding(BUILDING_MARKETPLACE, { 6, 2 });
     GameObjectId house = f.AddBuilding(BUILDING_FARMER_HOUSE, { 12, 2 });
     f.Run();
-    EXPECT_FALSE(f.objects.Logistics(house).inMarketRange);
-    EXPECT_EQ(f.roads.Find({ 9, 1 })->marketDistance, RoadTile::UNREACHED);
+    EXPECT_FALSE(f.objects.Logistics(house).InReach(ServiceType::Marketplace));
+    EXPECT_EQ(f.roads.Find({ 9, 1 })->serviceDistance[MARKET], RoadTile::UNREACHED);
 }
 
 TEST(LogisticsTest, NearestMarketplaceWins) {
@@ -181,8 +183,25 @@ TEST(LogisticsTest, NearestMarketplaceWins) {
     GameObjectId east = f.AddBuilding(BUILDING_MARKETPLACE, { 26, 2 });
     GameObjectId house = f.AddBuilding(BUILDING_FARMER_HOUSE, { 22, 2 }); // Touching road 14 tiles from the west one, 3 from the east one
     f.Run();
-    EXPECT_EQ(f.objects.Logistics(house).market, east);
+    EXPECT_EQ(f.objects.Logistics(house).services[MARKET], east);
     (void)west;
+}
+
+TEST(LogisticsTest, EachServiceSpreadsItsOwnRange) {
+    LogisticsFixture f;
+    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddRoadX(4, 60, 1);
+    GameObjectId school = f.AddBuilding(BUILDING_SCHOOL, { 6, 2 }); // 3x3: touches the road along x 6..8
+    const size_t SCHOOL = (size_t)ServiceType::School;
+    int range = SERVICE_ROAD_RANGE[SCHOOL];
+    GameObjectId near = f.AddBuilding(BUILDING_FARMER_HOUSE, { 8 + range - 2, 2 });
+    GameObjectId far = f.AddBuilding(BUILDING_FARMER_HOUSE, { 8 + range + 1, 2 });
+    f.Run();
+    EXPECT_EQ(f.roads.Find({ 8, 1 })->serviceDistance[SCHOOL], 1);
+    EXPECT_EQ(f.roads.Find({ 8 + range, 1 })->serviceDistance[SCHOOL], RoadTile::UNREACHED);
+    EXPECT_EQ(f.objects.Logistics(near).services[SCHOOL], school);
+    EXPECT_FALSE(f.objects.Logistics(far).InReach(ServiceType::School));
+    EXPECT_FALSE(f.objects.Logistics(near).InReach(ServiceType::Marketplace)); // A school is no marketplace
 }
 
 TEST(LogisticsTest, PreviewReachUsesTheGivenRange) {

@@ -19,6 +19,19 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
 | Framework Knitter | `framework_knitter_n.vox` | 36 x 36 x up to 34 |
 | Pig Farm | `pig_farm_n.vox` | 36 x 36 x up to 22 |
 | Slaughterhouse | `slaughterhouse_n.vox` | 36 x 36 x up to 32 |
+| School | `school_n.vox` | 36 x 36 x up to 38 |
+| Grain Farm, Wheat Field | `grain_farm_n.vox`, `wheat_field_n.vox` | 36 x 36 x up to 28, 10 |
+| Flour Mill | `flour_mill_n.vox` | 36 x 36 x up to 64 |
+| Bakery, Rendering Works | `bakery_n.vox`, `rendering_works_n.vox` | 36 x 36 x up to 34 |
+| Soap Factory | `soap_factory_n.vox` | 36 x 36 x up to 40 |
+| Clay Pit, Brick Factory | `clay_pit_n.vox`, `brick_factory_n.vox` | 36 x 36 x up to 24, 44 |
+| Artisan House | `artisan_house_n.vox` | 36 x 36 x up to 54 |
+| Variety Theatre | `variety_theatre_n.vox` | 48 x 48 x up to 50 |
+| Cattle Farm, Pasture | `cattle_farm_n.vox`, `pasture_n.vox` | 36 x 36 x up to 28, 12 |
+| Iron Mine, Charcoal Kiln | `iron_mine_n.vox`, `charcoal_kiln_n.vox` | 36 x 36 x up to 40, 28 |
+| Furnace | `furnace_n.vox` | 36 x 36 x up to 52 |
+| Steelworks | `steelworks_n.vox` | 36 x 48 x up to 52 |
+| Cannery, Sewing Machine Factory | `cannery_n.vox`, `sewing_machine_factory_n.vox` | 36 x 36 x up to 40, 46 |
 
 ## Rules
 
@@ -32,7 +45,7 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
   - The game rotates the model in quarter turns when the player presses R.
 - **Palette:** palette index = block ID.
   - The colors saved in these files are the in-game colors, so what you see in MagicaVoxel is what you get.
-  - Use the building materials, indices **60–99**:
+  - Use the building materials, indices **60–99** and **160–178**:
 
     | Range | Materials |
     |---|---|
@@ -61,6 +74,15 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
     | 97 | pig |
     | 98 | sausage |
     | 99 | mud |
+    | 160–161 | wheat (ears, stalks) |
+    | 162–165 | clay, coal, iron ore, steel |
+    | 166 | fire (glows) |
+    | 167–168 | cattle (brown, white) |
+    | 169–172 | bread, soap, brass, velvet |
+    | 173 | red brick |
+    | 174–175 | plaster (blue, pink) |
+    | 176 | green copper roof |
+    | 177–178 | sack, sail canvas |
 
   - The older blocks (1–50) also work. Changing a color in the palette changes nothing in the game: colors come from `shaders/render/shade.comp`.
 - **Markers:** two palette indices are not drawn. The game reads their positions instead:

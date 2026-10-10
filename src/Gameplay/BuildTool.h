@@ -44,13 +44,17 @@ public:
     static constexpr float DEMOLITION_SECONDS = 2.0f;
     static constexpr int MAX_DEMOLITIONS = 64;   // More at once vanish straight away
 
-    // Build menu tabs: the buildable types of a category (hotkeys 1, 2, ...); the Infrastructure
-    // tab ends with the road
+    // Build menu tabs: the buildable types of a category (hotkeys 1-9, 0), houses and service
+    // buildings first; the Infrastructure tab ends with the road
     static int EntryCount(BuildCategory tab);
     static int EntryAt(BuildCategory tab, int index); // Building type, or ROAD
 
     BuildCategory Tab() const { return m_Tab; }
-    void SetTab(BuildCategory tab) { m_Tab = tab; }
+    void SetTab(BuildCategory tab) {
+        if (TabUnlocked(tab)) m_Tab = tab;
+    }
+    // A tier's tab opens once any island has had residents of that tier (it stays open)
+    bool TabUnlocked(BuildCategory tab) const { return tab == BuildCategory::Infrastructure || (int)tab <= m_UnlockedTier; }
 
     BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models,
         TerrainGenerator& terrain);
@@ -145,7 +149,8 @@ private:
     int m_SelectedType = NO_TYPE;
     GameObjectId m_ModuleFarm = INVALID_GAME_OBJECT; // The farm SelectModules chose
     GameObjectId m_MoveOwner = INVALID_GAME_OBJECT;  // A moved module's farm
-    BuildCategory m_Tab = BuildCategory::Housing;
+    BuildCategory m_Tab = BuildCategory::Farmers;
+    int m_UnlockedTier = 0; // The highest tier any island has had residents of
     uint8_t m_Rotation = 0;
     PlacementCheck m_LastCheck;
     GameObjectId m_HoveredBuilding = INVALID_GAME_OBJECT;
@@ -190,6 +195,6 @@ private:
     glm::ivec3 m_CarriedKey = glm::ivec3(-1); // Farm tile and rotation the above were made for
 
     bool m_LeftWasPressed = false, m_RightWasPressed = false, m_RWasPressed = false;
-    std::array<bool, 9> m_NumberWasPressed = {}; // Keys 1-9
+    std::array<bool, 10> m_NumberWasPressed = {}; // Keys 1-9, 0
     bool m_TabWasPressed = false;
 };

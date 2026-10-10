@@ -49,6 +49,7 @@ const int SHADOW_CELL_STRIDE = 16;
 const int OBJECT_TILE = 16;
 const int OBJECT_TILE_STRIDE = 32;
 layout(binding = 15) uniform usampler3D objectAtlas; // Block IDs at (atlas x, z, y)
+const uint CARGO_ID = 107u; // Block::CARGO: a cart's cargo voxels, drawn as the block in axisX.w
 
 // True when a world point is inside some voxel object's box (its hull keeps the sea out)
 bool insideObject(vec3 p, ivec2 pixel) {
@@ -89,7 +90,7 @@ float traceObject(VoxelObjectData object, vec3 origin, vec3 dir, float maxT, out
     for (int i = 0; i < size.x + size.y + size.z; i++) {
         uint id = texelFetch(objectAtlas, ivec3(object.model.x + cell.x, cell.z, cell.y), 0).r;
         if (id != 0u) {
-            hitId = id;
+            hitId = id == CARGO_ID ? uint(object.axisX.w) : id; // A cart's cargo: the good it carries
             vec3 n = vec3(0.0);
             n[axis] = -float(stepDir[axis]);
             hitNormal = n.x * object.axisX.xyz + n.y * object.axisY.xyz + n.z * object.axisZ.xyz;
@@ -229,23 +230,67 @@ const vec3 MODEL_PALETTE[40] = vec3[](
     vec3(0.28, 0.20, 0.13)  // 99 mud
 );
 
-// Horse carts, block IDs 102-114 (src/World/BlockTypes.h); the cargo follows ItemType order
+// Horse carts, block IDs 102-106, and the goods they carry from 108 on in ItemType order
+// (src/World/BlockTypes.h; 107 is the cargo placeholder, never drawn)
 const int CART_FIRST = 102;
-const int CART_LAST = 114;
-const vec3 CART_PALETTE[13] = vec3[](
+const int CART_LAST = 128;
+const vec3 CART_PALETTE[27] = vec3[](
     vec3(0.46, 0.29, 0.16), // 102 horse coat
     vec3(0.12, 0.08, 0.06), // 103 horse mane, tail, hooves
     vec3(0.34, 0.17, 0.09), // 104 harness leather
     vec3(0.56, 0.39, 0.21), // 105 wagon wood
     vec3(0.20, 0.20, 0.22), // 106 wheel iron
-    vec3(0.40, 0.27, 0.14), // 107 cargo: wood (logs)
-    vec3(0.80, 0.64, 0.42), // 108 cargo: planks
-    vec3(0.70, 0.74, 0.78), // 109 cargo: fish
-    vec3(0.93, 0.92, 0.87), // 110 cargo: wool
-    vec3(0.22, 0.32, 0.56), // 111 cargo: work clothes
-    vec3(0.68, 0.30, 0.20), // 112 cargo: bricks
-    vec3(0.58, 0.22, 0.16), // 113 cargo: sausages
-    vec3(0.90, 0.62, 0.60)  // 114 cargo: pigs
+    vec3(1.00, 0.00, 1.00), // 107 cargo placeholder
+    vec3(0.40, 0.27, 0.14), // 108 cargo: wood (logs)
+    vec3(0.80, 0.64, 0.42), // 109 cargo: planks
+    vec3(0.70, 0.74, 0.78), // 110 cargo: fish
+    vec3(0.93, 0.92, 0.87), // 111 cargo: wool
+    vec3(0.22, 0.32, 0.56), // 112 cargo: work clothes
+    vec3(0.68, 0.30, 0.20), // 113 cargo: bricks
+    vec3(0.58, 0.22, 0.16), // 114 cargo: sausages
+    vec3(0.90, 0.62, 0.60), // 115 cargo: pigs
+    vec3(0.86, 0.70, 0.30), // 116 cargo: grain
+    vec3(0.92, 0.88, 0.78), // 117 cargo: flour
+    vec3(0.74, 0.48, 0.22), // 118 cargo: bread
+    vec3(0.90, 0.84, 0.60), // 119 cargo: tallow
+    vec3(0.80, 0.86, 0.80), // 120 cargo: soap
+    vec3(0.64, 0.38, 0.22), // 121 cargo: clay
+    vec3(0.62, 0.20, 0.18), // 122 cargo: beef
+    vec3(0.42, 0.28, 0.22), // 123 cargo: iron ore
+    vec3(0.10, 0.10, 0.11), // 124 cargo: coal
+    vec3(0.56, 0.60, 0.64), // 125 cargo: steel
+    vec3(0.40, 0.44, 0.50), // 126 cargo: steel beams
+    vec3(0.74, 0.76, 0.80), // 127 cargo: canned food
+    vec3(0.18, 0.18, 0.20)  // 128 cargo: sewing machines
+);
+
+// More building materials and the upper tiers' clothes, block IDs 160-181 (src/World/BlockTypes.h)
+const int EXTRA_MATERIALS_FIRST = 160;
+const int EXTRA_MATERIALS_LAST = 181;
+const int FIRE_ID = 166;
+const vec3 EXTRA_PALETTE[22] = vec3[](
+    vec3(0.88, 0.72, 0.30), // 160 wheat
+    vec3(0.62, 0.64, 0.24), // 161 wheat stalk
+    vec3(0.66, 0.38, 0.22), // 162 clay
+    vec3(0.10, 0.10, 0.11), // 163 coal
+    vec3(0.45, 0.28, 0.20), // 164 iron ore
+    vec3(0.55, 0.58, 0.62), // 165 steel
+    vec3(1.00, 0.55, 0.15), // 166 fire
+    vec3(0.42, 0.24, 0.12), // 167 cattle brown
+    vec3(0.90, 0.88, 0.84), // 168 cattle white
+    vec3(0.76, 0.50, 0.22), // 169 bread
+    vec3(0.86, 0.88, 0.80), // 170 soap
+    vec3(0.80, 0.64, 0.24), // 171 brass
+    vec3(0.50, 0.08, 0.12), // 172 velvet
+    vec3(0.66, 0.30, 0.20), // 173 brick red
+    vec3(0.55, 0.66, 0.76), // 174 plaster blue
+    vec3(0.86, 0.66, 0.62), // 175 plaster pink
+    vec3(0.36, 0.58, 0.50), // 176 roof green (copper)
+    vec3(0.80, 0.72, 0.55), // 177 sack
+    vec3(0.90, 0.87, 0.78), // 178 canvas
+    vec3(0.40, 0.26, 0.16), // 179 artisan coat
+    vec3(0.24, 0.32, 0.26), // 180 artisan coat, green
+    vec3(0.12, 0.10, 0.09)  // 181 bowler hat
 );
 
 vec3 getAlbedo(int voxelID, ivec3 mapPos) {
@@ -256,6 +301,10 @@ vec3 getAlbedo(int voxelID, ivec3 mapPos) {
         return MODEL_PALETTE[voxelID - MODEL_MATERIALS_FIRST] * variation;
     }
     if (voxelID >= CART_FIRST && voxelID <= CART_LAST) return CART_PALETTE[voxelID - CART_FIRST];
+    if (voxelID >= EXTRA_MATERIALS_FIRST && voxelID <= EXTRA_MATERIALS_LAST) {
+        float variation = 0.93 + 0.07 * hash(vec2(mapPos.xz) * 0.91 + float(mapPos.y) * 3.7);
+        return EXTRA_PALETTE[voxelID - EXTRA_MATERIALS_FIRST] * variation;
+    }
     if (voxelID == 1) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000); // Grass
     else if (voxelID == 2) albedo = vec3(0.180, 0.110, 0.050); // Dirt
     else if (voxelID == 3) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.42, 0.42, 0.40) : vec3(0.36, 0.36, 0.35); // Stone
@@ -459,6 +508,12 @@ void main() {
         if (voxelID == WINDOW_GLASS_ID) {
             float night = clamp(1.0 - dot(lightColor, vec3(0.45)) * 1.6, 0.0, 1.0);
             lighting = mix(lighting, vec3(1.0, 0.72, 0.38), night * 0.85);
+        }
+
+        // --- FURNACE AND KILN FIRE ---
+        if (voxelID == FIRE_ID) {
+            float flicker = 0.85 + 0.15 * sin(time * 9.0 + float(mapPos.x * 7 + mapPos.z * 3));
+            lighting = mix(lighting, vec3(1.0, 0.55, 0.18) * 1.4 * flicker, 0.85);
         }
 
         // --- BIOLUMINESCENT CAVE GLOW ---

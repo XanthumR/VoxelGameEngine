@@ -29,7 +29,7 @@
         <div class="separator"/>
         <h3>Load and unload, 10 at a time</h3>
         <div data-for="good : goods">
-            <div class="row good-row">
+            <div class="row good-row" data-if="good.island > 0 || good.ship > 0">
                 <img class="icon small" data-attr-src="good.icon"/>
                 <span class="name">{{good.name}}</span>
                 <span class="amounts muted">island {{good.island}} | ship {{good.ship}}</span>

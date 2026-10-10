@@ -29,15 +29,15 @@ struct VoxelAnchorComponent {
     glm::ivec2 footprint = glm::ivec2(1); // Columns along x and z
 };
 
-// Whether a building is linked by road to a warehouse and to a marketplace (computed by
-// LogisticsSystem every time roads or buildings change)
+// Whether a building is linked by road to a warehouse, and which service buildings (marketplace,
+// school, ...) reach it (computed by LogisticsSystem every time roads or buildings change)
 struct LogisticsComponent {
     GameObjectId warehouse = INVALID_GAME_OBJECT; // The warehouse it is connected to
     uint16_t roadDistance = 0xFFFF;               // Road tiles to that warehouse
     bool connected = false;
-    GameObjectId market = INVALID_GAME_OBJECT;    // The marketplace whose reach it is in
-    uint16_t marketDistance = 0xFFFF;
-    bool inMarketRange = false;
+    std::array<GameObjectId, SERVICE_COUNT> services = {}; // Per ServiceType: the building whose reach it is in, or INVALID
+
+    bool InReach(ServiceType service) const { return services[(size_t)service] != INVALID_GAME_OBJECT; }
 };
 
 // A house: its residents and how well each of its tier's needs is met (PopulationSystem). The tier

@@ -1,6 +1,7 @@
 #include "Economy/PopulationSystem.h"
 
 #include "Economy/IslandEconomy.h"
+#include "Economy/Treasury.h"
 #include "Simulation/BuildingTypes.h"
 
 #include <algorithm>
@@ -36,8 +37,8 @@ bool PopulationSystem::IsReadyToUpgrade(const GameObjectRegistry& objects, GameO
 
 bool PopulationSystem::CanUpgrade(const GameObjectRegistry& objects, const IslandEconomyManager& economy, GameObjectId id) {
     if (!IsReadyToUpgrade(objects, id)) return false;
-    const IslandStorage* storage = economy.Find(objects.Building(id).island);
-    return storage && storage->Amount(ItemType::Planks) >= UPGRADE_PLANKS;
+    const BuildingComponent& building = objects.Building(id);
+    return Treasury::CheckMaterials(UpgradeCost(BUILDING_TYPES[building.type].tier), building.island, economy) == PlacementError::None;
 }
 
 void PopulationSystem::RequestUpgrade(GameObjectId id) {
@@ -46,11 +47,12 @@ void PopulationSystem::RequestUpgrade(GameObjectId id) {
 
 void PopulationSystem::ApplyUpgradeRequests(GameObjectRegistry& objects, IslandEconomyManager& economy) {
     for (GameObjectId id : m_UpgradeRequests) {
-        if (!CanUpgrade(objects, economy, id)) continue; // No longer ready, or the planks ran out
+        if (!CanUpgrade(objects, economy, id)) continue; // No longer ready, or the materials ran out
         BuildingComponent& building = objects.Building(id);
         ResidenceComponent& residence = objects.Residence(id);
-        economy.Remove(building.island, ItemType::Planks, UPGRADE_PLANKS);
-        building.type = RESIDENCE_FOR_TIER[BUILDING_TYPES[building.type].tier + 1];
+        int tier = BUILDING_TYPES[building.type].tier;
+        Treasury::TakeMaterials(UpgradeCost(tier), building.island, economy);
+        building.type = RESIDENCE_FOR_TIER[tier + 1];
         residence.upgradeTicks = 0;
         residence.downgradeTicks = 0;
         PushLookChange(id);
@@ -87,7 +89,7 @@ void PopulationSystem::Consume(const GameObjectRegistry& objects, IslandEconomyM
         int residents = objects.Residence(id).residents;
         storage->population[type.tier] += residents;
         const LogisticsComponent& logistics = objects.Logistics(id);
-        if (logistics.connected && logistics.inMarketRange) storage->suppliedResidents[type.tier] += residents;
+        if (logistics.connected && logistics.InReach(ServiceType::Marketplace)) storage->suppliedResidents[type.tier] += residents;
     }
 
     // Consume, tier by tier, so lower tiers get scarce goods first
@@ -124,13 +126,14 @@ void PopulationSystem::UpdateHouse(GameObjectRegistry& objects, IslandEconomyMan
     const LogisticsComponent& logistics = objects.Logistics(id);
     IslandStorage* storage = economy.Find(building.island);
 
-    // Need supply of this house
-    bool served = logistics.connected && logistics.inMarketRange && storage;
+    // Need supply of this house: goods come through a marketplace, services from their buildings' reach
+    bool served = logistics.connected && logistics.InReach(ServiceType::Marketplace) && storage;
     bool allNeedsMet = true;
     for (int n = 0; n < MAX_NEEDS; n++) {
         int16_t supply = 0;
         if (n < tier.needCount && served) {
-            supply = tier.needs[n].kind == NeedKind::Service ? (int16_t)1000 : storage->supply[type.tier][n];
+            const Need& need = tier.needs[n];
+            supply = need.kind == NeedKind::Service ? (logistics.InReach(need.service) ? (int16_t)1000 : (int16_t)0) : storage->supply[type.tier][n];
         }
         residence.needSupply[n] = supply;
         if (n < tier.needCount && supply < UPGRADE_SUPPLY) allNeedsMet = false;

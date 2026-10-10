@@ -98,3 +98,20 @@ TEST(TreasuryTest, DemolishRefundsHalf) {
     EXPECT_EQ(f.treasury.Coins(), 1000 - cost.coins + cost.coins / 2);
     EXPECT_EQ(f.economy.Find(ISLAND)->Amount(ItemType::Planks), 20 - cost.planks + cost.planks / 2);
 }
+
+TEST(TreasuryTest, BricksAndSteelBeamsAreMaterialsToo) {
+    TreasuryFixture f;
+    f.economy.OnWarehouseAdded(ISLAND);
+    IslandStorage& storage = *f.economy.Find(ISLAND);
+    const BuildingCost& cost = BUILDING_COSTS[BUILDING_THEATRE];
+    f.treasury.SetCoins(cost.coins);
+    storage.amounts[(size_t)ItemType::Planks] = cost.planks;
+    EXPECT_EQ(f.treasury.Check(BUILDING_THEATRE, ISLAND, f.economy), PlacementError::NotEnoughBricks);
+    storage.amounts[(size_t)ItemType::Bricks] = cost.bricks;
+    EXPECT_EQ(f.treasury.Check(BUILDING_THEATRE, ISLAND, f.economy), PlacementError::NotEnoughSteelBeams);
+    storage.amounts[(size_t)ItemType::SteelBeams] = cost.steelBeams;
+    EXPECT_EQ(f.treasury.Check(BUILDING_THEATRE, ISLAND, f.economy), PlacementError::None);
+    f.treasury.Pay(BUILDING_THEATRE, ISLAND, f.economy);
+    EXPECT_EQ(storage.Amount(ItemType::Bricks), 0);
+    EXPECT_EQ(storage.Amount(ItemType::SteelBeams), 0);
+}

@@ -140,8 +140,8 @@ private:
         uint32_t roadRevision = 0xFFFFFFFF, logisticsRevision = 0, roadPreviewRevision = 0;
         int selection = 0;
         GameObjectId highlightedWarehouse = INVALID_GAME_OBJECT;
-        GameObjectId highlightedMarket = INVALID_GAME_OBJECT;
-        int previewReachType = -1; // Building type whose reach is previewed (warehouse or marketplace), or -1
+        GameObjectId highlightedService = INVALID_GAME_OBJECT; // A hovered service building (marketplace, school, ...)
+        int previewReachType = -1; // Building type whose reach is previewed (warehouse or service building), or -1
         uint32_t locationRevision = 0;
         glm::ivec2 previewMinTile = glm::ivec2(0), previewTiles = glm::ivec2(0);
         bool operator==(const TileOverlayKey&) const = default;

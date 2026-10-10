@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is next.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way.
 
 ## Roadmap
 
@@ -695,3 +695,65 @@ The player-facing UI moves from Dear ImGui to **RmlUi** (HTML/CSS-like documents
 - ImGui is left only for the debug tools; `CLAUDE.md` and this roadmap.
 
 - Done: ImGui remains in `DebugOverlay` (F3), `Hud` (free-fly) and `WorldMarkers` (building and ship badges over the world, moved together from `BuildingMarkers` and `ShipPanel`). Milestone 7 is complete.
+
+## Milestone 8, in detail
+
+The upper tiers and their goods, as in Anno 1800 but with fewer chains, and NPC traders. Done in three parts, each playable:
+
+- **8.1** the systems (more tiers, service buildings, construction materials, tier tabs) and the content of Workers and Artisans;
+- **8.2** Engineers and Investors;
+- **8.3** NPC traders.
+
+### 8.1 Systems
+
+- **Service buildings:** a new role `Service` with a `ServiceType` (Marketplace, School, Variety Theatre; University and Bank in 8.2), each with its own road range. `LogisticsSystem` spreads the reach of every connected service building and records, per building, which building of each type serves it. A service need is met when its building's reach touches the house; goods still need a marketplace.
+- **Needs:** up to 8 per tier (`MAX_NEEDS`); a need is a good or a service, its name comes from the good or service.
+- **Construction materials:** `BuildingCost` gains bricks and steel beams beside planks (windows in 8.2). Placement checks each (`NotEnoughBricks`, `NotEnoughSteelBeams`). A house upgrade costs the materials of the house type it becomes (Worker House: 2 planks; Artisan House: 2 planks and 3 bricks).
+- **Build menu:** one tab per tier (the buildings that tier unlocks, its service buildings first) and Infrastructure. A tier's tab opens once any island has residents of that tier. Number keys 1-9 and 0 pick the first ten entries; longer tabs wrap to a second row.
+- **Carts:** the cargo voxels of a cart model are a placeholder block the shade pass replaces with the good's block, so the cart models no longer multiply with the goods (4 frames x 9 loads instead of 4 x 33).
+- **Walkers:** Artisans get their own look (a coat and a bowler hat).
+
+### 8.1 Content
+
+| Tier (house) | Needs (residents each) |
+|---|---|
+| Farmers (10) | Marketplace 2, Fish 4, Work Clothes 4 |
+| Workers (20) | Marketplace 2, Fish 3, Work Clothes 3, Sausages 3, Bread 3, Soap 3, School 3 |
+| Artisans (30) | Marketplace 3, School 3, Sausages 3, Bread 3, Soap 3, Canned Food 5, Sewing Machines 5, Variety Theatre 5 |
+
+| Building (tiles) | Tab | Workforce | Input → output | Cycle | Location |
+|---|---|---|---|---|---|
+| School (3×3) | Workers | — | service, range 16 | | |
+| Grain Farm (3×3) | Workers | 10 Farmers | → Grain | 30 s | 4 Wheat Fields (3×3 modules) within 3 tiles |
+| Flour Mill (3×3) | Workers | 10 Farmers | Grain → Flour | 30 s | |
+| Bakery (3×3) | Workers | 15 Workers | Flour → Bread | 30 s | |
+| Rendering Works (3×3) | Workers | 10 Workers | Pigs → Tallow | 30 s | |
+| Soap Factory (3×3) | Workers | 15 Workers | Tallow → Soap | 30 s | |
+| Clay Pit (3×3) | Workers | 10 Workers | → Clay | 30 s | Coast within 2 tiles |
+| Brick Factory (3×3) | Workers | 15 Workers | Clay → Bricks | 30 s | |
+| Variety Theatre (4×4) | Artisans | — | service, range 24 | | |
+| Cattle Farm (3×3) | Artisans | 5 Farmers | → Beef | 60 s | 3 Pastures (3×3 modules) within 3 tiles |
+| Iron Mine (3×3) | Artisans | 15 Workers | → Iron | 30 s | |
+| Charcoal Kiln (3×3) | Artisans | 5 Farmers | Wood → Coal | 30 s | |
+| Furnace (3×3) | Artisans | 20 Workers | Iron + Coal → Steel | 30 s | |
+| Steelworks (3×4) | Artisans | 20 Workers | Steel → Steel Beams | 45 s | |
+| Cannery (3×3) | Artisans | 20 Artisans | Beef + Iron → Canned Food | 30 s | |
+| Sewing Machine Factory (3×3) | Artisans | 20 Artisans | Wood + Steel → Sewing Machines | 30 s | |
+
+Each building gets a `.vox` model from `tools/building_models/generate.py` (new materials from block ID 160: wheat, clay, coal, ore, steel, furnace fire, cattle, bread, soap, brass, velvet, ...), a build menu picture and the goods their icons.
+
+- Done (8.1): all of the above. Placement and demolish refunds handle the three materials; the building panel lists an upgrade's materials; service buildings show the houses they serve; hovering or placing one tints the road reach of its type. The ship panel lists only the goods the island or the ship has, the island panel only the goods in stock. Tests cover service reach, material checks and the Artisan upgrade.
+
+### 8.2 Engineers and Investors (planned)
+
+| Tier (house) | Needs |
+|---|---|
+| Engineers (40) | Marketplace, Variety Theatre, Canned Food, Sewing Machines, Glasses, Light Bulbs, University |
+| Investors (50) | Marketplace, University, Glasses, Light Bulbs, Champagne, Jewelry, Bank |
+
+Chains: Sand Mine (coast) → Glassworks (Glass); Window Makers (Wood + Glass → Windows, the new construction material); Copper Mine → Spectacle Factory (Glass + Copper → Glasses); Filament Factory (Coal → Filaments) → Light Bulb Factory (Glass + Filaments); Vineyard (modules) → Champagne Cellar (Grapes + Glass); Gold Mine → Goldsmiths (Jewelry). Service buildings: University, Bank.
+
+### 8.3 NPC traders (planned)
+
+A trader's island with its own harbor that the player's ships can sail to: it sells and buys a list of goods at fixed prices, and trade route stops there buy or sell instead of loading and unloading.
+

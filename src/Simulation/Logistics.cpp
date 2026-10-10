@@ -7,6 +7,17 @@
 namespace {
 
 const glm::ivec2 DIRECTIONS[4] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+constexpr int WAREHOUSE_REACH = -1; // Reach kind of warehouses; services use their ServiceType
+
+// A road tile's distance and source for one kind of reach (Tile: RoadTile or const RoadTile)
+template <typename Tile>
+auto& DistanceOf(Tile& road, int kind) {
+    return kind == WAREHOUSE_REACH ? road.distance : road.serviceDistance[kind];
+}
+template <typename Tile>
+auto& SourceOf(Tile& road, int kind) {
+    return kind == WAREHOUSE_REACH ? road.warehouse : road.service[kind];
+}
 
 void FootprintTilesOf(const VoxelAnchorComponent& anchor, glm::ivec2& minTile, glm::ivec2& tiles) {
     minTile = glm::ivec2(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
@@ -14,15 +25,16 @@ void FootprintTilesOf(const VoxelAnchorComponent& anchor, glm::ivec2& minTile, g
 }
 
 // The nearest reached road tile (within range) touching a footprint, for one kind of reach
-FootprintConnection BestAround(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, int range,
-    uint16_t RoadTile::*distance, GameObjectId RoadTile::*owner) {
+FootprintConnection BestAround(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, int range, int kind) {
     FootprintConnection best;
     ForEachTileAround(minTile, tiles, [&](glm::ivec2 tile) {
         const RoadTile* road = roads.Find(tile);
-        if (!road || road->*distance > range || road->*distance >= best.roadDistance) return;
+        if (!road) return;
+        uint16_t distance = DistanceOf(*road, kind);
+        if (distance > range || distance >= best.roadDistance) return;
         best.connected = true;
-        best.source = road->*owner;
-        best.roadDistance = road->*distance;
+        best.source = SourceOf(*road, kind);
+        best.roadDistance = distance;
     });
     return best;
 }
@@ -41,29 +53,28 @@ bool LogisticsSystem::Update(GameObjectRegistry& objects, RoadNetwork& roads, ui
     return true;
 }
 
-void LogisticsSystem::Seed(RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, GameObjectId source,
-    uint16_t RoadTile::*distance, GameObjectId RoadTile::*owner) {
+void LogisticsSystem::Seed(RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, GameObjectId source, int kind) {
     ForEachTileAround(minTile, tiles, [&](glm::ivec2 tile) {
         RoadTile* road = roads.Find(tile);
-        if (!road || road->*distance <= 1) return;
-        road->*distance = 1;
-        road->*owner = source;
+        if (!road || DistanceOf(*road, kind) <= 1) return;
+        DistanceOf(*road, kind) = 1;
+        SourceOf(*road, kind) = source;
         m_Queue.push_back({ tile, 1 }); // Never more entries than road tiles: within the reserve
     });
 }
 
-void LogisticsSystem::Spread(RoadNetwork& roads, int range, uint16_t RoadTile::*distance, GameObjectId RoadTile::*owner) {
+void LogisticsSystem::Spread(RoadNetwork& roads, int range, int kind) {
     for (size_t head = 0; head < m_Queue.size(); head++) {
         QueueEntry entry = m_Queue[head];
         if (entry.distance >= range) continue;
-        GameObjectId source = roads.Find(entry.tile)->*owner;
+        GameObjectId source = SourceOf(*roads.Find(entry.tile), kind);
         for (const glm::ivec2& direction : DIRECTIONS) {
             glm::ivec2 next = entry.tile + direction;
             RoadTile* road = roads.Find(next);
-            if (!road || road->*distance <= entry.distance + 1) continue;
-            road->*distance = (uint16_t)(entry.distance + 1);
-            road->*owner = source;
-            m_Queue.push_back({ next, road->*distance });
+            if (!road || DistanceOf(*road, kind) <= entry.distance + 1) continue;
+            DistanceOf(*road, kind) = (uint16_t)(entry.distance + 1);
+            SourceOf(*road, kind) = source;
+            m_Queue.push_back({ next, (uint16_t)(entry.distance + 1) });
         }
     }
 }
@@ -78,9 +89,9 @@ void LogisticsSystem::Rebuild(GameObjectRegistry& objects, RoadNetwork& roads) {
         if (id == INVALID_GAME_OBJECT || BUILDING_TYPES[objects.Building(id).type].role != BuildingRole::Storage) continue;
         glm::ivec2 minTile, tiles;
         FootprintTilesOf(objects.Anchor(id), minTile, tiles);
-        Seed(roads, minTile, tiles, id, &RoadTile::distance, &RoadTile::warehouse);
+        Seed(roads, minTile, tiles, id, WAREHOUSE_REACH);
     }
-    Spread(roads, WAREHOUSE_ROAD_RANGE, &RoadTile::distance, &RoadTile::warehouse);
+    Spread(roads, WAREHOUSE_ROAD_RANGE, WAREHOUSE_REACH);
 
     // 2. Warehouse connection of every building
     m_ConnectedBuildings = 0;
@@ -106,39 +117,40 @@ void LogisticsSystem::Rebuild(GameObjectRegistry& objects, RoadNetwork& roads) {
         if (connection.connected) m_ConnectedBuildings++;
     }
 
-    // 3. Reach of the connected marketplaces
-    m_Queue.clear();
-    for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
-        GameObjectId id = objects.IdAtSlot(slot);
-        if (id == INVALID_GAME_OBJECT || BUILDING_TYPES[objects.Building(id).type].role != BuildingRole::Market) continue;
-        if (!objects.Logistics(id).connected) continue;
-        glm::ivec2 minTile, tiles;
-        FootprintTilesOf(objects.Anchor(id), minTile, tiles);
-        Seed(roads, minTile, tiles, id, &RoadTile::marketDistance, &RoadTile::market);
+    // 3. Reach of the connected service buildings, one type at a time
+    for (int kind = 0; kind < SERVICE_COUNT; kind++) {
+        m_Queue.clear();
+        for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
+            GameObjectId id = objects.IdAtSlot(slot);
+            if (id == INVALID_GAME_OBJECT || BUILDING_TYPES[objects.Building(id).type].service != (ServiceType)kind) continue;
+            if (!objects.Logistics(id).connected) continue;
+            glm::ivec2 minTile, tiles;
+            FootprintTilesOf(objects.Anchor(id), minTile, tiles);
+            Seed(roads, minTile, tiles, id, kind);
+        }
+        Spread(roads, SERVICE_ROAD_RANGE[kind], kind);
     }
-    Spread(roads, MARKET_ROAD_RANGE, &RoadTile::marketDistance, &RoadTile::market);
 
-    // 4. Which buildings a marketplace serves
+    // 4. Which buildings each service reaches
     for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
         GameObjectId id = objects.IdAtSlot(slot);
         if (id == INVALID_GAME_OBJECT) continue;
         glm::ivec2 minTile, tiles;
         FootprintTilesOf(objects.Anchor(id), minTile, tiles);
-        FootprintConnection market = MarketConnectionOf(roads, minTile, tiles);
         LogisticsComponent& logistics = objects.Logistics(id);
-        logistics.inMarketRange = market.connected;
-        logistics.market = market.source;
-        logistics.marketDistance = market.roadDistance;
+        for (int kind = 0; kind < SERVICE_COUNT; kind++) {
+            logistics.services[kind] = BestAround(roads, minTile, tiles, SERVICE_ROAD_RANGE[kind], kind).source;
+        }
     }
     m_Revision++;
 }
 
 FootprintConnection LogisticsSystem::ConnectionOf(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles) {
-    return BestAround(roads, minTile, tiles, WAREHOUSE_ROAD_RANGE, &RoadTile::distance, &RoadTile::warehouse);
+    return BestAround(roads, minTile, tiles, WAREHOUSE_ROAD_RANGE, WAREHOUSE_REACH);
 }
 
-FootprintConnection LogisticsSystem::MarketConnectionOf(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles) {
-    return BestAround(roads, minTile, tiles, MARKET_ROAD_RANGE, &RoadTile::marketDistance, &RoadTile::market);
+FootprintConnection LogisticsSystem::ServiceConnectionOf(const RoadNetwork& roads, ServiceType service, glm::ivec2 minTile, glm::ivec2 tiles) {
+    return BestAround(roads, minTile, tiles, SERVICE_ROAD_RANGE[(size_t)service], (int)service);
 }
 
 void LogisticsSystem::PreviewReach(const RoadNetwork& roads, glm::ivec2 minTile, glm::ivec2 tiles, int range, std::vector<glm::ivec2>& out) {

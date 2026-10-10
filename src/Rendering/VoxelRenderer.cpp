@@ -23,7 +23,7 @@ namespace {
 // One voxel object for the shade pass (std430): where it is and its local axes in the world
 struct GpuObject {
     glm::vec4 position; // Middle of the model's bottom face, in voxels
-    glm::vec4 axisX, axisY, axisZ;
+    glm::vec4 axisX, axisY, axisZ; // axisX.w: the cargo block (VoxelObject::cargo)
     glm::ivec4 model;   // Atlas x of the model, its size
 };
 
@@ -249,7 +249,8 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
             bool onScreen = inFront && tileLow.x <= tileHigh.x && tileLow.y <= tileHigh.y;
             if (!onScreen && !casts) continue;
 
-            GpuObject gpu = { glm::vec4(position, object.waterline), rotation[0], rotation[1], rotation[2], glm::ivec4(slot.atlasX, slot.size) };
+            GpuObject gpu = { glm::vec4(position, object.waterline), glm::vec4(glm::vec3(rotation[0]), (float)object.cargo), rotation[1], rotation[2],
+                glm::ivec4(slot.atlasX, slot.size) };
             const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&gpu);
             m_GpuObjects.insert(m_GpuObjects.end(), bytes, bytes + sizeof(GpuObject)); // Within the reserve
             for (int ty = tileLow.y; onScreen && ty <= tileHigh.y; ty++) {

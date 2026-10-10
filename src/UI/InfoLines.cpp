@@ -6,15 +6,28 @@
 
 namespace {
 
-constexpr size_t MAX_LINES = 48;
+constexpr size_t MAX_LINES = 64;
 
+// tools/ui_icons/generate.py draws these
 constexpr std::array<const char*, ITEM_COUNT> ITEM_ICONS = { "icons/wood.tga", "icons/planks.tga", "icons/fish.tga", "icons/wool.tga",
-    "icons/work_clothes.tga", "icons/bricks.tga", "icons/sausages.tga", "icons/pigs.tga" };
+    "icons/work_clothes.tga", "icons/bricks.tga", "icons/sausages.tga", "icons/pigs.tga", "icons/grain.tga", "icons/flour.tga", "icons/bread.tga",
+    "icons/tallow.tga", "icons/soap.tga", "icons/clay.tga", "icons/beef.tga", "icons/iron.tga", "icons/coal.tga", "icons/steel.tga",
+    "icons/steel_beams.tga", "icons/canned_food.tga", "icons/sewing_machines.tga" };
+constexpr std::array<const char*, TIER_COUNT> TIER_ICONS = { "icons/farmer.tga", "icons/worker.tga", "icons/artisan.tga" };
+constexpr std::array<const char*, SERVICE_COUNT> SERVICE_ICONS = { "icons/marketplace.tga", "icons/school.tga", "icons/theatre.tga" };
 
 } // namespace
 
 const char* ItemIcon(ItemType item) {
     return ITEM_ICONS[(size_t)item];
+}
+
+const char* TierIcon(int tier) {
+    return TIER_ICONS[(size_t)tier];
+}
+
+const char* NeedIcon(const Need& need) {
+    return need.kind == NeedKind::Good ? ItemIcon(need.item) : SERVICE_ICONS[(size_t)need.service];
 }
 
 void InfoLines::Bind(Rml::DataModelConstructor& model, const char* name) {
