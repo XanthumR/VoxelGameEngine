@@ -143,13 +143,14 @@ void main() {
             }
             int surface = waveSurface;
             int id = int(voxelValue * 255.0 + 0.5);
-            if (mapPos.y <= seaLevel) {
-                if (id == WATER_ID && mapPos.y > surface) voxelValue = 0.0;
-            } else if (voxelValue == 0.0 && mapPos.y <= surface && cachedSlot >= 0 &&
+            if (id == WATER_ID) {
+                if (mapPos.y > surface) voxelValue = 0.0; // A trough (water only ever exists up to seaLevel)
+            } else if (mapPos.y > seaLevel && voxelValue == 0.0 && mapPos.y <= surface && cachedSlot >= 0 &&
                        int(sampleSlot(cachedSlot, ivec3(mapPos.x, seaLevel, mapPos.z)) * 255.0 + 0.5) == WATER_ID) {
                 voxelValue = float(WATER_ID) / 255.0;
             } else if (id == SAND_ID && cachedSlot >= 0 && sampleSlot(cachedSlot, mapPos + ivec3(0, 1, 0)) == 0.0) {
-                // Swash: a wave that ran up the beach covers the top sand voxel
+                // Swash: a wave that ran up the beach covers the top sand voxel (also the lowest step,
+                // whose top is at sea level)
                 vec2 column = vec2(mapPos.xz) + 0.5;
                 vec4 shore = sampleShore(column);
                 if (shore.x < 0.0 && -shore.x < swashReach(surfStrength(column))) voxelValue = float(WATER_ID) / 255.0;
