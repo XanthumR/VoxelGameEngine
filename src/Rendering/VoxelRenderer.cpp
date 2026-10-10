@@ -1,5 +1,7 @@
 #include "Rendering/VoxelRenderer.h"
 
+#include "Rendering/GpuTimers.h"
+
 #include "Rendering/GpuChunkCache.h"
 #include "Rendering/OceanSimulation.h"
 #include "Rendering/RenderSettings.h"
@@ -333,6 +335,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     GLuint fullGroupsX = (m_Targets.Width() + 7) / 8, fullGroupsY = (m_Targets.Height() + 7) / 8;
 
     // 1. Trace: one camera ray per pixel into the G-buffer
+    if (frame.timers) frame.timers->Mark("Trace (camera rays)");
     glUseProgram(m_TracePass.program);
     uploadUniforms(m_TracePass.uniforms);
     glDispatchCompute(fullGroupsX, fullGroupsY, 1);
@@ -340,6 +343,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
 
     // 2. Shadows: soft shadows once per 2x2 quad
     if (settings.halfResShadows) {
+        if (frame.timers) frame.timers->Mark("Shadows");
         glUseProgram(m_ShadowPass.program);
         uploadUniforms(m_ShadowPass.uniforms);
         int quadsX = (m_Targets.Width() + 1) / 2, quadsY = (m_Targets.Height() + 1) / 2;
@@ -349,6 +353,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
 
     // Floating objects take their height and tilt from the waves under them
     if (objectCount > 0) {
+        if (frame.timers) frame.timers->Mark("Floating objects");
         glUseProgram(m_FloatPass.program);
         uploadUniforms(m_FloatPass.uniforms);
         glDispatchCompute((objectCount + 63) / 64, 1, 1);
@@ -356,6 +361,7 @@ void VoxelRenderer::Render(const FrameParams& frame, const RenderSettings& setti
     }
 
     // 3. Shade: lighting and overlays into the final color image
+    if (frame.timers) frame.timers->Mark("Shade + blit");
     glUseProgram(m_ShadePass.program);
     uploadUniforms(m_ShadePass.uniforms);
     glDispatchCompute(fullGroupsX, fullGroupsY, 1);

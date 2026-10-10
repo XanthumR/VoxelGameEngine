@@ -118,6 +118,7 @@ set(GAME_SOURCES
     src/Gameplay/StrategyCamera.cpp
     src/Rendering/FigureRenderer.cpp
     src/Rendering/GpuChunkCache.cpp
+    src/Rendering/GpuTimers.cpp
     src/Rendering/GrassAnimator.cpp
     src/Rendering/OceanSimulation.cpp
     src/Rendering/RenderTargets.cpp

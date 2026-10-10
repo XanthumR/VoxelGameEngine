@@ -1,5 +1,11 @@
 #include "UI/DebugOverlay.h"
 
+#include "Rendering/GpuTimers.h"
+
+#include <cstdio>
+
+#include <algorithm>
+
 #include "Economy/IslandEconomy.h"
 #include "Gameplay/BuildTool.h"
 #include "Gameplay/DebugEditTool.h"
@@ -75,6 +81,18 @@ void DebugOverlay::Draw(const OverlayContext& c) {
     glm::ivec3 playerChunk = c.streamer.PlayerChunk();
     ImGui::Text("--- ENGINE METRICS ---");
     ImGui::Text("Frame time: %.2f ms (%.1f FPS)", c.deltaTime * 1000.0f, c.framerate);
+    ImGui::Text("GPU: %s", c.gpuName);
+    // Where the frame goes: the main thread, and each GPU pass (bars against the slowest)
+    ImGui::Text("CPU (main thread): %.2f ms | GPU total: %.2f ms", c.cpuMilliseconds, c.gpuTimers.TotalMilliseconds());
+    float slowest = 0.01f;
+    for (int i = 0; i < c.gpuTimers.Count(); i++) slowest = std::max(slowest, c.gpuTimers.Milliseconds(i));
+    for (int i = 0; i < c.gpuTimers.Count(); i++) {
+        char label[32];
+        std::snprintf(label, sizeof(label), "%.2f ms", c.gpuTimers.Milliseconds(i));
+        ImGui::ProgressBar(c.gpuTimers.Milliseconds(i) / slowest, ImVec2(110.0f, 0.0f), label);
+        ImGui::SameLine();
+        ImGui::Text("%s", c.gpuTimers.Name(i));
+    }
     ImGui::Text("Dispatches: %d | VRAM: %.1f MB", c.settings.halfResShadows ? 3 : 2, vramMB);
     ImGui::Text("Render Resolution: %d x %d", c.targets.Width(), c.targets.Height());
     ImGui::Text("Pending Chunk Gen (Hot): %zu", c.streamer.PendingRequests());

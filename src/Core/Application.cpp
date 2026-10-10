@@ -122,6 +122,9 @@ bool Application::Init() {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return false;
     }
+    m_GpuName = (const char*)glGetString(GL_RENDERER);
+    std::cout << "GPU: " << m_GpuName << " (OpenGL " << (const char*)glGetString(GL_VERSION) << ")" << std::endl;
+    m_GpuTimers.Init();
 
     // GPU systems (each loads its shaders, so a missing or broken file fails fast)
     if (!m_Renderer.Init() || !m_Ocean.Init() || !m_Shore.Init() || !m_Grass.Init(m_Terrain) || !m_Cache.Init() ||
@@ -469,7 +472,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     OverlayContext overlay{ m_Window, deltaTime, ImGui::GetIO().Framerate, m_EditTool, m_Streamer, m_Cache, m_World,
         m_Settings, m_Renderer.Targets(), m_Grass.ActiveCount(), GrassAnimator::ANIMATION_RADIUS,
         m_CameraMode == CameraMode::Strategy ? "Strategy (F1: free-fly)" : "Free-fly (F1: strategy)", m_Hover,
-        m_HoverIsland, m_PanelIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool, m_Walkers.Count() };
+        m_HoverIsland, m_PanelIsland, m_Simulation, m_Clock.DroppedSteps(), m_BuildTool, m_Walkers.Count(), m_GpuTimers, m_CpuFrameMs,
+        m_GpuName };
     m_Overlay.Draw(overlay);
     if (m_CameraMode == CameraMode::Strategy) {
         int width, height;
@@ -488,8 +492,11 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_Options.lockCamera) m_FreeFlyCamera.LockView(m_Options.cameraVoxel, m_Options.cameraYaw, m_Options.cameraPitch);
 
     // --- GPU simulation: ocean waves, grass ---
+    m_GpuTimers.BeginFrame();
     float animationTime = m_Options.fixedTime >= 0.0f ? m_Options.fixedTime : (float)glfwGetTime();
+    m_GpuTimers.Mark("Ocean waves (FFT)");
     m_Ocean.Update(animationTime);
+    m_GpuTimers.Mark("Grass");
     m_Grass.Animate(animationTime, m_Cache);
     // Figures: walkers, chimney smoke and fishing boats, drawn into the voxels on the GPU
     float gameDelta = deltaTime * (float)m_GameSpeed; // Paused or sped up with the simulation
@@ -504,6 +511,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_VoxelObjects.insert(m_VoxelObjects.end(), m_Walkers.Objects().begin(), m_Walkers.Objects().end());
     AppendCartObjects(m_Simulation.Objects(), m_Clock.Alpha(), m_CartModelBase, m_VoxelObjects);
     m_ShipControl.AppendObjects(m_Simulation.Ships(), m_Clock.Alpha(), gameDelta, m_VoxelObjects);
+    m_GpuTimers.Mark("Smoke puffs");
     m_FigureRenderer.Draw(m_Figures, m_Cache, SEA_LEVEL);
 
     // --- Render ---
@@ -522,12 +530,18 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         frame.overlay = &m_TileOverlay;
     }
     frame.objects = &m_VoxelObjects;
+    frame.timers = &m_GpuTimers;
+    m_GpuTimers.Mark("Shore map + object setup");
     m_Renderer.Render(frame, m_Settings, m_Cache, m_Ocean, m_Shore);
 
     if (m_CameraMode == CameraMode::FreeFly) DrawHud(m_EditTool.CrosshairColor(m_FreeFlyCamera), m_EditTool.SelectedBlock());
+    m_GpuTimers.Mark("Game UI (RmlUi)");
     if (m_CameraMode == CameraMode::Strategy) m_Ui.Render(m_WindowWidth, m_WindowHeight);
+    m_GpuTimers.Mark("Debug UI (ImGui)");
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    m_GpuTimers.EndFrame();
+    m_CpuFrameMs = m_CpuFrameMs * 0.95f + (float)(glfwGetTime() - frameStartTime) * 1000.0f * 0.05f;
 
     if (m_Options.screenshotDelay >= 0.0 && glfwGetTime() >= m_Options.screenshotDelay) {
         if (SaveWindowScreenshot(m_Options.screenshotPath, m_WindowWidth, m_WindowHeight)) {

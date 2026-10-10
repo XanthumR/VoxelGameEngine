@@ -13,6 +13,7 @@
 #include "Gameplay/Picking.h"
 #include "Gameplay/StrategyCamera.h"
 #include "Rendering/GpuChunkCache.h"
+#include "Rendering/GpuTimers.h"
 #include "Rendering/GrassAnimator.h"
 #include "Rendering/OceanSimulation.h"
 #include "Rendering/RenderSettings.h"
@@ -118,6 +119,9 @@ private:
     bool m_RoutesOpen = false; // The trade route window
     FishingBoats m_Boats;   // Fishing boats of the fisheries (visual only)
     FigureRenderer m_FigureRenderer;
+    GpuTimers m_GpuTimers;
+    float m_CpuFrameMs = 0.0f;      // Main thread time per frame, smoothed (without waiting for vsync)
+    const char* m_GpuName = "";
     std::vector<Figure> m_Figures; // This frame's smoke puffs, reserved at setup
     std::vector<VoxelObject> m_VoxelObjects; // This frame's walkers, carts and boats, reserved at setup
     int m_CartModelBase = 0; // First cart model (FigureModels)

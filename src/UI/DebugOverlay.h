@@ -20,6 +20,8 @@ class Simulation;
 class VoxelWorld;
 
 // Everything the overlay shows or lets the player change
+class GpuTimers;
+
 struct OverlayContext {
     GLFWwindow* window;
     float deltaTime;
@@ -40,6 +42,9 @@ struct OverlayContext {
     uint64_t droppedSimulationSteps;
     const BuildTool& buildTool;
     size_t walkers;
+    const GpuTimers& gpuTimers;
+    float cpuMilliseconds; // Main thread per frame, without the wait for vsync
+    const char* gpuName;
 };
 
 // The F3 debug window: engine metrics, a top-down minimap and the editor and render controls

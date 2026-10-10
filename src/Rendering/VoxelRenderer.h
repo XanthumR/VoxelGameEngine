@@ -16,6 +16,8 @@ class TileOverlay;
 struct RenderSettings;
 
 // Everything the renderer needs to know about the current frame
+class GpuTimers;
+
 struct FrameParams {
     glm::vec3 cameraPos;   // World units
     glm::vec3 cameraFront;
@@ -27,6 +29,7 @@ struct FrameParams {
     BuildPreview preview;  // Highlighted box (building placement or selection)
     const TileOverlay* overlay = nullptr; // Per-tile ground highlights; none when null
     const std::vector<VoxelObject>* objects = nullptr; // Moving voxel objects (boats); up to MAX_OBJECTS
+    GpuTimers* timers = nullptr; // Times each pass when set (F3 window)
 };
 
 // Draws the voxel world with three compute passes (shaders/render/):
