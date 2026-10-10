@@ -16,9 +16,23 @@ float getShadow(vec3 worldStart, vec3 lightDir) {
     int cachedSlot = -1;
     ivec3 cachedBrick = ivec3(0x7fffffff);
     bool cachedBrickEmpty = false;
+    ivec2 cachedColumn = ivec2(0x7fffffff);
+    int cachedColumnTop = -1;
     vec3 unusedNormal;
 
     for (int i = 0; i < 200; i++) {
+        // Above everything in this chunk column: leave it in one step (toward the light the ray
+        // usually climbs out of the world from here)
+        ivec2 column = mapPos.xz >> 5;
+        if (column != cachedColumn) {
+            cachedColumn = column;
+            cachedColumnTop = columnTop(column);
+        }
+        if (skipAboveColumn(cachedColumnTop, stepDir, deltaDist, mapPos, sideDist, unusedNormal)) {
+            if (mapPos.y < 0 || mapPos.y >= dimY) break;
+            continue;
+        }
+
         // Page table is only re-read when the ray enters a new chunk
         ivec3 chunkCoord = chunkOf(mapPos);
         if (any(notEqual(chunkCoord, cachedChunk))) {

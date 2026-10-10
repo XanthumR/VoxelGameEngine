@@ -22,6 +22,9 @@ constexpr int BRICK_MASK_SIZE = BRICKS_PER_AXIS * BRICKS_PER_AXIS * BRICKS_PER_A
 //    Each pool has a brick mask texture beside it.
 //  - Page table: a toroidal PAGE_TABLE_WRAP x 4 x PAGE_TABLE_WRAP texture of
 //    [slotIndex + 1, cx, cy, cz] that maps chunk coordinates to slots.
+//  - Column tops: a PAGE_TABLE_WRAP x PAGE_TABLE_WRAP R32UI texture, per 32x32 chunk column
+//    1 + the highest voxel y that may be solid there (0: none), from the chunks' brick masks and
+//    the figures drawn on the GPU. Rays skip the air above it in one step.
 // All-air chunks get no slot; they are remembered as "known empty" instead.
 class GpuChunkCache {
 public:
@@ -45,6 +48,11 @@ public:
     // its brick mask. False when it has no slot or is now all air: MakeResident handles those.
     bool UpdateRegion(uint64_t key, const std::vector<uint8_t>& data, glm::ivec3 min, glm::ivec3 max);
     void Evict(uint64_t key);
+
+    // Raises the column tops for this frame's GPU-drawn figures (smoke puffs), given as the
+    // highest voxel each reaches; last frame's are lowered again. Within MAX_FIGURE_POINTS.
+    static constexpr int MAX_FIGURE_POINTS = 8192;
+    void SetFigureTops(const std::vector<glm::ivec3>& highestVoxels);
     void Forget(uint64_t key); // Evict and drop the "known empty" mark (chunk left the GPU window)
 
     bool IsResident(uint64_t key) const { return m_ChunkSlots.count(key) != 0; }
@@ -53,7 +61,8 @@ public:
     // First global slot of pools 1..3 for the shaders (INT_MAX = pool not allocated)
     glm::ivec3 PoolBaseSlots() const;
 
-    // Page table on unit 1, pools and brick masks on units 2-9 (layout bindings in the shaders)
+    // Column tops on unit 0, page table on unit 1, pools and brick masks on units 2-9 (layout
+    // bindings in the shaders)
     void BindForSampling() const;
     // Pools as read-write images on units 0-3, brick masks as images on units 4-7
     void BindAsImages() const;
@@ -79,6 +88,8 @@ private:
     void UploadToSlot(int slotIndex, const std::vector<uint8_t>& data, const uint8_t* brickMask);
     void UploadBrickMask(int pool, glm::ivec3 origin, const uint8_t* brickMask);
     void WritePageTable(int cx, int cy, int cz, glm::ivec4 value);
+    void SetChunkTop(int cx, int cy, int cz, int top); // Highest local y that may be solid, -1 none
+    void UpdateColumn(int ptX, int ptZ);                // Re-uploads its top if it changed
     const glm::ivec4& ReadPageTable(int cx, int cy, int cz) const;
 
     GLuint m_PageTable = 0;
@@ -90,4 +101,12 @@ private:
     std::unordered_map<uint64_t, int> m_ChunkSlots; // Chunk key -> slot index
     std::vector<int> m_FreeSlots;
     std::unordered_set<uint64_t> m_KnownEmpty;      // All-air chunks in the GPU window (need no slot)
+
+    // Column tops (see above): per page table entry its chunk's top, per column the figures' top
+    // and the value on the GPU
+    GLuint m_ColumnTops = 0;
+    std::vector<int8_t> m_ChunkTops = std::vector<int8_t>(PAGE_TABLE_WRAP * CHUNK_LAYERS * PAGE_TABLE_WRAP, -1);
+    std::vector<uint8_t> m_FigureTops = std::vector<uint8_t>(PAGE_TABLE_WRAP * PAGE_TABLE_WRAP, 0);
+    std::vector<uint32_t> m_ColumnValues = std::vector<uint32_t>(PAGE_TABLE_WRAP * PAGE_TABLE_WRAP, 0);
+    std::vector<int> m_FigureColumns, m_PreviousFigureColumns; // Column indices with a figure top
 };

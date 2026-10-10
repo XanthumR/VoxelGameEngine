@@ -29,6 +29,18 @@ int WrapPageTable(int coordinate) {
     return wrapped < 0 ? wrapped + GpuChunkCache::PAGE_TABLE_WRAP : wrapped;
 }
 
+// Highest local y a solid voxel can be at, from the brick mask (rounded up to the brick), -1 if none
+int TopFromBrickMask(const uint8_t* brickMask) {
+    for (int by = BRICKS_PER_AXIS - 1; by >= 0; by--) {
+        for (int bz = 0; bz < BRICKS_PER_AXIS; bz++) {
+            for (int bx = 0; bx < BRICKS_PER_AXIS; bx++) {
+                if (brickMask[(bz * BRICKS_PER_AXIS + by) * BRICKS_PER_AXIS + bx]) return by * BRICK_SIZE + BRICK_SIZE - 1;
+            }
+        }
+    }
+    return -1;
+}
+
 } // namespace
 
 bool GpuChunkCache::Init() {
@@ -41,6 +53,15 @@ bool GpuChunkCache::Init() {
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32I, PAGE_TABLE_WRAP, CHUNK_LAYERS, PAGE_TABLE_WRAP, 0, GL_RGBA_INTEGER, GL_INT, m_PageTableData.data());
+
+    glGenTextures(1, &m_ColumnTops);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_ColumnTops);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, PAGE_TABLE_WRAP, PAGE_TABLE_WRAP, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, m_ColumnValues.data());
+    m_FigureColumns.reserve(MAX_FIGURE_POINTS * 4);
+    m_PreviousFigureColumns.reserve(MAX_FIGURE_POINTS * 4);
 
     // Further pools are added on demand as the render distance grows
     if (!AddPool()) {
@@ -156,6 +177,9 @@ bool GpuChunkCache::UpdateRegion(uint64_t key, const std::vector<uint8_t>& data,
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0);
     UploadBrickMask(p, origin, brickMask);
+    int cx, cy, cz;
+    UnpackChunkKey(key, cx, cy, cz);
+    SetChunkTop(cx, cy, cz, TopFromBrickMask(brickMask));
     return true;
 }
 
@@ -192,6 +216,7 @@ void GpuChunkCache::MakeResident(uint64_t key, glm::ivec3 chunkCoord, const std:
 
     if (it != m_ChunkSlots.end()) {
         UploadToSlot(it->second, data, brickMask);
+        SetChunkTop(chunkCoord.x, chunkCoord.y, chunkCoord.z, TopFromBrickMask(brickMask));
         return;
     }
 
@@ -204,6 +229,7 @@ void GpuChunkCache::MakeResident(uint64_t key, glm::ivec3 chunkCoord, const std:
     UploadToSlot(slotIndex, data, brickMask);
     WritePageTable(chunkCoord.x, chunkCoord.y, chunkCoord.z,
         glm::ivec4(slotIndex + 1, chunkCoord.x, chunkCoord.y, chunkCoord.z));
+    SetChunkTop(chunkCoord.x, chunkCoord.y, chunkCoord.z, TopFromBrickMask(brickMask));
 }
 
 void GpuChunkCache::Evict(uint64_t key) {
@@ -219,7 +245,46 @@ void GpuChunkCache::Evict(uint64_t key) {
     const glm::ivec4& entry = ReadPageTable(cx, cy, cz);
     if (entry.y == cx && entry.z == cy && entry.w == cz) {
         WritePageTable(cx, cy, cz, glm::ivec4(0));
+        SetChunkTop(cx, cy, cz, -1);
     }
+}
+
+void GpuChunkCache::SetChunkTop(int cx, int cy, int cz, int top) {
+    int ptX = WrapPageTable(cx), ptZ = WrapPageTable(cz);
+    int8_t& stored = m_ChunkTops[(ptZ * CHUNK_LAYERS + cy) * PAGE_TABLE_WRAP + ptX];
+    if (stored == top) return;
+    stored = (int8_t)top;
+    UpdateColumn(ptX, ptZ);
+}
+
+void GpuChunkCache::UpdateColumn(int ptX, int ptZ) {
+    uint32_t value = m_FigureTops[ptZ * PAGE_TABLE_WRAP + ptX];
+    for (int cy = 0; cy < CHUNK_LAYERS; cy++) {
+        int top = m_ChunkTops[(ptZ * CHUNK_LAYERS + cy) * PAGE_TABLE_WRAP + ptX];
+        if (top >= 0) value = std::max(value, (uint32_t)(cy * CHUNK_SIZE + top + 1));
+    }
+    uint32_t& current = m_ColumnValues[ptZ * PAGE_TABLE_WRAP + ptX];
+    if (current == value) return;
+    current = value;
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_ColumnTops);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, ptX, ptZ, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, &value);
+}
+
+void GpuChunkCache::SetFigureTops(const std::vector<glm::ivec3>& highestVoxels) {
+    // Last frame's figure tops go; columns are re-uploaded below only if their value changes
+    std::swap(m_FigureColumns, m_PreviousFigureColumns);
+    m_FigureColumns.clear();
+    for (int column : m_PreviousFigureColumns) m_FigureTops[column] = 0;
+    for (const glm::ivec3& voxel : highestVoxels) {
+        if (m_FigureColumns.size() >= m_FigureColumns.capacity()) break;
+        int column = WrapPageTable(voxel.z >> 5) * PAGE_TABLE_WRAP + WrapPageTable(voxel.x >> 5);
+        uint8_t top = (uint8_t)std::clamp(voxel.y + 1, 0, WORLD_HEIGHT);
+        if (top > m_FigureTops[column]) m_FigureTops[column] = top;
+        m_FigureColumns.push_back(column); // Within the reserve
+    }
+    for (int column : m_PreviousFigureColumns) UpdateColumn(column % PAGE_TABLE_WRAP, column / PAGE_TABLE_WRAP);
+    for (int column : m_FigureColumns) UpdateColumn(column % PAGE_TABLE_WRAP, column / PAGE_TABLE_WRAP);
 }
 
 void GpuChunkCache::Forget(uint64_t key) {
@@ -228,6 +293,8 @@ void GpuChunkCache::Forget(uint64_t key) {
 }
 
 void GpuChunkCache::BindForSampling() const {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_ColumnTops);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_3D, m_PageTable);
     for (int p = 0; p < MAX_POOLS; p++) {

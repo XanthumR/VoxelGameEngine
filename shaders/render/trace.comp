@@ -72,12 +72,15 @@ void main() {
     int cachedSlot = -1;
     ivec3 cachedBrick = ivec3(0x7fffffff);
     bool cachedBrickEmpty = false;
+    // The sea surface of the column the ray is in (it moves through several voxels of a column)
+    ivec2 waveColumn = ivec2(0x7fffffff);
+    int waveSurface = 0;
+    // The chunk column's floor: its top, but never below the highest a wave crest reaches
+    ivec2 cachedColumn = ivec2(0x7fffffff);
+    int columnFloor = 0;
 
     // DDA Loop
     for (int i = 0; i < maxSteps; i++) {
-        // Break early if we march past the active rendering distance (render distance + 1 chunk, in voxels)
-        ivec2 distXZ = abs(mapPos.xz - cameraVoxelXZ);
-        if (max(distXZ.x, distXZ.y) > renderDistanceVoxels) break;
 
         if (chunkViewerEnabled == 1 && isOnChunkEdge(mapPos)) {
             float distAttenuation = clamp(1.0 - (float(i) / 300.0), 0.0, 1.0);
@@ -87,11 +90,26 @@ void main() {
         // Page table is only re-read when the ray enters a new chunk
         ivec3 chunkCoord = chunkOf(mapPos);
         if (any(notEqual(chunkCoord, cachedChunk))) {
+            // Past the render distance (render distance + 1 chunk, in voxels): a chunk is
+            // entered before any of its voxels, so checking here is enough
+            ivec2 distXZ = abs(mapPos.xz - cameraVoxelXZ);
+            if (max(distXZ.x, distXZ.y) > renderDistanceVoxels) break;
             cachedChunk = chunkCoord;
             cachedSlot = getChunkSlot(chunkCoord);
         }
 
         if (allowChunkSkip) {
+            // Above everything in this chunk column: jump down to its top or into the next column
+            ivec2 column = mapPos.xz >> 5;
+            if (column != cachedColumn) {
+                cachedColumn = column;
+                columnFloor = max(columnTop(column), seaLevel + MAX_WAVE);
+            }
+            if (skipAboveColumn(columnFloor, stepDir, deltaDist, mapPos, sideDist, normal)) {
+                if (mapPos.y < 0 || mapPos.y >= dimY) break;
+                continue;
+            }
+
             // Empty chunk: every voxel is air, so jump to the next chunk in one step
             if (cachedSlot < 0) {
                 skipCell(32, stepDir, deltaDist, mapPos, sideDist, normal);
@@ -119,7 +137,11 @@ void main() {
         // seaLevel). All of seaLevel +- MAX_WAVE shares a brick and chunk with seaLevel, so a
         // raised crest is never inside a skipped empty cell.
         if (mapPos.y >= seaLevel - MAX_WAVE + 1 && mapPos.y <= seaLevel + MAX_WAVE) {
-            int surface = seaLevel + seaWave(mapPos.xz);
+            if (mapPos.xz != waveColumn) {
+                waveColumn = mapPos.xz;
+                waveSurface = seaLevel + seaWave(mapPos.xz);
+            }
+            int surface = waveSurface;
             int id = int(voxelValue * 255.0 + 0.5);
             if (mapPos.y <= seaLevel) {
                 if (id == WATER_ID && mapPos.y > surface) voxelValue = 0.0;

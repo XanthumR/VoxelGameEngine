@@ -2,6 +2,9 @@
 // empty chunks and bricks while ray marching.
 
 layout(binding = 1) uniform isampler3D pageTable;
+// Per 32x32 chunk column (wrapped like the page table): 1 + the highest voxel y that may be solid
+// there, 0 for none. Rays skip the air above it in one step (skipAboveColumn).
+layout(binding = 0) uniform usampler2D columnTops;
 
 // Chunk voxel data is split over up to 4 pool textures, each a 64 x 64 x N grid of 32^3 slots,
 // with a brick mask beside each (pool downscaled 8x: non-zero if the 8^3 brick has a solid voxel).
@@ -85,19 +88,24 @@ bool isBrickEmpty(int slotIndex, ivec3 ipos) {
     return mask == 0.0;
 }
 
-// Advances DDA state (mapPos, sideDist) to the first voxel past the current aligned
-// cell of cellSize^3 voxels (32 = chunk, 8 = brick), in one jump instead of up to
-// ~3*cellSize single steps. Uses the same per-axis crossing arithmetic as the DDA
-// itself, so the result is exactly where stepping would arrive.
-void skipCell(int cellSize, ivec3 stepDir, vec3 deltaDist, inout ivec3 mapPos, inout vec3 sideDist, inout vec3 normal) {
-    ivec3 cellMin = mapPos & ~(cellSize - 1); // floor to cell (cellSize is a power of two)
+// The highest voxel y that may be solid in a chunk column, -1 for none
+int columnTop(ivec2 chunkXZ) {
+    int ptX = chunkXZ.x % PAGE_TABLE_WRAP; if (ptX < 0) ptX += PAGE_TABLE_WRAP;
+    int ptZ = chunkXZ.y % PAGE_TABLE_WRAP; if (ptZ < 0) ptZ += PAGE_TABLE_WRAP;
+    return int(texelFetch(columnTops, ivec2(ptX, ptZ), 0).r) - 1;
+}
 
-    // Ray distance at which we leave the cell through each axis' far wall
+// Advances DDA state (mapPos, sideDist) to the first voxel past the box boxMin..boxMax
+// (inclusive, containing mapPos), in one jump instead of many single steps. Uses the same
+// per-axis crossing arithmetic as the DDA itself, so the result is exactly where stepping
+// would arrive.
+void skipBox(ivec3 boxMin, ivec3 boxMax, ivec3 stepDir, vec3 deltaDist, inout ivec3 mapPos, inout vec3 sideDist, inout vec3 normal) {
+    // Ray distance at which we leave the box through each axis' far wall
     ivec3 remaining;
     float tExit = 1e30;
     int exitAxis = 0;
     for (int a = 0; a < 3; a++) {
-        remaining[a] = stepDir[a] > 0 ? (cellMin[a] + cellSize - 1 - mapPos[a]) : (mapPos[a] - cellMin[a]);
+        remaining[a] = stepDir[a] > 0 ? (boxMax[a] - mapPos[a]) : (mapPos[a] - boxMin[a]);
         float tAxis = stepDir[a] != 0 ? sideDist[a] + float(remaining[a]) * deltaDist[a] : 1e30;
         if (tAxis < tExit) { tExit = tAxis; exitAxis = a; }
     }
@@ -119,4 +127,20 @@ void skipCell(int cellSize, ivec3 stepDir, vec3 deltaDist, inout ivec3 mapPos, i
 
     normal = vec3(0.0);
     normal[exitAxis] = float(-stepDir[exitAxis]);
+}
+
+// The same for the aligned cell of cellSize^3 voxels around mapPos (32 = chunk, 8 = brick)
+void skipCell(int cellSize, ivec3 stepDir, vec3 deltaDist, inout ivec3 mapPos, inout vec3 sideDist, inout vec3 normal) {
+    ivec3 cellMin = mapPos & ~(cellSize - 1); // floor to cell (cellSize is a power of two)
+    skipBox(cellMin, cellMin + cellSize - 1, stepDir, deltaDist, mapPos, sideDist, normal);
+}
+
+// Above floorY in a chunk column there is only air (floorY: at least the column's top): skips
+// the ray out of that air box, to just above the floor or into the next column. False if mapPos
+// is not above the floor.
+bool skipAboveColumn(int floorY, ivec3 stepDir, vec3 deltaDist, inout ivec3 mapPos, inout vec3 sideDist, inout vec3 normal) {
+    if (mapPos.y <= floorY) return false;
+    ivec3 boxMin = ivec3((mapPos.x >> 5) << 5, floorY + 1, (mapPos.z >> 5) << 5);
+    skipBox(boxMin, ivec3(boxMin.x + 31, 127, boxMin.z + 31), stepDir, deltaDist, mapPos, sideDist, normal);
+    return true;
 }
