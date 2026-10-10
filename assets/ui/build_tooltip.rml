@@ -1,13 +1,13 @@
 <rml>
 <head>
-    <title>Building tooltip</title>
+    <title>Building card</title>
     <link type="text/rcss" href="theme.rcss"/>
     <style>
-        /* Placed next to the cursor by BuildingInfo; it never takes the mouse */
-        body { position: absolute; width: 300dp; pointer-events: none; z-index: 100; }
+        /* Above the hovered card of the construction menu (BuildMenu places it); it never takes the mouse */
+        body { position: absolute; width: 330dp; pointer-events: none; z-index: 100; }
     </style>
 </head>
-<body class="panel compact" data-model="building_tooltip">
+<body class="panel compact" data-model="build_tooltip">
     <div class="title">{{title}}</div>
     <div class="line" data-for="line : lines">
         <div class="row">
@@ -17,7 +17,6 @@
             <span class="spacer"/>
             <span class="value" data-if="line.value != ''">{{line.value}}</span>
         </div>
-        <progress data-if="line.bar >= 0" data-attr-value="line.bar" data-class-warn="line.bar < 0.9" data-class-bad="line.bar < 0.5"/>
     </div>
 </body>
 </rml>

@@ -21,6 +21,7 @@ A city-builder and trade game in the style of Anno 1800, built on a custom C++ v
 | WASD or arrow keys, screen edge | Pan the camera |
 | Q / E | Rotate the camera |
 | Mouse wheel | Zoom |
+| B | Open or close the construction menu (hover a building for its card) |
 | Tab, 1-9, 0 | Switch build menu tab, pick a building (it stays picked to place more) |
 | R, Shift + mouse wheel | Rotate the building to place or move |
 | Left click | Place, select a building or ship |

@@ -21,7 +21,7 @@ strong { font-weight: bold; }
     padding: 10dp 14dp 12dp;
     border: 1dp #a8874a;
     border-radius: 3dp;
-    decorator: linear-gradient(to bottom, #2b333dF2, #1a1f26F2);
+    decorator: linear-gradient(to bottom, #2b333dFA, #1a1f26FA);
     box-shadow: #00000099 0 8dp 22dp, #f0d89a1a 0 1dp 0 0 inset, #0b0e12 0 0 0 3dp inset, #a8874a66 0 0 0 4dp inset;
 }
 /* The title: gold Roman capitals on a darker band with a gold rule under it */

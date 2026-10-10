@@ -793,6 +793,7 @@ Milestone 7 moved the UI to RmlUi and the last restyle gave it Anno 1800's look 
 - Opens and closes on B and on a button at the bottom middle; the tier tabs as now, then within a tab small group headings (Public buildings, Production, Farm fields) as Anno sorts them.
 - A tooltip card per building: picture, name, cost, upkeep, workforce (tier and count), inputs → output with cycle time, location rule (coast, trees, modules), what it is for ("Farmers need it").
 - Buildings shown before they are unlocked, greyed, with what unlocks them (residents of a tier); a tier's first look at a tab flashes it.
+- Done: B toggles the menu (`BuildTool::MenuOpen`; closed, a Construction button and the tools stay); groups "Houses and public buildings", "Production", "Trade and roads"; every tab opens, a locked building cannot be selected (`BuildTool::BuildingUnlocked`); a newly unlocked tab glows until opened; the card (`assets/ui/build_tooltip.rml`) sits above the cursor. `--showcase` unlocks every tier. Panels are nearly opaque now.
 
 **U3. Object menu**
 - The selected building's menu docked at the bottom middle (the construction menu hides while it is open), with a header row: name, then Move, Copy, Pause, Demolish buttons.

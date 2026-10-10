@@ -275,8 +275,12 @@ void BuildingDetails(InfoLines& lines, GameObjectId building, const GameObjectRe
 
 void Show(Rml::ElementDocument* document, bool visible) {
     if (!document || document->IsVisible() == visible) return;
-    if (visible) document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
-    else document->Hide();
+    if (visible) {
+        document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        document->PullToFront(); // Over the menus
+    } else {
+        document->Hide();
+    }
 }
 
 template <typename T>

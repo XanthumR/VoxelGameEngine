@@ -75,6 +75,7 @@ static int MaxBuildingHeight() {
 }
 
 void BuildTool::SelectType(int type) {
+    if (!BuildingUnlocked(type) && m_SelectedType != type) return; // Shown in the menu, not buildable yet
     if (m_SelectedType == ROAD && type != ROAD) m_RoadTool.Cancel();
     if (m_Moving != INVALID_GAME_OBJECT) EndMove(false);
     m_SelectedType = type;
@@ -110,16 +111,15 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
         }
     }
 
-    // Hotkeys (shown on the build menu buttons): Tab switches to the next open tab, 1-9 and 0 pick
-    // from the open tab
-    if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS, m_TabWasPressed)) {
-        do {
-            m_Tab = (BuildCategory)(((int)m_Tab + 1) % (int)BuildCategory::Count);
-        } while (!TabUnlocked(m_Tab));
+    // Hotkeys (shown on the build menu buttons): B opens and closes the construction menu; while it
+    // is open Tab switches to the next tab and 1-9 and 0 pick from the open tab
+    if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS, m_BWasPressed)) ToggleMenu();
+    if (Pressed(keyboardFree && m_MenuOpen && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS, m_TabWasPressed)) {
+        m_Tab = (BuildCategory)(((int)m_Tab + 1) % (int)BuildCategory::Count);
     }
     int entries = EntryCount(m_Tab);
     for (int key = 0; key < (int)m_NumberWasPressed.size(); key++) {
-        bool down = keyboardFree && glfwGetKey(window, key == 9 ? GLFW_KEY_0 : GLFW_KEY_1 + key) == GLFW_PRESS;
+        bool down = keyboardFree && m_MenuOpen && glfwGetKey(window, key == 9 ? GLFW_KEY_0 : GLFW_KEY_1 + key) == GLFW_PRESS;
         if (Pressed(down, m_NumberWasPressed[key]) && key < entries) SelectType(EntryAt(m_Tab, key));
     }
     if (Pressed(keyboardFree && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS, m_RWasPressed)) m_Rotation = (m_Rotation + 1) & 3;

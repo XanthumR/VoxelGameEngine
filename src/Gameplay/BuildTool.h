@@ -56,11 +56,15 @@ public:
     static int EntryAt(BuildCategory tab, int index); // Building type, or ROAD
 
     BuildCategory Tab() const { return m_Tab; }
-    void SetTab(BuildCategory tab) {
-        if (TabUnlocked(tab)) m_Tab = tab;
-    }
-    // A tier's tab opens once any island has had residents of that tier (it stays open)
+    void SetTab(BuildCategory tab) { m_Tab = tab; }
+    // A tier's buildings unlock once any island has had residents of that tier (they stay unlocked);
+    // its tab can be opened before, to see what is coming
     bool TabUnlocked(BuildCategory tab) const { return tab == BuildCategory::Infrastructure || (int)tab <= m_UnlockedTier; }
+    bool BuildingUnlocked(int type) const { return type < 0 || TabUnlocked(BUILDING_TYPES[type].category); }
+    void UnlockAllTiers() { m_UnlockedTier = TIER_COUNT - 1; } // --showcase
+    // The construction menu: B opens and closes it; the number keys pick from it while it is open
+    bool MenuOpen() const { return m_MenuOpen; }
+    void ToggleMenu() { m_MenuOpen = !m_MenuOpen; }
 
     BuildTool(const VoxelWorld& world, WorldEditor& editor, Simulation& simulation, RoadTool& roads, const BuildingModelLibrary& models,
         TerrainGenerator& terrain);
@@ -165,6 +169,8 @@ private:
     GameObjectId m_MoveOwner = INVALID_GAME_OBJECT;  // A moved module's farm
     BuildCategory m_Tab = BuildCategory::Farmers;
     int m_UnlockedTier = 0; // The highest tier any island has had residents of
+    bool m_MenuOpen = true;
+    bool m_BWasPressed = false;
     uint8_t m_Rotation = 0;
     PlacementCheck m_LastCheck;
     GameObjectId m_HoveredBuilding = INVALID_GAME_OBJECT;

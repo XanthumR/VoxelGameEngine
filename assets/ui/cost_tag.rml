@@ -4,7 +4,7 @@
     <link type="text/rcss" href="theme.rcss"/>
     <style>
         /* Beside the cursor while placing (BuildMenu moves it); it never takes the mouse */
-        body { position: absolute; pointer-events: none; padding: 4dp 8dp; }
+        body { position: absolute; pointer-events: none; padding: 4dp 8dp; z-index: 100; }
         .pair { margin-right: 8dp; }
         .pair img { margin-right: 3dp; }
         .pair span { font-weight: bold; color: #f1e7cf; }

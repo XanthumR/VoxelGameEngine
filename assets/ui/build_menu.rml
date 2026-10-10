@@ -8,16 +8,21 @@
             bottom: 12dp;
             left: 50%;
             transform: translateX(-50%);
-            min-width: 560dp;
-            max-width: 1440dp;
         }
         .tabs .tab { width: 150dp; flex: 0 0 auto; display: flex; flex-direction: row; align-items: center; justify-content: center; }
         .tabs .tab img { margin-right: 6dp; }
         .tabs .tab.locked { color: #6f6c66; border-color: #3d382c; }
         .tabs .tab.locked img { image-color: #ffffff55; }
+        /* A tab just unlocked glows until it is opened */
+        .tabs .tab.fresh { color: #fff3d6; border-color: #f0d89a; box-shadow: #e9c97c99 0 0 10dp 2dp; }
         .tab-hint { margin-left: 8dp; }
-        #entries { display: flex; flex-direction: row; flex-wrap: wrap; align-items: stretch; }
-        /* One building: name on top, its cost below, the hotkey in the corner */
+        #main { display: flex; flex-direction: row; align-items: stretch; }
+        #groups { display: flex; flex-direction: row; align-items: flex-start; }
+        /* A group of buildings under its heading, a gold rule between groups */
+        .group { display: block; flex: 0 0 auto; margin-right: 10dp; padding-right: 10dp; border-right: 1dp #a8874a55; }
+        .group-name { display: block; margin-bottom: 4dp; font-family: Cinzel; font-weight: bold; font-size: 12dp; color: #dcbc6e; }
+        .cards { display: flex; flex-direction: row; } /* One row: the biggest group (9) still fits */
+        /* One building: its picture, name and cost, the hotkey in the corner */
         .entry {
             display: block;
             position: relative;
@@ -30,8 +35,7 @@
             font-size: 12dp;
         }
         .slot { display: block; margin: 0 6dp 6dp 0; }
-        .entry .picture { display: block; width: 104dp; height: 78dp; margin: 0 auto 2dp; }
-        .entry .picture { decorator: none; }
+        .entry .picture { display: block; width: 104dp; height: 78dp; margin: 0 auto 2dp; decorator: none; }
         .entry .name { display: block; margin-bottom: 4dp; white-space: normal; font-family: Cinzel; font-weight: bold; font-size: 12dp; }
         .entry .cost { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; font-weight: normal; }
         /* An icon and its amount wrap together */
@@ -39,36 +43,54 @@
         .entry .cost img { margin-right: 3dp; }
         .entry .hotkey { position: absolute; top: 4dp; right: 6dp; font-size: 11dp; color: #a8874a; }
         .entry.selected .hotkey { color: #3a2a10; }
-        #tools { display: flex; flex-direction: column; align-self: stretch; justify-content: center; margin-left: 4dp; }
+        /* Not unlocked yet: dimmed, with what unlocks it */
+        .entry.locked { color: #6f6c66; border-color: #3d382c; }
+        .entry.locked .picture { image-color: #ffffff40; }
+        .entry .unlock { display: block; font-size: 11dp; color: #9c9584; }
+        #tools { display: flex; flex-direction: column; justify-content: center; margin-left: 4dp; }
         #tools button { display: flex; flex-direction: row; align-items: center; margin-bottom: 4dp; padding: 4dp 8dp; text-align: left; }
         #tools button img { margin-right: 6dp; }
+        /* Closed: the tools in a row beside the button that opens the menu */
+        body.closed #tools { flex-direction: row; margin-left: 0; }
+        body.closed #tools button { margin: 0 4dp 0 0; }
         #status { margin-top: 8dp; }
         #status .hint { margin-left: 12dp; }
     </style>
 </head>
-<body class="panel" data-model="build_menu">
-    <div class="row">
+<body class="panel" data-model="build_menu" data-class-closed="!open">
+    <div class="row" data-if="open">
         <div class="tabs">
-            <div class="tab" data-for="t, i : tabs" data-class-selected="tab == i" data-class-locked="t.locked"
+            <div class="tab" data-for="t, i : tabs" data-class-selected="tab == i" data-class-locked="t.locked" data-class-fresh="t.fresh"
                  data-event-click="set_tab(i)"><img class="icon small" data-attr-src="t.icon"/><span>{{t.name}}</span></div>
         </div>
-        <span class="tab-hint muted">[Tab]</span>
+        <span class="tab-hint muted">[Tab] [B] closes</span>
     </div>
-    <div id="entries">
-        <!-- data-for on a wrapper: views on the repeated element itself fail while the list shrinks -->
-        <div class="slot" data-for="entry : entries"><button class="entry" data-class-selected="entry.selected" data-event-click="select(entry.type)">
-            <img class="picture" data-attr-src="entry.image"/>
-            <span class="name">{{entry.name}}</span>
-            <div class="cost" data-if="entry.coins > 0">
-                <div class="pair"><img class="icon small" src="icons/coin.tga"/><span>{{entry.coins}}</span></div>
-                <div class="pair" data-if="entry.planks > 0"><img class="icon small" src="icons/planks.tga"/><span>{{entry.planks}}</span></div>
-                <div class="pair" data-if="entry.bricks > 0"><img class="icon small" src="icons/bricks.tga"/><span>{{entry.bricks}}</span></div>
-                <div class="pair" data-if="entry.steel_beams > 0"><img class="icon small" src="icons/steel_beams.tga"/><span>{{entry.steel_beams}}</span></div>
-            </div>
-            <div class="cost" data-if="entry.coins == 0"><span>1x1 tiles</span></div>
-            <span class="hotkey">{{entry.hotkey}}</span>
-        </button></div>
+    <div id="main">
+        <div id="groups" data-if="open">
+            <!-- data-for on wrappers: views on the repeated element itself fail while the list shrinks -->
+            <div class="group" data-for="group : groups"><div data-if="group.used">
+                <span class="group-name">{{group.name}}</span>
+                <div class="cards">
+                    <div class="slot" data-for="entry : group.entries"><button class="entry" data-class-selected="entry.selected"
+                            data-class-locked="entry.locked" data-event-click="select(entry.type)"
+                            data-event-mouseover="hover(entry.type)" data-event-mouseout="hover(-100)">
+                        <img class="picture" data-attr-src="entry.image"/>
+                        <span class="name">{{entry.name}}</span>
+                        <span class="unlock" data-if="entry.locked">{{entry.unlock}}</span>
+                        <div data-if="!entry.locked"><div class="cost" data-if="entry.coins > 0">
+                            <div class="pair"><img class="icon small" src="icons/coin.tga"/><span>{{entry.coins}}</span></div>
+                            <div class="pair" data-if="entry.planks > 0"><img class="icon small" src="icons/planks.tga"/><span>{{entry.planks}}</span></div>
+                            <div class="pair" data-if="entry.bricks > 0"><img class="icon small" src="icons/bricks.tga"/><span>{{entry.bricks}}</span></div>
+                            <div class="pair" data-if="entry.steel_beams > 0"><img class="icon small" src="icons/steel_beams.tga"/><span>{{entry.steel_beams}}</span></div>
+                        </div></div>
+                        <div class="cost" data-if="entry.coins == 0"><span>1x1 tiles</span></div>
+                        <span class="hotkey">{{entry.hotkey}}</span>
+                    </button></div>
+                </div>
+            </div></div>
+        </div>
         <div id="tools">
+            <button data-if="!open" data-event-click="toggle_menu"><img class="icon small" src="icons/construction.tga"/><span>Construction [B]</span></button>
             <button data-class-selected="tool == -3" data-event-click="select(-3)"><img class="icon small" src="icons/demolish.tga"/><span>Demolish</span></button>
             <button data-class-selected="tool == -4" data-event-click="select(-4)"><img class="icon small" src="icons/move.tga"/><span>Move</span></button>
             <button data-class-selected="tool == -5" data-event-click="select(-5)"><img class="icon small" src="icons/copy.tga"/><span>Copy</span></button>

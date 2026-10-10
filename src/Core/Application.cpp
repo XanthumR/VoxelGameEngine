@@ -274,6 +274,7 @@ void Application::PlaceShowcase() {
         placed += modules;
     }
     m_Simulation.Coins().SetCoins(100000); // To try things with
+    m_BuildTool.UnlockAllTiers();
     std::cout << "Showcase: placed " << placed << " buildings" << std::endl;
 }
 
