@@ -34,7 +34,8 @@ vec2 screenPixel(mat4 camera, vec3 world, out bool visible) {
     return (clip.xy / max(clip.w, 1e-6) * 0.5 + 0.5) * vec2(renderSize);
 }
 
-// Last frame's shadow for this voxel face, seen at pixel this frame; age < 0 when there is none.
+// Last frame's shadow for this voxel face (or a neighbour on its plane), seen at pixel this
+// frame; age < 0 when there is none.
 // The voxel's motion on screen since last frame (a motion vector) moves the pixel back to where
 // that spot was: with a still camera the same pixel.
 float previousShadow(ivec4 key, ivec2 currentPixel, out float age) {
@@ -50,15 +51,26 @@ float previousShadow(ivec4 key, ivec2 currentPixel, out float age) {
     ivec2 toward = ivec2(fract(pixel.x * 0.5) < 0.5 ? -1 : 1, fract(pixel.y * 0.5) < 0.5 ? -1 : 1);
     ivec2 candidates[4] = ivec2[](quad, quad + ivec2(toward.x, 0), quad + ivec2(0, toward.y), quad + toward);
     ivec2 quadDims = (renderSize + 1) / 2;
+    // The same voxel face; failing that a neighbour on the same face plane (while the camera moves
+    // the quads seldom pick the very same voxel): a shadow is the same there except right at a
+    // shadow's edge, which can then sit a voxel off until the quad traces again
+    int axis = key.w >> 1;
+    ivec2 neighbour = ivec2(-1);
     for (int i = 0; i < 4; i++) {
         ivec2 q = candidates[i];
         if (q.x < 0 || q.y < 0 || q.x >= quadDims.x || q.y >= quadDims.y) continue;
-        if (imageLoad(previousShadowKey, q) != key) continue;
-        vec2 previous = imageLoad(previousShadowValue, q).rg;
-        age = previous.g;
-        return previous.r;
+        ivec4 previousKey = imageLoad(previousShadowKey, q);
+        if (previousKey == key) {
+            neighbour = q;
+            break;
+        }
+        ivec3 d = abs(previousKey.xyz - key.xyz);
+        if (neighbour.x < 0 && previousKey.w == key.w && previousKey[axis] == key[axis] && max(d.x, max(d.y, d.z)) <= 1) neighbour = q;
     }
-    return 1.0;
+    if (neighbour.x < 0) return 1.0;
+    vec2 previous = imageLoad(previousShadowValue, neighbour).rg;
+    age = previous.g;
+    return previous.r;
 }
 
 void main() {
