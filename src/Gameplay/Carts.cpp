@@ -16,7 +16,7 @@ int DirectionIndex(glm::ivec2 step) {
     return step.y > 0 ? 2 : 3;
 }
 
-// The right-hand side of driving along step (the same frame as figures.comp)
+// The right-hand side of driving along step (the same frame as figures.glsl)
 glm::vec2 RightOf(glm::ivec2 step) {
     return glm::vec2(-step.y, step.x);
 }

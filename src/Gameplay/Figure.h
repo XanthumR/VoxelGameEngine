@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-// A smoke puff drawn into the voxel world every frame by FigureRenderer (shaders/people/figures.comp).
+// A smoke puff drawn into the voxel world every frame by FigureRenderer (shaders/people/figures.glsl).
 // People, carts and boats are voxel objects (Rendering/VoxelObject.h). 16 bytes, the std430
 // layout of the shader's buffer.
 struct Figure {

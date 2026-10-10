@@ -42,7 +42,7 @@ constexpr uint8_t SMOKE_LIGHT = 58; // Smoke puffs, and sails
 constexpr uint8_t BOAT_WOOD = 59;
 constexpr uint8_t FIGURE_FIRST = PERSON_SKIN, FIGURE_LAST = BOAT_WOOD;
 
-// Horse carts, drawn on the GPU like the other figures (shaders/people/figures.comp); the cargo
+// Horse carts, drawn on the GPU like the other figures (shaders/people/figures.glsl); the cargo
 // blocks follow ItemType order. 100 and 101 are building model markers, never in the world.
 constexpr uint8_t HORSE_COAT = 102;
 constexpr uint8_t HORSE_DARK = 103;  // Mane, tail, hooves

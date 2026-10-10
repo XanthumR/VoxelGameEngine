@@ -1,0 +1,5 @@
+#version 440 core
+// Erases last frame's smoke puffs (see figures.glsl)
+#define FIGURE_MODE 0
+#define FIGURE_BINDING 4
+#include "people/figures.glsl"

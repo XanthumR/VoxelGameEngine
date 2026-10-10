@@ -1,11 +1,13 @@
-#version 440 core
 // Smoke puffs drawn into the voxel world every frame (FigureRenderer, Figure in src/Gameplay/Figure.h):
 // a small cube of smoke over a chimney that thins out as it ages. People, carts and boats are
 // voxel objects instead (shade.comp), so they move off the grid.
-// Runs twice per frame:
-//   mode 0 (erase): last frame's puffs are removed (only voxels that still hold a figure block)
-//   mode 1 (draw):  this frame's puffs are drawn (only into air)
+// Two programs run per frame, one after the other (figures_erase.comp, figures_draw.comp):
+//   FIGURE_MODE 0 (erase): last frame's puffs are removed (only voxels that still hold a figure block)
+//   FIGURE_MODE 1 (draw):  this frame's puffs are drawn (only into air)
 // so the world is never damaged, and puffs wiped by a chunk re-upload come back the next frame.
+// Two programs with their own buffer bindings rather than one with a mode uniform: the NVIDIA
+// driver ran the erase with the draw's settings when they changed between the two dispatches,
+// leaving every puff's path behind as smoke.
 layout(local_size_x = 64) in;
 
 #include "include/voxel_write.glsl"
@@ -16,12 +18,11 @@ const int FIGURE_FIRST = 47; // The figure blocks; only smoke is drawn now, but 
 const int FIGURE_LAST = 59;
 const int WATER_ID = 35;
 
-layout(std430, binding = 4) buffer FigureBuffer {
+layout(std430, binding = FIGURE_BINDING) buffer FigureBuffer {
     ivec4 figures[]; // xyz = the puff's center, w = packed look (see Figure in src/Gameplay/Figure.h)
 };
 
 uniform int numFigures;
-uniform int mode;     // 0 = erase, 1 = draw
 uniform int seaLevel; // Erased voxels at or below it become water again
 
 bool isFigure(int id) {
@@ -51,7 +52,7 @@ void main() {
                 int pool = locateVoxel(center + ivec3(x, y, z), c, b);
                 if (pool < 0) continue;
                 int current = voxelId(loadVoxel(pool, c));
-                if (mode == 0) {
+                if (FIGURE_MODE == 0) {
                     if (isFigure(current)) storeVoxel(pool, c, center.y + y <= seaLevel ? float(WATER_ID) / 255.0 : 0.0);
                     continue;
                 }

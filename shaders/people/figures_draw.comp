@@ -1,0 +1,5 @@
+#version 440 core
+// Draws this frame's smoke puffs (see figures.glsl)
+#define FIGURE_MODE 1
+#define FIGURE_BINDING 5
+#include "people/figures.glsl"
