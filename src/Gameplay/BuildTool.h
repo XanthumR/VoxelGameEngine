@@ -9,6 +9,7 @@
 
 #include <glm/glm.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <vector>
@@ -76,6 +77,9 @@ public:
     bool PreviewInMarketRange() const { return m_PreviewInMarket; } // ... and a marketplace's reach
     GameObjectId HoveredBuilding() const { return m_HoveredBuilding; }
     GameObjectId MovingBuilding() const { return m_Moving; } // Being dragged; INVALID when none
+    bool IsUnderConstruction(GameObjectId id) const {
+        return std::any_of(m_Constructions.begin(), m_Constructions.end(), [id](const Construction& c) { return c.id == id; });
+    }
 
     // The building clicked with nothing selected (its panel is open); INVALID when none
     GameObjectId InspectedBuilding() const { return m_InspectedBuilding; }

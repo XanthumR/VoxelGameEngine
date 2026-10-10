@@ -1,6 +1,7 @@
 #include "Core/Application.h"
 
 #include "Core/Screenshot.h"
+#include "Economy/ProductionChains.h"
 #include "Simulation/BuildingTypes.h"
 #include "UI/WorldMarkers.h"
 #include "Gameplay/FigureModels.h"
@@ -14,6 +15,7 @@
 #include "imgui_impl_opengl3.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 
 namespace {
@@ -21,6 +23,7 @@ namespace {
 const char* TREE_MODEL_PATH = "assets/tree.vox";
 const char* BUILDING_MODEL_DIRECTORY = "assets/buildings";
 const float SMOKE_DISTANCE = 1500.0f; // Voxels from the camera's focus within which chimneys smoke
+const float ANIMATION_DISTANCE = 700.0f; // ...and within which buildings' moving parts are drawn
 const glm::ivec2 SPAWN_SEARCH_START(640, 640); // Spawn is the nearest decent island to here
 
 } // namespace
@@ -156,6 +159,17 @@ bool Application::Init() {
         }
     }
 
+    // Buildings' moving parts
+    std::vector<VoxelObjectModel> partModels;
+    m_Animations.Load("assets/buildings/parts", partModels);
+    m_Animations.SetAlwaysInUse(m_Options.showcase);
+    m_Smoke.SetAlwaysInUse(m_Options.showcase);
+    m_PartModelBase = -1;
+    for (const VoxelObjectModel& model : partModels) {
+        int index = m_Renderer.AddObjectModel(model);
+        if (m_PartModelBase < 0) m_PartModelBase = index;
+    }
+
     // The game UI (RmlUi); Dear ImGui stays for the debug windows
     if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context()) || !m_IslandPanel.Init(m_Ui.Context()) ||
         !m_BuildingInfo.Init(m_Ui.Context()) || !m_ShipPanel.Init(m_Ui.Context()) || !m_TradeRoutes.Init(m_Ui.Context())) {
@@ -182,7 +196,7 @@ bool Application::Init() {
     m_TileOverlay.Init(TILE_SIZE);
     m_ReachScratch.reserve(8192);
     m_Figures.reserve(FigureRenderer::MAX_FIGURES);
-    m_VoxelObjects.reserve(VoxelRenderer::MAX_OBJECTS);
+    m_VoxelObjects.reserve(4 * VoxelRenderer::MAX_OBJECTS); // Before culling: the renderer draws up to MAX_OBJECTS
 
     // The tree model must be loaded before the workers start generating
     if (!m_Trees.Load(TREE_MODEL_PATH)) {
@@ -215,12 +229,62 @@ void Application::Spawn() {
     SetCameraMode(m_Options.lockCamera ? CameraMode::FreeFly : CameraMode::Strategy);
 }
 
+// --showcase: every building type on the spawn island, each at the nearest free spot of a grid
+// around the spawn (the warehouse first, so the island is settled), each farm with all its
+// modules. Placed like the player places them, but free; then 100000 coins to try things with.
+void Application::PlaceShowcase() {
+    glm::ivec2 spawn = m_Terrain.FindSpawnColumn(SPAWN_SEARCH_START);
+    glm::ivec2 center(ColumnToTile(spawn.x), ColumnToTile(spawn.y));
+    constexpr int SPACING = 5, MAX_RING = 16; // Grid tiles
+    int placed = 0;
+    for (uint16_t type = 0; type < BUILDING_TYPES.size(); type++) {
+        if (BUILDING_TYPES[type].role == BuildingRole::Module) continue; // With their farm below
+        GameObjectId id = INVALID_GAME_OBJECT;
+        for (int ring = 0; ring <= MAX_RING && id == INVALID_GAME_OBJECT; ring++) {
+            for (int dz = -ring; dz <= ring && id == INVALID_GAME_OBJECT; dz++) {
+                for (int dx = -ring; dx <= ring && id == INVALID_GAME_OBJECT; dx++) {
+                    if (std::max(std::abs(dx), std::abs(dz)) == ring) id = m_BuildTool.Place(type, 0, center + glm::ivec2(dx, dz) * SPACING);
+                }
+            }
+        }
+        if (id == INVALID_GAME_OBJECT) {
+            std::cout << "Showcase: no room for a " << BUILDING_TYPES[type].name << std::endl;
+            continue;
+        }
+        placed++;
+
+        // A farm's modules, on the free tiles in its range
+        int module = ModuleTypeOf(type);
+        if (module < 0) continue;
+        const ProductionChain& chain = PRODUCTION_CHAINS[BUILDING_TYPES[type].chain];
+        const VoxelAnchorComponent& farm = m_Simulation.Objects().Anchor(id);
+        glm::ivec2 farmMin(ColumnToTile(farm.origin.x), ColumnToTile(farm.origin.z));
+        glm::ivec2 farmMax = farmMin + farm.footprint / TILE_SIZE + (int)chain.radius;
+        int modules = 0;
+        m_BuildTool.SelectModules(id); // Its modules go to this farm
+        for (int z = farmMin.y - chain.radius; z < farmMax.y && modules < chain.fullSpeedCount; z++) {
+            for (int x = farmMin.x - chain.radius; x < farmMax.x && modules < chain.fullSpeedCount; x++) {
+                if (m_BuildTool.Place((uint16_t)module, 0, glm::ivec2(x, z)) != INVALID_GAME_OBJECT) modules++;
+            }
+        }
+        m_BuildTool.SelectType(BuildTool::NO_TYPE);
+        placed += modules;
+    }
+    m_Simulation.Coins().SetCoins(100000); // To try things with
+    std::cout << "Showcase: placed " << placed << " buildings" << std::endl;
+}
+
 int Application::Run() {
     if (!Init()) return -1;
     Spawn();
 
     double lastTime = glfwGetTime();
+    double showcaseTime = m_Options.showcase ? lastTime + 1.5 : -1.0; // Once the island around the spawn has streamed in
     while (!glfwWindowShouldClose(m_Window)) {
+        if (showcaseTime > 0.0 && glfwGetTime() >= showcaseTime) {
+            PlaceShowcase();
+            showcaseTime = -1.0;
+        }
         double frameStartTime = glfwGetTime();
         // The simulation gets the real elapsed time (GameClock caps it); cameras get a clamped
         // one so a stall (window drag, breakpoint) can't launch the player through walls
@@ -461,7 +525,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     bool strategy = m_CameraMode == CameraMode::Strategy;
     m_TopBar.SetVisible(strategy);
     m_BuildMenu.SetVisible(strategy);
-    m_TopBar.Update(m_Simulation.Coins(), m_GameSpeed, m_RoutesOpen);
+    m_TopBar.Update(m_Simulation.Coins(), m_Simulation.Economy(), m_GameSpeed, m_RoutesOpen);
     m_BuildMenu.Update(m_BuildTool, m_Simulation.Objects().AliveCount());
     m_IslandPanel.Update(m_PanelIsland, m_Simulation.Economy(), strategy);
     {
@@ -523,6 +587,9 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_VoxelObjects.insert(m_VoxelObjects.end(), m_Walkers.Objects().begin(), m_Walkers.Objects().end());
     AppendCartObjects(m_Simulation.Objects(), m_Clock.Alpha(), m_CartModelBase, m_VoxelObjects);
     m_ShipControl.AppendObjects(m_Simulation.Ships(), m_Clock.Alpha(), gameDelta, m_VoxelObjects);
+    m_Animations.Update(gameDelta, m_Simulation.Objects());
+    m_Animations.AppendObjects(m_Simulation.Objects(), glm::vec2(focus.x, focus.z), ANIMATION_DISTANCE, m_PartModelBase, m_VoxelObjects,
+        [this](GameObjectId id) { return id == m_BuildTool.MovingBuilding() || m_BuildTool.IsUnderConstruction(id); });
     m_GpuTimers.Mark("Smoke puffs");
     m_FigureRenderer.Draw(m_Figures, m_Cache, SEA_LEVEL);
 
@@ -547,11 +614,23 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_Renderer.Render(frame, m_Settings, m_Cache, m_Ocean, m_Shore);
 
     if (m_CameraMode == CameraMode::FreeFly) DrawHud(m_EditTool.CrosshairColor(m_FreeFlyCamera), m_EditTool.SelectedBlock());
+    // ImGui's background list (the badges over the world) goes under the game UI, its windows (the
+    // debug tools) over it
+    ImDrawList* background = ImGui::GetBackgroundDrawList();
+    ImGui::Render();
+    const ImDrawData* imgui = ImGui::GetDrawData();
+    m_ImGuiUnderUi = *imgui; // Copies into vectors that keep their capacity
+    m_ImGuiOverUi = *imgui;
+    m_ImGuiUnderUi.CmdLists.resize(0);
+    m_ImGuiOverUi.CmdLists.resize(0);
+    for (ImDrawList* list : imgui->CmdLists) (list == background ? m_ImGuiUnderUi : m_ImGuiOverUi).CmdLists.push_back(list);
+    m_ImGuiUnderUi.CmdListsCount = m_ImGuiUnderUi.CmdLists.Size;
+    m_ImGuiOverUi.CmdListsCount = m_ImGuiOverUi.CmdLists.Size;
+    ImGui_ImplOpenGL3_RenderDrawData(&m_ImGuiUnderUi);
     m_GpuTimers.Mark("Game UI (RmlUi)");
     if (m_CameraMode == CameraMode::Strategy) m_Ui.Render(m_WindowWidth, m_WindowHeight);
     m_GpuTimers.Mark("Debug UI (ImGui)");
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplOpenGL3_RenderDrawData(&m_ImGuiOverUi);
     m_GpuTimers.EndFrame();
     m_CpuFrameMs = m_CpuFrameMs * 0.95f + (float)(glfwGetTime() - frameStartTime) * 1000.0f * 0.05f;
 

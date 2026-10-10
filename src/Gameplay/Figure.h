@@ -10,9 +10,10 @@ struct Figure {
 
     glm::ivec4 position; // xyz = the puff's center, w = packed look
 
-    // Bits 0-1 size - 1 (1-3 voxels), 2-5 density (0-15, how much of the cube is filled), 9 kind, 11-18 seed
-    static int PackPuff(int size, int density, int seed) {
-        return ((size - 1) & 3) | ((density & 15) << 2) | (PUFF << 9) | ((seed & 255) << 11);
+    // Bits 0-1 size - 1 (1-3 voxels), 2-5 density (0-15, how much of the cube is filled), 6 dark
+    // (coal smoke), 9 kind, 11-18 seed
+    static int PackPuff(int size, int density, int seed, bool dark = false) {
+        return ((size - 1) & 3) | ((density & 15) << 2) | (dark ? 1 << 6 : 0) | (PUFF << 9) | ((seed & 255) << 11);
     }
     static int KindOf(int packed) { return (packed >> 9) & 3; }
 };

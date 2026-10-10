@@ -292,6 +292,15 @@ def school(d):
     d.rectangle((10, 9, 12, 11), fill=(60, 90, 130))
 
 
+def construction(d):
+    # A hammer crossed with a trowel
+    steel, handle = (150, 158, 170), WOOD
+    d.line((3, 14, 11, 6), fill=handle, width=2)
+    d.polygon([(9, 2), (13, 6), (11, 8), (7, 4)], fill=steel, outline=INK)
+    d.line((13, 14, 9, 10), fill=handle, width=2)
+    d.polygon([(2, 6), (7, 6), (9, 9), (4, 11)], fill=(200, 205, 212), outline=INK)
+
+
 def theatre(d):
     # Comedy and tragedy masks
     light, dark = (240, 230, 200), (200, 170, 90)
@@ -313,6 +322,7 @@ ICONS = {
     "grain": grain, "flour": flour, "bread": bread, "tallow": tallow, "soap": soap, "clay": clay, "beef": beef,
     "iron": iron, "coal": coal, "steel": steel, "steel_beams": steel_beams, "canned_food": canned_food,
     "sewing_machines": sewing_machines, "artisan": artisan, "marketplace": marketplace, "school": school, "theatre": theatre,
+    "construction": construction,
 }
 
 if __name__ == "__main__":

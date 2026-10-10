@@ -124,7 +124,8 @@ constexpr uint8_t CANVAS = 178;     // Windmill sails
 constexpr uint8_t PERSON_COAT_ARTISAN = 179;
 constexpr uint8_t PERSON_COAT_ARTISAN_GREEN = 180;
 constexpr uint8_t PERSON_BOWLER = 181;
-constexpr uint8_t EXTRA_MATERIALS_LAST = 181;
+constexpr uint8_t SMOKE_DARK = 182; // Coal smoke of heavy industry: a figure block like SMOKE_LIGHT
+constexpr uint8_t EXTRA_MATERIALS_LAST = 182;
 } // namespace Block
 
 // Grass tufts and water are drawn, but the player, raycasts and projectiles pass through them

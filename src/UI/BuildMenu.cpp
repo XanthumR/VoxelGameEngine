@@ -14,6 +14,8 @@ namespace {
 
 constexpr int MAX_ENTRIES = 20;
 constexpr std::array<const char*, (int)BuildCategory::Count> TAB_NAMES = { "Farmers", "Workers", "Artisans", "Infrastructure" };
+constexpr std::array<const char*, (int)BuildCategory::Count> TAB_ICONS = { "icons/farmer.tga", "icons/worker.tga", "icons/artisan.tga",
+    "icons/construction.tga" };
 constexpr int REQUEST_OFFSET = 3; // Keeps ROAD (-2) and NO_TYPE (-1) above the "no request" 0
 
 } // namespace
@@ -35,6 +37,7 @@ bool BuildMenu::Init(Rml::Context* context) {
     model.RegisterArray<std::vector<Entry>>();
     if (Rml::StructHandle<Tab> tab = model.RegisterStruct<Tab>()) {
         tab.RegisterMember("name", &Tab::name);
+        tab.RegisterMember("icon", &Tab::icon);
         tab.RegisterMember("locked", &Tab::locked);
     }
     model.RegisterArray<std::vector<Tab>>();
@@ -53,7 +56,7 @@ bool BuildMenu::Init(Rml::Context* context) {
     });
     m_Model = model.GetModelHandle();
     m_Entries.reserve(MAX_ENTRIES);
-    for (const char* name : TAB_NAMES) m_Tabs.push_back({ name, false });
+    for (size_t i = 0; i < TAB_NAMES.size(); i++) m_Tabs.push_back({ TAB_NAMES[i], TAB_ICONS[i], false });
 
     m_Document = context->LoadDocument("assets/ui/build_menu.rml");
     return m_Document != nullptr;

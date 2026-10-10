@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way (8.1 done); the UI milestone comes next, before 8.2.
 
 ## Roadmap
 
@@ -14,6 +14,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 6 (done) | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
 | 7 (done) | Game UI (RmlUi) | The player-facing UI moves from Dear ImGui to RmlUi: styled Anno-like panels from markup and style sheets, data-bound to the simulation; ImGui stays for the debug tools |
 | 8 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
+| UI (next) | Anno 1800 interface | The game plays like Anno 1800 through its interface: tool modes, a construction menu with rich tooltips, a docked object menu, island bar and inventory, notifications, statistics, a minimap |
 | 9 | Persistence & polish | Save/load (edited chunks + game objects), notifications, sound, balancing |
 
 ## Milestone 1, in detail (done)
@@ -756,4 +757,85 @@ Chains: Sand Mine (coast) → Glassworks (Glass); Window Makers (Wood + Glass �
 ### 8.3 NPC traders (planned)
 
 A trader's island with its own harbor that the player's ships can sail to: it sells and buys a list of goods at fixed prices, and trade route stops there buy or sell instead of loading and unloading.
+
+## UI milestone: the Anno 1800 interface, in detail
+
+Milestone 7 moved the UI to RmlUi and the last restyle gave it Anno 1800's look (dark slate panels, gold trim, Cinzel and Libre Baskerville). This milestone makes it *behave* like Anno 1800: how you build, inspect, follow your economy and get told about problems. Anno's art and fonts are its own, so the look stays our own version of its style; the behaviour is what we copy.
+
+### What Anno 1800 does, and what we have
+
+| Anno 1800 | Here today | Gap |
+|---|---|---|
+| Building tool stays selected: place one after another, Esc or right click ends it | One building per selection | Keep the tool after placing |
+| Demolish as a tool (bulldozer cursor, the target outlined red, drag over many) | Right click demolishes at once | A demolish mode; right click only cancels |
+| Move tool and "copy building" (pick a placed building to build another of it) | Move by dragging a building | Move mode and a pipette |
+| Cost tag and the reach of the building at the cursor while placing; missing materials in red | Status line at the bottom; reach on the roads | A cost tag by the cursor |
+| Construction menu by tier, each building with a tooltip: cost, upkeep, workforce, what it makes from what, where it may stand | Tier tabs, cost on the card | Tooltip cards; buildings not yet unlocked shown greyed with what unlocks them |
+| Object menu docked at the bottom middle when a building is selected: name, productivity with its history, storage slots, workforce, pause, and per type: needs grid and upgrade (houses), inventory (warehouse), ships (harbor) | Panel at the bottom right with rows of text | A laid-out object menu with sections and a pause button |
+| Island bar at the top left: the island's name, its storage on a click | Island panel at the top right | Island bar + an inventory window with trends |
+| Top bar: balance with its breakdown, residents per tier with their needs on hover | Balance and residents per tier | Needs summary per tier on hover |
+| Notifications down the right side, click to jump there | Badges over buildings only | A notification feed |
+| Statistics screen: production and consumption per good and island, population, finance | None | A statistics window |
+| Minimap with islands, ships and the view, click to go there; compass | None | A minimap |
+| Pause menu (Esc): resume, settings, quit | Esc frees the mouse in free-fly | An Esc menu with settings (render scale, distance, UI scale) |
+
+### Phases (each playable, in this order)
+
+**U1. Tools and placing**
+- `BuildTool` modes: Build (stays on after placing; Esc / right click leaves it), Demolish (Delete key or a bulldozer button: hover outlines the building red, click or drag demolishes, refunds shown), Move (M; today's drag-to-move stays as well), Copy (a pipette: click a building to select its type, with its rotation).
+- Rotation on R and on the mouse wheel with Shift held.
+- A cost tag beside the cursor while placing: coins and materials, red where the island lacks them; the status line stays for errors.
+- Debug toggles move off the letters (chunk viewer, light visualizer to F-keys) so the letters are free for tools.
+- Tests: tool state changes (pure logic in `BuildTool` split into a testable `ToolState`).
+
+**U2. Construction menu**
+- Opens and closes on B and on a button at the bottom middle; the tier tabs as now, then within a tab small group headings (Public buildings, Production, Farm fields) as Anno sorts them.
+- A tooltip card per building: picture, name, cost, upkeep, workforce (tier and count), inputs → output with cycle time, location rule (coast, trees, modules), what it is for ("Farmers need it").
+- Buildings shown before they are unlocked, greyed, with what unlocks them (residents of a tier); a tier's first look at a tab flashes it.
+
+**U3. Object menu**
+- The selected building's menu docked at the bottom middle (the construction menu hides while it is open), with a header row: name, then Move, Copy, Pause, Demolish buttons.
+- Producers: productivity as a large figure with a 10-minute history graph (ring buffer in `ProductionComponent`, one sample a minute), input and output slots as boxes with their fill, workforce, the cart, the modules with a "Build" button.
+- Houses: residents bar, the needs as a grid of icons each with a fill ring and its +residents, the upgrade button with its materials.
+- Warehouse and harbor: the island inventory (below), the harbor's ships and "Build ship".
+- Pause stops a producer: a new `ProductionComponent` flag the simulation honours (status Paused, its jobs freed, upkeep still paid).
+
+**U4. Island bar, inventory and top bar**
+- Island bar at the top left: the name of the island under the camera ("Island #1" until islands get names), its residents, and a storage button.
+- Inventory window: every good the island has, as a grid of icons with amounts and a trend arrow (net per minute from the statistics below); filters for materials, food, goods.
+- Top bar: hover a tier for its residents and the supply of each of its needs on all islands.
+
+**U5. Notifications**
+- A `NotificationSystem` in the simulation: events with a kind, an island and a place, deduplicated and rate-limited (one per kind and building a minute): a producer missing an input or without workers, a house about to downgrade, storage full, a ship idle or arrived, a tier reached, coins running out.
+- A feed down the right side: icon, one line, fades after 20 s; clicking moves the camera there and selects the building.
+
+**U6. Statistics**
+- Per island and good, production and consumption per minute (counters in `ProductionSystem` and `PopulationSystem`, smoothed); per tier the residents; the income breakdown (taxes per tier, upkeep per building type).
+- A statistics window (F2): tabs Production, Population, Finance; a good's row shows its producers' count and the balance, red when negative.
+
+**U7. Minimap and pause menu**
+- Minimap at the bottom right: islands from `IslandRegistry` (land cells), the player's buildings as dots, ships, the camera's view as a box; click to move the camera there; a compass button resets the rotation.
+- Esc menu: Resume, Settings (render scale, render distance, UI scale, vsync), Quit. Esc otherwise leaves the current tool or closes the open window first, as in Anno.
+
+### Keys after this milestone
+
+| Key | Action |
+|---|---|
+| B | Construction menu |
+| 1-9, 0 | Building in the open tab |
+| Tab | Next tab |
+| R / Shift + wheel | Rotate |
+| Delete | Demolish tool |
+| M | Move tool |
+| C | Copy (pipette) |
+| Space, P | Pause / resume the game |
+| F2 | Statistics |
+| Esc | Leave the tool, close the window, or the pause menu |
+| F1, F3, F5-F8 | Debug: free-fly camera, metrics, chunk viewer, light visualizer |
+
+### Engine work this needs
+- `BuildTool` split into tool state (testable) and its input handling.
+- Statistics and notification counters in the simulation (deterministic, allocated up front, per island).
+- Productivity history in `ProductionComponent` (fixed ring of 10 samples).
+- RmlUi: a few new documents (object menu, inventory, notifications, statistics, minimap, pause menu); the minimap drawn as a texture the renderer updates when buildings or ships change.
 

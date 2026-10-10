@@ -2,7 +2,7 @@
 
 Each building's first model (assets/buildings/<model name>_1.vox) is drawn in isometric view from
 the front (the door side) and the right, on a patch of grass, with the colors saved in the file
-(the in-game colors). It is drawn large and shrunk smoothly to fill the same canvas as the others. Run from the project root:
+(the in-game colors), and its moving parts (assets/buildings/parts/parts.txt) where they rest. It is drawn large and shrunk smoothly to fill the same canvas as the others. Run from the project root:
     python tools/ui_icons/buildings.py
 """
 
@@ -84,10 +84,41 @@ def fit(width, depth, voxels, color_of):
     return canvas
 
 
-def building(path):
+# Where the animals of a pen stand in a picture, as fractions of how far they stray
+ANIMAL_SPOTS = ((-1.0, -1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, 1.0), (0.0, 0.0))
+
+
+def parts_of(name):
+    """(u, v, y, block) of the moving parts of a building model at rest, in its frame."""
+    out = []
+    try:
+        lines = open(os.path.join(MODELS, "parts", "parts.txt")).read().splitlines()
+    except OSError:
+        return out
+    animals = 0
+    for line in lines:
+        fields = line.split()
+        if not fields or fields[0].startswith("#") or fields[0] != name:
+            continue
+        part_file, u, v, y, motion, a, b = fields[1], int(fields[2]), int(fields[3]), int(fields[4]), fields[5], float(fields[7]), float(fields[8])
+        pw, pd, ph, part_voxels, _ = read_vox(os.path.join(MODELS, "parts", part_file + ".vox"))
+        if motion == "wander":  # Standing on the ground, spread over the pen
+            du, dv = ANIMAL_SPOTS[animals % len(ANIMAL_SPOTS)]
+            animals += 1
+            u0, v0, y0 = round(u + du * a) - pw // 2, round(v + dv * b) - pd // 2, y
+        else:  # Centered on its pivot
+            u0, v0, y0 = u - pw // 2, v - pd // 2, y - ph // 2
+        for (x, q, z), index in part_voxels.items():
+            out.append((u0 + pw - 1 - x, v0 + q, y0 + z, index))
+    return out
+
+
+def building(path, name):
     width, depth, height, file_voxels, palette = read_vox(path)
     # The game's building frame: u = width - 1 - x, v = y (v = 0 is the door side, nearest the viewer)
     voxels = {(width - 1 - x, depth - 1 - y, z + 1): index for (x, y, z), index in file_voxels.items()}
+    for u, v, y, index in parts_of(name):
+        voxels[(u, depth - 1 - v, y + 1)] = index
     for p in range(width):
         for q in range(depth):
             voxels.setdefault((p, q, 0), GRASS)
@@ -112,7 +143,7 @@ if __name__ == "__main__":
     count = 0
     for path in sorted(glob.glob(os.path.join(MODELS, "*_1.vox"))):
         name = os.path.basename(path)[: -len("_1.vox")]
-        building(path).save(os.path.join(OUT, name + ".tga"), compression=None)
+        building(path, name).save(os.path.join(OUT, name + ".tga"), compression=None)
         count += 1
     road().save(os.path.join(OUT, "road.tga"), compression=None)
     print(f"Wrote {count} building pictures and the road to {OUT}")

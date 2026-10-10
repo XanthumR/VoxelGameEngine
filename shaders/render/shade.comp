@@ -266,9 +266,9 @@ const vec3 CART_PALETTE[27] = vec3[](
 
 // More building materials and the upper tiers' clothes, block IDs 160-181 (src/World/BlockTypes.h)
 const int EXTRA_MATERIALS_FIRST = 160;
-const int EXTRA_MATERIALS_LAST = 181;
+const int EXTRA_MATERIALS_LAST = 182;
 const int FIRE_ID = 166;
-const vec3 EXTRA_PALETTE[22] = vec3[](
+const vec3 EXTRA_PALETTE[23] = vec3[](
     vec3(0.88, 0.72, 0.30), // 160 wheat
     vec3(0.62, 0.64, 0.24), // 161 wheat stalk
     vec3(0.66, 0.38, 0.22), // 162 clay
@@ -290,7 +290,8 @@ const vec3 EXTRA_PALETTE[22] = vec3[](
     vec3(0.90, 0.87, 0.78), // 178 canvas
     vec3(0.40, 0.26, 0.16), // 179 artisan coat
     vec3(0.24, 0.32, 0.26), // 180 artisan coat, green
-    vec3(0.12, 0.10, 0.09)  // 181 bowler hat
+    vec3(0.12, 0.10, 0.09), // 181 bowler hat
+    vec3(0.13, 0.12, 0.12)  // 182 coal smoke
 );
 
 vec3 getAlbedo(int voxelID, ivec3 mapPos) {

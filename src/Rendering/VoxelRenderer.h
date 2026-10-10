@@ -40,7 +40,7 @@ struct FrameParams {
 // textures the passes read.
 class VoxelRenderer {
 public:
-    static constexpr int MAX_OBJECTS = 1024;
+    static constexpr int MAX_OBJECTS = 2048;
     static constexpr int OBJECT_TILE = 16;      // Pixels per side of a screen tile for object culling
     static constexpr int OBJECTS_PER_TILE = 31; // ponytail: extra objects in a crowded tile are not drawn there
     // Shadow grid: which objects can shadow a world column (cells of SHADOW_CELL x SHADOW_CELL

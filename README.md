@@ -12,7 +12,7 @@ A city-builder and trade game in the style of Anno 1800, built on a custom C++ v
 - **Production chains:** fishery, lumberjack and sawmill, sheep farm and framework knitter, pig farm and slaughterhouse. Workforce, location rules (coast, trees, pasture) and input buffers apply.
 - **Economy:** coins from taxes minus building upkeep, build costs in coins and materials, game speed 0/1/2/4.
 - **Ships and trade:** build ships at a harbor, sail them by right click, load and unload cargo, set up trade routes that ships sail on their own, and settle new islands.
-- **Game UI:** Anno-style parchment panels made with RmlUi, in a Minecraft-like pixel font (Monocraft), with a picture of every building in the build menu.
+- **Game UI:** Anno 1800-style dark slate panels with gold trim made with RmlUi, titles in Cinzel and text in Libre Baskerville, a top ribbon with coins and the residents of each tier, and a picture of every building in the build menu.
 
 ## Controls
 
@@ -65,7 +65,7 @@ Launch options: `--render-distance N`, `--render-scale F`, and for reproducible 
 
 ## Credits
 
-GLFW, GLM, glad, Dear ImGui, RmlUi, FastNoiseLite, Google Test, and the Monocraft font (SIL Open Font License).
+GLFW, GLM, glad, Dear ImGui, RmlUi, FastNoiseLite, Google Test, and the Cinzel and Libre Baskerville fonts (SIL Open Font License).
 
 ## License
 

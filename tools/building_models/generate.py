@@ -303,8 +303,7 @@ def worker_house(variant):
     m.box(20, v0, 1, 20, v0, 10, STONE_DARK)
     m.box(15, v0, 10, 19, v0, 10, STONE_DARK)
     m.box(16, v0, 11, 18, v0, 11, STONE_DARK)
-    m.set(22, v0 - 1, 8, IRON)  # Lantern
-    m.set(22, v0 - 1, 7, WINDOW_GLASS)
+    m.set(22, v0 - 1, 9, IRON)  # The lantern's bracket (the lantern is a moving part)
     for u in (6, 10, 24, 28):
         window(m, u, v0, 3, 2, 5, None, None, facing=-1)
         window(m, u, v1, 3, 2, 5, None, None, facing=+1)
@@ -380,9 +379,6 @@ def warehouse():
     m.box(21, v0 - 1, 20, 26, v0 - 1, 25, DOOR_WOOD)
     m.box(19, v0 - 2, 27, 28, v0 + 2, 28, ROOF_SLATE)
     m.box(23, v0 - 6, 26, 24, v0, 26, TIMBER_DARK)
-    m.box(23, v0 - 6, 19, 23, v0 - 6, 25, IRON)
-    m.set(23, v0 - 6, 18, IRON)
-    m.set(24, v0 - 6, 18, IRON)
 
     # Cobbled apron, crates and barrels
     m.box(0, 0, 0, 47, v0 - 1, 0, COBBLE)
@@ -415,7 +411,6 @@ def marketplace():
     m.box(20, 17, 11, 27, 18, 11, TIMBER_DARK)
     for step in range(3):
         m.box(19, 15 + step, 12 + step, 28, 20 - step, 12 + step, ROOF_TILE_RED)
-    m.box(23, 17, 7, 24, 18, 8, IRON)
 
     # Four stalls facing the well, each with its own awning colors and goods
     stalls = [
@@ -453,23 +448,6 @@ def log_pile(m, u0, u1, v0, rows):
             m.box(u0, v, layer, u1, v, layer, TIMBER_LIGHT)
             m.set(u0, v, layer, PLASTER_CREAM)
             m.set(u1, v, layer, PLASTER_CREAM)
-
-
-def sheep(m, u, v):
-    """A sheep facing -v: wool body, dark head and legs."""
-    m.box(u, v + 1, 1, u + 2, v + 4, 3, WOOL_WHITE)
-    m.box(u, v, 2, u + 2, v, 3, STONE_DARK)
-    for leg_u, leg_v in ((u, v + 1), (u + 2, v + 1), (u, v + 4), (u + 2, v + 4)):
-        m.set(leg_u, leg_v, 0, STONE_DARK)
-
-
-def pig(m, u, v):
-    """A pig facing -u."""
-    m.box(u + 1, v, 1, u + 4, v + 2, 2, PIG_PINK)
-    m.box(u, v, 1, u, v + 2, 2, PIG_PINK)
-    m.set(u, v + 1, 1, SAUSAGE)  # Snout
-    for leg_u, leg_v in ((u + 1, v), (u + 4, v), (u + 1, v + 2), (u + 4, v + 2)):
-        m.set(leg_u, leg_v, 0, PIG_PINK)
 
 
 def fishery():
@@ -513,8 +491,6 @@ def fishery():
         for y in range(G + 3, G + 9):
             if (u + y) % 2 == 0:
                 m.set(u, 4, y, TIMBER_DARK)
-    for u in range(24, 33, 3):
-        m.box(u, 12, G + 5, u, 12, G + 7, FISH_SILVER)
 
     # The dock: plank deck flush with the quay, on pilings down into the sea
     d0, d1 = 11, 24
@@ -561,8 +537,6 @@ def lumberjack():
     log_pile(m, 24, 34, 4, 3)
     log_pile(m, 24, 34, 13, 2)
     m.box(26, 20, 0, 27, 21, 1, BARREL)  # Chopping block
-    m.box(27, 20, 2, 27, 20, 3, TIMBER_LIGHT)
-    m.set(27, 20, 4, IRON)
     for i in range(3):  # Saw horse
         m.set(30 + i, 24, i, TIMBER_DARK)
         m.set(32 - i, 24, i, TIMBER_DARK)
@@ -590,7 +564,6 @@ def sawmill():
     m.box(9, 14, 2, 26, 17, 2, TIMBER_LIGHT)
     for u, v in ((9, 14), (26, 14), (9, 17), (26, 17)):
         m.box(u, v, 0, u, v, 1, TIMBER_DARK)
-    m.box(17, 15, 3, 18, 16, 5, IRON)
     m.box(10, 15, 3, 15, 16, 3, TIMBER_LIGHT)  # A log on the bench
 
     # Plank stacks with spacers
@@ -667,8 +640,6 @@ def sheepfold():
         m.box(u, 28, 1, u, 28, 4, TIMBER_DARK)
     m.box(3, 8, 0, 4, 15, 1, TIMBER_DARK)
     m.box(4, 9, 1, 4, 14, 1, WELL_WATER)
-    for u, v in ((8, 5), (14, 10), (21, 6), (27, 13), (10, 18), (19, 21), (28, 4)):
-        sheep(m, u, v)
     for u, v in ((6, 22), (31, 19), (16, 28)):  # Flowers in the grass
         m.set(u, v, 0, FLOWER_YELLOW)
     return m
@@ -705,6 +676,7 @@ def framework_knitter():
         m.box(u + 1, 2, 0, u + 1, 4, 2, TIMBER_DARK)
     m.box(6, 3, 3, 8, 5, 5, WOOL_WHITE)
     crate(m, 28, 2, 0)
+    m.box(12, 3, 0, 12, 3, 5, TIMBER_DARK)  # The spinning wheel's stand (the wheel is a moving part)
     return m
 
 
@@ -777,8 +749,6 @@ def pigsty():
     m.box(3, 4, 1, 3, 9, 1, WELL_WATER)
     m.box(15, 3, 0, 21, 4, 1, TIMBER_DARK)
     m.box(16, 3, 1, 20, 3, 1, MUD)
-    for u, v in ((6, 6), (12, 12), (16, 8), (5, 17), (14, 19)):
-        pig(m, u, v)
     return m
 
 
@@ -810,8 +780,6 @@ def slaughterhouse():
         m.box(u, 4, 0, u, 4, 9, TIMBER_DARK)
     m.box(3, 4, 10, 23, 9, 10, ROOF_TILE_RED)
     m.box(4, 5, 8, 22, 5, 8, TIMBER_DARK)
-    for u in range(5, 22, 2):
-        m.box(u, 5, 5, u, 5, 7, SAUSAGE)
     barrel(m, 26, 4, 0)
     barrel(m, 30, 6, 0)
     crate(m, 26, 9, 0)
@@ -889,9 +857,6 @@ def harbor():
             m.set(u, v, G + 2, IRON)
     # A small crane with a rope and a hanging crate
     m.box(36, 50, G, 37, 51, G + 14, TIMBER_DARK)
-    m.box(28, 50, G + 14, 37, 50, G + 14, TIMBER_DARK)
-    m.box(29, 50, G + 8, 29, 50, G + 13, FENCE_WOOD)
-    crate(m, 28, 49, G + 5)
     # Cargo waiting on the pier
     for u, v in ((10, 39), (14, 39), (10, 43)):
         crate(m, u, v, G)
@@ -981,22 +946,6 @@ def tree(m, u, v, y=0, height=9, crown=4):
                 m.set(cu, cv, y + height + dy, LEAVES)
 
 
-def cow(m, u, v):
-    """A cow facing -u: brown with white patches, horns."""
-    for x in range(u + 2, u + 8):
-        for z in range(v, v + 3):
-            for y in (2, 3, 4):
-                patch = (x * 5 + z * 3 + y * 7) % 9 < 3
-                m.set(x, z, y, CATTLE_WHITE if patch else CATTLE_BROWN)
-    for leg_u, leg_v in ((u + 2, v), (u + 7, v), (u + 2, v + 2), (u + 7, v + 2)):
-        m.box(leg_u, leg_v, 0, leg_u, leg_v, 1, CATTLE_BROWN)
-    m.box(u, v + 1, 3, u + 1, v + 1, 5, CATTLE_BROWN)  # Head
-    m.set(u, v + 1, 3, CATTLE_WHITE)                   # Muzzle
-    m.set(u + 1, v, 6, PLASTER_WHITE)                  # Horns
-    m.set(u + 1, v + 2, 6, PLASTER_WHITE)
-    m.set(u + 8, v + 1, 3, CATTLE_BROWN)               # Tail
-
-
 def lamp_post(m, u, v, height=9):
     m.box(u, v, 0, u, v, height, IRON)
     m.set(u, v, height + 1, WINDOW_GLASS)
@@ -1034,8 +983,6 @@ def school():
     m.box(t0, w0, 27, t1, w1, 28, PLASTER_WHITE)
     for u, v in ((t0, w0), (t1, w0), (t0, w1), (t1, w1)):
         m.box(u, v, 29, u, v, 32, PLASTER_WHITE)
-    m.box(17, 22, 30, 18, 23, 31, BRASS)
-    m.box(17, 22, 29, 18, 23, 29, BRASS)
     for step in range(3):
         m.box(t0 - 1 + step, w0 - 1 + step, 33 + step, t1 + 1 - step, w1 + 1 - step, 33 + step, ROOF_SLATE)
     m.box(17, 22, 36, 18, 23, 37, IRON)
@@ -1049,8 +996,6 @@ def school():
         m.set(u, 3, 0, TIMBER_DARK)
         m.set(u + 3, 3, 0, TIMBER_DARK)
     m.box(33, 8, 1, 33, 8, 16, IRON)
-    m.box(29, 8, 13, 32, 8, 15, AWNING_BLUE)
-    m.box(29, 8, 14, 32, 8, 14, AWNING_WHITE)
     return m
 
 
@@ -1072,6 +1017,7 @@ def grain_farm():
     m.box(8, v0 - 3, 0, 15, v0 + 6, 0, STONE_LIGHT)  # Threshing floor
     gable_roof(m, u0, u1, v0, v1, 11, 25, ROOF_TILE_RED, ROOF_TILE_DARK, overhang=2, gable_wall=TIMBER_LIGHT)
     m.box(9, v0, 14, 14, v0, 18, DOOR_WOOD)  # Loft door
+    m.box(11, 22, 27, 11, 22, 30, IRON)      # The weathervane's rod
     sacks(m, 9, v0 + 2, 1, 2)
     m.box(4, v0 + 3, 2, 7, v1 - 3, 5, WHEAT)  # Sheaves stored inside
     # Granary on staddle stones
@@ -1146,24 +1092,7 @@ def flour_mill():
     dome(m, cu, cv, 7.5, 41, THATCH)
     m.box(17, 21, 48, 18, 22, 49, THATCH_DARK)
     m.box(17, 7, 43, 18, 14, 44, TIMBER_DARK)
-    hub_u, hub_y, sail_v = 18.0, 44.0, 6
-    m.box(16, sail_v, 42, 19, sail_v + 1, 45, TIMBER_DARK)
-    # Four sails in an X: a spar along each diagonal, canvas on one side with a lattice
-    length = 19.0
-    for u in range(36):
-        for y in range(20, 64):
-            du, dy = u + 0.5 - hub_u, y + 0.5 - hub_y
-            dist = (du * du + dy * dy) ** 0.5
-            if dist < 2.0 or dist > length:
-                continue
-            for a, b in ((du, dy), (-du, dy)):
-                along = (a + b) / 2 ** 0.5    # Along this diagonal
-                across = (a - b) / 2 ** 0.5   # Across it
-                if abs(across) < 0.8:
-                    m.set(u, sail_v, y, TIMBER_DARK)
-                elif 0.8 <= across * (1 if along > 0 else -1) < 6.2 and abs(along) > 4:
-                    lattice = int(abs(along)) % 4 == 0 or abs(across) > 5.6
-                    m.set(u, sail_v, y, TIMBER_LIGHT if lattice else CANVAS)
+    # The sails turn: a moving part (moving_parts)
     # Flour sacks and a cart by the door
     sacks(m, 4, 4, 0, 3, PLASTER_WHITE)
     sacks(m, 5, 4, 3, 2, PLASTER_WHITE)
@@ -1197,8 +1126,6 @@ def bakery():
         m.box(4, v, y, 15, v, y, AWNING_YELLOW if (v % 2) else AWNING_WHITE)
     # A sign: a pretzel on an iron bracket
     m.box(21, v0 - 3, 12, 21, v0 - 1, 12, IRON)
-    m.box(20, v0 - 3, 9, 22, v0 - 3, 11, BREAD)
-    m.set(21, v0 - 3, 10, AIR)
     for u in (6, 12, 18):
         window(m, u, v0 - 1, 16, 3, 3, SHUTTER_GREEN, FLOWER_RED if u == 12 else None, facing=-1)
     gable_roof(m, u0, u1, v0 - 1, v1, 21, 31, ROOF_TILE_RED, ROOF_TILE_DARK, overhang=2, gable_wall=PLASTER_CREAM)
@@ -1270,6 +1197,7 @@ def soap_factory():
         window(m, u, v1, 16, 3, 4, None, None, facing=+1)
     gable_roof(m, u0, u1, v0, v1, 22, 34, ROOF_SLATE, STONE_DARK, overhang=2, gable_wall=PLASTER_BLUE)
     factory_chimney(m, 30, 26, 0, 39, size=4)
+    m.set(10, 22, 35, IRON)  # The ventilator's base
     # Drying racks with rows of soap bars
     for rack_v in (3, 7):
         for u in (19, 33):
@@ -1302,8 +1230,6 @@ def clay_pit():
     for u in (10, 20):
         m.box(u, 20, 1, u, 20, 9, TIMBER_DARK)
     m.box(10, 20, 9, 20, 20, 9, TIMBER_LIGHT)
-    m.box(15, 20, 4, 15, 20, 8, FENCE_WOOD)
-    m.box(14, 19, 2, 16, 21, 3, BARREL)
     # Stacks of drying clay blocks
     for u0, v0 in ((27, 4), (27, 12), (2, 2)):
         for layer in range(4):
@@ -1472,6 +1398,8 @@ def variety_theatre():
     for u in (12, 35):
         m.box(u, 3, 10, u, 3, 11, BRASS)
         m.set(u, 3, 12, WINDOW_GLASS)
+    for u in (9, 38):
+        m.box(u, 3, 25, u, 3, 41, IRON)  # Flag poles (the flags are moving parts)
     # The dome, a lantern and a finial
     dome(m, 23.5, 30.0, 11.0, 27, ROOF_GREEN)
     for u, v in disc_cells(23.5, 30.0, 11.5):
@@ -1523,10 +1451,6 @@ def cattle_farm():
     m.box(27, 5, 0, 33, 11, 3, HAY)
     m.box(28, 6, 4, 32, 10, 5, HAY)
     m.box(29, 7, 6, 31, 9, 6, HAY)
-    m.box(19, 10, 1, 21, 11, 2, CATTLE_BROWN)
-    m.box(18, 10, 2, 18, 11, 3, CATTLE_BROWN)
-    for u, v in ((19, 10), (21, 10), (19, 11), (21, 11)):
-        m.set(u, v, 0, CATTLE_BROWN)
     return m
 
 
@@ -1535,8 +1459,6 @@ def pasture():
     a shade tree and a salt lick."""
     m = Model(36, 36, 12)
     fence(m, 0, 0, 35, 35, gate=(15, 19))
-    for u, v in ((5, 6), (18, 10), (8, 20), (22, 24)):
-        cow(m, u, v)
     m.box(26, 4, 0, 33, 5, 1, TIMBER_DARK)
     m.box(27, 4, 1, 32, 5, 1, WELL_WATER)
     tree(m, 30, 29, 0, height=8, crown=4)
@@ -1585,11 +1507,7 @@ def iron_mine():
         for y in range(22, 36):
             m.set(u + (y - 22) // 5 * (1 if u == 14 else -1), 28, y, TIMBER_DARK)
     m.box(14, 28, 30, 22, 28, 30, TIMBER_DARK)
-    for du in range(-4, 5):
-        for dy in range(-4, 5):
-            if 3.0 <= (du * du + dy * dy) ** 0.5 <= 4.4 or du == 0 or dy == 0:
-                if (du * du + dy * dy) ** 0.5 <= 4.4:
-                    m.set(18 + du, 27, 35 + dy, IRON)
+    # Its wheel turns: a moving part
     # Ore heaps and a cart of coal
     for cu, cv, r, block in ((5, 5, 4.0, IRON_ORE), (30, 5, 3.5, IRON_ORE), (5, 13, 3.0, 3)):
         for u, v in disc_cells(cu, cv, r):
@@ -1688,8 +1606,6 @@ def steelworks():
         m.box(left + 1, v0 + 3, 4, left + 6, v0 + 3, 8, STEEL)
     m.box(u0, v0, 15, u1, v0, 17, BRICK_RED)
     m.box(14, v0, 15, 19, v0, 18, BRASS)  # A clock over the doors
-    m.set(16, v0 - 1, 16, IRON)
-    m.set(17, v0 - 1, 17, IRON)
     # Sawtooth roof: ridges along u, steep glass faces toward the front
     m.box(u0, v0, 19, u1, v1, 19, ROOF_SLATE)
     for tooth in range(v0, v1, 8):
@@ -1772,8 +1688,6 @@ def sewing_machine_factory():
     # The clock tower bit over the door
     m.box(14, v0 - 1, 31, 21, v0 + 2, 37, BRICK_RED)
     m.box(15, v0 - 1, 32, 20, v0 - 1, 36, PLASTER_WHITE)
-    m.box(17, v0 - 1, 34, 17, v0 - 1, 36, IRON)
-    m.box(17, v0 - 1, 34, 19, v0 - 1, 34, IRON)
     m.box(13, v0 - 2, 38, 22, v0 + 3, 38, STONE_LIGHT)
     m.box(17, v0, 39, 18, v0 + 1, 41, BRASS)
     # Flat roof with a parapet and skylights
@@ -1794,8 +1708,339 @@ def sewing_machine_factory():
     m.box(27, 4, 4, 27, 5, 6, COAL)
     m.box(27, 4, 6, 29, 5, 6, COAL)
     m.set(29, 4, 4, BRASS)                   # ...brass trim, a wheel
-    m.box(31, 4, 3, 31, 5, 5, IRON)
     return m
+
+
+
+# --- Moving parts --------------------------------------------------------------------------------
+# Parts of buildings that move (windmill sails, a mine's wheel, swinging signs, animals in pens) are
+# not in the building models: each is its own small model in assets/buildings/parts/, drawn by the
+# game as a voxel object (src/Gameplay/BuildingAnimations.h). parts.txt says where each sits on
+# which building and how it moves:
+#   <building model> <part file> <u> <v> <y> <motion> <axis> <a> <b>
+# u v y: the pivot in the building's frame (a voxel; the part model is centered on it). Motions:
+#   spin   a = radians per second about the axis (across = u, up = y, forward = v)
+#   swing  a = radians per second of the sway, b = its amplitude in radians
+#   slide  a = radians per second of the back and forth, b = how far along the axis, in voxels
+#   wander an animal walking about a pen: u v = the pen's middle, y = the ground, a b = how far it
+#          strays along u and v (the model stands on its bottom and faces +v)
+
+
+class Canvas(Model):
+    """A model without bounds, in a building's frame: parts may reach past the building."""
+
+    def __init__(self):
+        super().__init__(1, 1, 1)
+
+    def set(self, u, v, y, block):
+        if block == AIR:
+            self.voxels.pop((u, v, y), None)
+        else:
+            self.voxels[(u, v, y)] = block
+
+
+def centered(canvas, pivot):
+    """The canvas cropped to a box centered on the pivot voxel (odd sizes)."""
+    pu, pv, py = pivot
+    hu = max(abs(u - pu) for u, v, y in canvas.voxels)
+    hv = max(abs(v - pv) for u, v, y in canvas.voxels)
+    hy = max(abs(y - py) for u, v, y in canvas.voxels)
+    m = Model(2 * hu + 1, 2 * hv + 1, 2 * hy + 1)
+    for (u, v, y), block in canvas.voxels.items():
+        m.set(u - pu + hu, v - pv + hv, y - py + hy, block)
+    return m
+
+
+def tight(canvas):
+    """The canvas cropped to its voxels."""
+    us, vs, ys = zip(*canvas.voxels)
+    m = Model(max(us) - min(us) + 1, max(vs) - min(vs) + 1, max(ys) - min(ys) + 1)
+    for (u, v, y), block in canvas.voxels.items():
+        m.set(u - min(us), v - min(vs), y - min(ys), block)
+    return m
+
+
+def disc(m, cu, cv, cy, r, block, plane):
+    """A disc of radius r around a voxel, in the plane 'uy' (facing v) or 'vy' (facing u) or 'uv'."""
+    ri = int(r) + 1
+    for a in range(-ri, ri + 1):
+        for b in range(-ri, ri + 1):
+            if a * a + b * b <= r * r:
+                if plane == 'uy':
+                    m.set(cu + a, cv, cy + b, block)
+                elif plane == 'vy':
+                    m.set(cu, cv + a, cy + b, block)
+                else:
+                    m.set(cu + a, cv + b, cy, block)
+
+
+def spokes(m, cu, cv, cy, r, block, plane, count=4):
+    """A wheel's rim and spokes."""
+    import math
+    for i in range(count * 2):
+        angle = math.pi * i / count
+        for t in range(int(r) + 1):
+            a, b = int(round(math.cos(angle) * t)), int(round(math.sin(angle) * t))
+            if plane == 'uy':
+                m.set(cu + a, cv, cy + b, block)
+            else:
+                m.set(cu, cv + a, cy + b, block)
+    for step in range(64):
+        angle = 2 * math.pi * step / 64
+        a, b = int(round(math.cos(angle) * r)), int(round(math.sin(angle) * r))
+        if plane == 'uy':
+            m.set(cu + a, cv, cy + b, block)
+        else:
+            m.set(cu, cv + a, cy + b, block)
+
+
+def sheep_part(m, u, v):
+    """A sheep facing +v."""
+    m.box(u, v, 1, u + 2, v + 3, 3, WOOL_WHITE)
+    m.box(u, v + 4, 2, u + 2, v + 4, 3, STONE_DARK)
+    for leg_u, leg_v in ((u, v), (u + 2, v), (u, v + 3), (u + 2, v + 3)):
+        m.set(leg_u, leg_v, 0, STONE_DARK)
+
+
+def pig_part(m, u, v):
+    """A pig facing +v."""
+    m.box(u, v, 1, u + 2, v + 3, 2, PIG_PINK)
+    m.box(u, v + 4, 1, u + 2, v + 4, 2, PIG_PINK)
+    m.set(u + 1, v + 4, 1, SAUSAGE)
+    for leg_u, leg_v in ((u, v), (u + 2, v), (u, v + 3), (u + 2, v + 3)):
+        m.set(leg_u, leg_v, 0, PIG_PINK)
+
+
+def cow_part(m, u, v, scale=1):
+    """A cow facing +v (a calf at scale 0)."""
+    length = 6 if scale else 4
+    for x in range(u, u + 3):
+        for z in range(v, v + length):
+            for y in range(2, 5 if scale else 4):
+                patch = (x * 5 + z * 3 + y * 7) % 9 < 3
+                m.set(x, z, y, CATTLE_WHITE if patch else CATTLE_BROWN)
+    for leg_u, leg_v in ((u, v), (u + 2, v), (u, v + length - 1), (u + 2, v + length - 1)):
+        m.box(leg_u, leg_v, 0, leg_u, leg_v, 1, CATTLE_BROWN)
+    top = 5 if scale else 4
+    m.box(u + 1, v + length, top - 2, u + 1, v + length + 1, top, CATTLE_BROWN)
+    m.set(u + 1, v + length + 1, top - 2, CATTLE_WHITE)
+    if scale:
+        m.set(u, v + length, top + 1, PLASTER_WHITE)
+        m.set(u + 2, v + length, top + 1, PLASTER_WHITE)
+    m.set(u + 1, v - 1, 3, CATTLE_BROWN)
+
+
+def flag(m, pole_u, v, y, length, colors, direction=1):
+    """A flag on a pole, flying along u: stripes top to bottom."""
+    for i, block in enumerate(colors):
+        m.box(pole_u + direction, v, y - i, pole_u + direction * length, v, y - i, block)
+
+
+def moving_parts():
+    """[(file name, model)], [manifest lines]"""
+    files, lines = {}, []
+
+    def part(building, name, pivot, motion, axis, a, b, draw):
+        c = Canvas()
+        draw(c)
+        files[building + '_' + name] = centered(c, pivot)
+        lines.append('%s %s_%s %d %d %d %s %s %g %g' % ((building, building, name) + tuple(pivot) + (motion, axis, a, b)))
+
+    def animal(name, draw):
+        c = Canvas()
+        draw(c)
+        files[name] = tight(c)
+
+    def wander(building, name, center, half, count):
+        for _ in range(count):
+            lines.append('%s %s %d %d 0 wander - %g %g' % (building, name, center[0], center[1], half[0], half[1]))
+
+    animal('sheep', lambda c: sheep_part(c, 0, 0))
+    animal('pig', lambda c: pig_part(c, 0, 0))
+    animal('cow', lambda c: cow_part(c, 0, 0))
+    animal('calf', lambda c: cow_part(c, 0, 0, 0))
+
+    # Flour mill: the sails turn (an X of four lattice sails with canvas)
+    def sails(c):
+        hub_u, hub_y, sail_v, length = 18.0, 44.0, 6, 19.0
+        c.box(16, sail_v, 42, 19, sail_v + 1, 45, TIMBER_DARK)
+        for u in range(-2, 39):
+            for y in range(24, 66):
+                du, dy = u + 0.5 - hub_u, y + 0.5 - hub_y
+                dist = (du * du + dy * dy) ** 0.5
+                if dist < 2.0 or dist > length:
+                    continue
+                for a, b in ((du, dy), (-du, dy)):
+                    along = (a + b) / 2 ** 0.5
+                    across = (a - b) / 2 ** 0.5
+                    if abs(across) < 0.8:
+                        c.set(u, sail_v, y, TIMBER_DARK)
+                    elif 0.8 <= across * (1 if along > 0 else -1) < 6.2 and abs(along) > 4:
+                        lattice = int(abs(along)) % 4 == 0 or abs(across) > 5.6
+                        c.set(u, sail_v, y, TIMBER_LIGHT if lattice else CANVAS)
+    part('flour_mill', 'sails', (18, 6, 44), 'spin', 'forward', 0.8, 0, sails)
+
+    # Iron mine: the headframe's wheel
+    def mine_wheel(c):
+        spokes(c, 18, 27, 35, 4, IRON, 'uy', 3)
+    part('iron_mine', 'wheel', (18, 27, 35), 'spin', 'forward', 1.6, 0, mine_wheel)
+
+    # Sawmill: the saw blade
+    def blade(c):
+        disc(c, 18, 16, 4, 2.6, IRON, 'uy')
+        for a, b in ((3, 0), (-3, 0), (0, 3), (0, -3)):
+            c.set(18 + a, 16, 4 + b, STEEL)
+    part('sawmill', 'blade', (18, 16, 4), 'spin', 'forward', 8.0, 0, blade)
+
+    # Lumberjack: the axe chops at the block
+    def axe(c):
+        c.box(27, 20, 2, 27, 20, 5, TIMBER_LIGHT)
+        c.box(27, 19, 5, 27, 21, 6, IRON)
+    part('lumberjack', 'axe', (27, 20, 2), 'swing', 'across', 4.0, 0.7, axe)
+
+    # Warehouse: the hoist's rope and hook go up and down
+    def hook(c):
+        c.box(23, 3, 21, 23, 3, 25, FENCE_WOOD)
+        c.box(23, 3, 19, 24, 3, 20, IRON)
+        crate(c, 22, 2, 16, 3)
+    part('warehouse', 'hook', (23, 3, 21), 'slide', 'up', 0.6, -6, hook)
+
+    # Harbor: the crane's arm swings over the pier with its load
+    def crane(c):
+        G = 6
+        c.box(28, 50, G + 14, 37, 50, G + 14, TIMBER_DARK)
+        c.box(29, 50, G + 8, 29, 50, G + 13, FENCE_WOOD)
+        crate(c, 28, 49, G + 5)
+    part('harbor', 'crane', (36, 50, 20), 'swing', 'up', 0.35, 0.9, crane)
+
+    # Marketplace: the well's bucket
+    def bucket(c):
+        c.box(23, 17, 6, 24, 18, 7, IRON)
+        c.box(23, 17, 8, 23, 17, 10, FENCE_WOOD)
+    part('marketplace', 'bucket', (23, 17, 8), 'slide', 'up', 0.7, -3, bucket)
+
+    # Fishery: the fish drying on the net frame sway
+    def fish(c):
+        G = 6
+        for u in range(24, 33, 3):
+            c.box(u, 12, G + 5, u, 12, G + 7, FISH_SILVER)
+        c.box(24, 12, G + 8, 32, 12, G + 8, FENCE_WOOD)
+    part('fishery', 'fish', (28, 12, 14), 'swing', 'across', 1.7, 0.3, fish)
+
+    # School: the flag flies, the bell swings
+    part('school', 'flag', (33, 8, 14), 'swing', 'up', 1.8, 0.45,
+         lambda c: flag(c, 33, 8, 15, 4, (AWNING_BLUE, AWNING_WHITE, AWNING_BLUE), -1))
+    def bell(c):
+        c.box(17, 22, 29, 18, 23, 31, BRASS)
+        c.box(17, 22, 32, 18, 23, 32, IRON)
+    part('school', 'bell', (17, 22, 32), 'swing', 'across', 2.5, 0.4, bell)
+
+    # Theatre: two flags over the portico
+    part('variety_theatre', 'flag_left', (9, 3, 40), 'swing', 'up', 1.6, 0.5,
+         lambda c: flag(c, 9, 3, 40, 5, (VELVET, BRASS, VELVET), 1))
+    part('variety_theatre', 'flag_right', (38, 3, 40), 'swing', 'up', 1.7, 0.5,
+         lambda c: flag(c, 38, 3, 40, 5, (VELVET, BRASS, VELVET), -1))
+
+    # Bakery: the pretzel sign swings on its bracket
+    def pretzel(c):
+        c.box(20, 7, 9, 22, 7, 11, BREAD)
+        c.set(21, 7, 10, AIR)
+        c.set(21, 7, 11, IRON)
+    part('bakery', 'sign', (21, 7, 12), 'swing', 'across', 1.6, 0.3, pretzel)
+
+    # Framework knitter: a spinning wheel by the door
+    def spinning_wheel(c):
+        spokes(c, 13, 3, 5, 3, TIMBER_LIGHT, 'vy', 3)
+    part('framework_knitter', 'wheel', (13, 3, 5), 'spin', 'across', 2.5, 0, spinning_wheel)
+
+    # Slaughterhouse: the hanging sausages sway
+    def sausages(c):
+        for u in range(5, 22, 2):
+            c.box(u, 5, 5, u, 5, 7, SAUSAGE)
+    part('slaughterhouse', 'sausages', (13, 5, 8), 'swing', 'across', 1.3, 0.2, sausages)
+
+    # Grain farm: a weathervane on the barn turns in the wind
+    def vane(c):
+        c.box(9, 22, 31, 14, 22, 31, IRON)
+        c.box(13, 21, 30, 14, 23, 32, IRON)
+        c.set(9, 22, 32, BRASS)
+        c.set(11, 22, 31, BRASS)
+    part('grain_farm', 'vane', (11, 22, 31), 'spin', 'up', 0.5, 0, vane)
+
+    # Wheat field: a crow circles over it
+    def crow(c):
+        c.box(27, 17, 13, 27, 18, 13, COAL)
+        c.box(25, 17, 14, 29, 17, 14, COAL)
+        c.set(27, 19, 13, BRASS)
+    part('wheat_field', 'crow', (17, 17, 13), 'spin', 'up', 0.7, 0, crow)
+
+    # Rendering works: paddles stir the vats
+    for i, cu in enumerate((26, 31)):
+        def paddle(c, cu=cu):
+            c.box(cu, 14, 6, cu, 14, 12, TIMBER_DARK)
+            c.box(cu - 1, 14, 7, cu + 1, 14, 7, TIMBER_LIGHT)
+        part('rendering_works', 'paddle_%d' % i, (cu, 14, 9), 'spin', 'up', 1.2 + 0.3 * i, 0, paddle)
+
+    # Soap factory: a turbine ventilator on the roof
+    def ventilator(c):
+        for y in range(36, 39):
+            for a, b in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                c.set(10 + a, 22 + b, y, STEEL if (y + a) % 2 else IRON)
+        c.set(10, 22, 39, IRON)
+    part('soap_factory', 'ventilator', (10, 22, 37), 'spin', 'up', 2.0, 0, ventilator)
+
+    # Clay pit: the bucket on the winch goes down into the water and up again
+    def clay_bucket(c):
+        c.box(14, 19, 2, 16, 21, 3, BARREL)
+        c.box(15, 20, 4, 15, 20, 8, FENCE_WOOD)
+    part('clay_pit', 'bucket', (15, 20, 4), 'slide', 'up', 0.6, 4, clay_bucket)
+
+    # Brick factory: a barrow of bricks goes along the drying shed
+    def barrow(c):
+        c.box(7, 1, 1, 9, 2, 2, TIMBER_LIGHT)
+        c.box(7, 1, 3, 9, 2, 3, BRICK_RED)
+        c.set(10, 1, 1, IRON)
+        c.box(5, 1, 1, 6, 1, 1, TIMBER_DARK)
+    part('brick_factory', 'barrow', (8, 1, 1), 'slide', 'across', 0.4, 18, barrow)
+
+    # Cattle farm: hay goes up into the loft
+    def hay_bale(c):
+        c.box(15, 16, 7, 17, 18, 9, HAY)
+        c.box(16, 17, 10, 16, 17, 11, FENCE_WOOD)
+    part('cattle_farm', 'hay', (16, 17, 9), 'slide', 'up', 0.5, 2, hay_bale)
+
+    # Furnace: a slag cart goes back and forth on the casting floor
+    def slag_cart(c):
+        c.box(13, 5, 1, 15, 8, 2, IRON)
+        c.box(14, 6, 3, 14, 7, 3, FIRE)
+        c.set(13, 5, 0, STEEL)
+        c.set(15, 8, 0, STEEL)
+    part('furnace', 'cart', (14, 6, 1), 'slide', 'forward', 0.5, 5, slag_cart)
+
+    # Steelworks and the sewing machine factory: the clock hands go round
+    part('steelworks', 'clock', (16, 13, 16), 'spin', 'forward', 0.3, 0, lambda c: c.box(16, 13, 16, 16, 13, 18, IRON))
+    part('sewing_machine_factory', 'clock', (17, 9, 34), 'spin', 'forward', 0.25, 0, lambda c: c.box(17, 9, 34, 17, 9, 36, IRON))
+    part('sewing_machine_factory', 'handwheel', (31, 4, 4), 'spin', 'across', 3.0, 0, lambda c: spokes(c, 31, 4, 4, 1, IRON, 'vy', 2))
+
+    # Cannery: a barrow of crates goes along the dock
+    def dock_barrow(c):
+        c.box(11, 9, 2, 13, 10, 3, TIMBER_LIGHT)
+        crate(c, 11, 9, 4, 2)
+        c.set(14, 9, 2, IRON)
+    part('cannery', 'barrow', (12, 9, 2), 'slide', 'across', 0.45, 8, dock_barrow)
+
+    # Worker houses: the lantern by the door sways
+    part('worker_house', 'lantern', (22, 6, 9), 'swing', 'across', 1.4, 0.25,
+         lambda c: (c.set(22, 6, 8, IRON), c.set(22, 6, 7, WINDOW_GLASS)))
+
+    # Animals walking about
+    wander('sheepfold', 'sheep', (16, 13), (8, 8), 5)
+    wander('pigsty', 'pig', (11, 13), (5, 6), 3)
+    wander('pasture', 'cow', (15, 16), (8, 7), 4)
+    wander('cattle_farm', 'calf', (22, 8), (3, 2), 1)
+    wander('pig_farm', 'pig', (7, 11), (2, 1), 1)
+    wander('sheep_farm', 'sheep', (9, 6), (3, 2), 1)
+    return files, lines
 
 
 def main():
@@ -1842,6 +2087,18 @@ def main():
         'cannery_1': cannery(),
         'sewing_machine_factory_1': sewing_machine_factory(),
     }
+    # The moving parts and their manifest are always written
+    files, lines = moving_parts()
+    parts_dir = os.path.join(out, 'parts')
+    os.makedirs(parts_dir, exist_ok=True)
+    for name, model in files.items():
+        model.save(os.path.join(parts_dir, name + '.vox'))
+    with open(os.path.join(parts_dir, 'parts.txt'), 'w') as manifest:
+        manifest.write('# Moving parts of buildings: see moving_parts() in tools/building_models/generate.py\n')
+        manifest.write('# <building model> <part file> <u> <v> <y> <motion> <axis> <a> <b>\n')
+        manifest.write('\n'.join(lines) + '\n')
+    print('%d moving parts, %d placements -> %s' % (len(files), len(lines), parts_dir))
+
     # Only the models named on the command line, if any (keeps hand edits to the others)
     wanted = sys.argv[1:]
     for name, model in models.items():

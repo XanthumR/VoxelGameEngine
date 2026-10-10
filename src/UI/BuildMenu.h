@@ -24,7 +24,7 @@ public:
         bool selected = false;
     };
     struct Tab {
-        Rml::String name;
+        Rml::String name, icon;
         bool locked = false;
     };
 

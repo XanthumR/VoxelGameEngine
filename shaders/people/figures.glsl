@@ -14,6 +14,7 @@ layout(local_size_x = 64) in;
 
 // Block IDs, as in src/World/BlockTypes.h (colored in render/shade.comp)
 const int SMOKE_LIGHT = 58;
+const int SMOKE_DARK = 182; // Coal smoke of heavy industry
 const int FIGURE_FIRST = 47; // The figure blocks; only smoke is drawn now, but any left over is erased
 const int FIGURE_LAST = 59;
 const int WATER_ID = 35;
@@ -26,7 +27,7 @@ uniform int numFigures;
 uniform int seaLevel; // Erased voxels at or below it become water again
 
 bool isFigure(int id) {
-    return id >= FIGURE_FIRST && id <= FIGURE_LAST;
+    return (id >= FIGURE_FIRST && id <= FIGURE_LAST) || id == SMOKE_DARK;
 }
 
 uint hash(uint x) {
@@ -59,7 +60,7 @@ void main() {
                 // Only some of the cube is filled (density 0-15): the puff breaks up as it ages
                 uint h = hash(seed * 7919u + uint((x + 2) + (y + 2) * 5 + (z + 2) * 25));
                 if (int(h & 15u) >= density || !(current == 0 || isFigure(current))) continue;
-                storeVoxel(pool, c, float(SMOKE_LIGHT) / 255.0);
+                storeVoxel(pool, c, float((look & 64) != 0 ? SMOKE_DARK : SMOKE_LIGHT) / 255.0);
                 markBrick(pool, b);
             }
         }

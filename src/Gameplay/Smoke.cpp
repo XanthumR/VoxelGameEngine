@@ -25,6 +25,21 @@ uint32_t SmokeSystem::Random() {
     return m_RandomState;
 }
 
+// Heavy industry burns coal: its chimneys smoke black
+bool SmokeSystem::BlackSmoke(uint16_t type) {
+    switch (type) {
+    case BUILDING_RENDERING_WORKS:
+    case BUILDING_SOAP_FACTORY:
+    case BUILDING_BRICK_FACTORY:
+    case BUILDING_CHARCOAL_KILN:
+    case BUILDING_FURNACE:
+    case BUILDING_STEELWORKS:
+    case BUILDING_CANNERY:
+    case BUILDING_SEWING_MACHINE_FACTORY: return true;
+    default: return false;
+    }
+}
+
 bool SmokeSystem::InUse(const GameObjectRegistry& objects, GameObjectId id) {
     switch (BUILDING_TYPES[objects.Building(id).type].role) {
     case BuildingRole::Residence: return objects.Residence(id).residents > 0;
@@ -58,7 +73,7 @@ void SmokeSystem::Update(float deltaTime, const GameObjectRegistry& objects, con
         if (!model || model->smokeEmitters.empty()) continue;
         const VoxelAnchorComponent& anchor = objects.Anchor(id);
         glm::vec2 center = glm::vec2(anchor.origin.x, anchor.origin.z) + glm::vec2(anchor.footprint) * 0.5f;
-        bool active = InUse(objects, id) && glm::length(center - focusColumn) <= maxDistance;
+        bool active = (m_AlwaysInUse || InUse(objects, id)) && glm::length(center - focusColumn) <= maxDistance;
 
         const BuildingType& type = BUILDING_TYPES[building.type];
         float interval = building.type == BUILDING_SLAUGHTERHOUSE ? PUFF_INTERVAL * 0.5f : PUFF_INTERVAL; // The smokehouse
@@ -80,7 +95,7 @@ void SmokeSystem::Update(float deltaTime, const GameObjectRegistry& objects, con
             glm::ivec2 column = RotateToFootprint(marker.x, marker.y, building.rotation, size);
             glm::vec3 position((float)(anchor.origin.x + column.x), (float)(BUILD_GROUND_Y - type.belowGround + marker.z + 1),
                 (float)(anchor.origin.z + column.y));
-            m_Puffs.push_back({ position, 0.0f, (uint8_t)(Random() & 255) }); // Within the reserve
+            m_Puffs.push_back({ position, 0.0f, (uint8_t)(Random() & 255), BlackSmoke(building.type) }); // Within the reserve
         }
     }
 }
@@ -102,6 +117,6 @@ void SmokeSystem::AppendFigures(std::vector<Figure>& out) const {
         int size = life < 0.15f ? 1 : life < 0.4f ? 2 : 3;
         int density = 15 - (int)(12.0f * life); // Thins out as it ages
         glm::ivec3 voxel = glm::ivec3(glm::floor(puff.position + 0.5f));
-        out.push_back({ glm::ivec4(voxel, Figure::PackPuff(size, density, puff.seed)) });
+        out.push_back({ glm::ivec4(voxel, Figure::PackPuff(size, density, puff.seed, puff.dark)) });
     }
 }

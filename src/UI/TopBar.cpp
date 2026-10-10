@@ -1,6 +1,8 @@
 #include "UI/TopBar.h"
 
+#include "Economy/IslandEconomy.h"
 #include "Economy/Treasury.h"
+#include "UI/InfoLines.h"
 
 #include <RmlUi/Core.h>
 
@@ -17,6 +19,15 @@ bool TopBar::Init(Rml::Context* context) {
     model.Bind("losing", &m_Losing);
     model.Bind("speed", &m_Speed);
     model.Bind("routes_open", &m_RoutesOpen);
+    if (Rml::StructHandle<Tier> tier = model.RegisterStruct<Tier>()) {
+        tier.RegisterMember("icon", &Tier::icon);
+        tier.RegisterMember("name", &Tier::name);
+        tier.RegisterMember("residents", &Tier::residents);
+        tier.RegisterMember("shown", &Tier::shown);
+    }
+    model.RegisterArray<std::vector<Tier>>();
+    model.Bind("tiers", &m_Tiers);
+    for (int tier = 0; tier < TIER_COUNT; tier++) m_Tiers.push_back({ TierIcon(tier), POPULATION_TIERS[tier].name, 0, tier == 0 });
     model.BindEventCallback("set_speed", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& arguments) {
         if (!arguments.empty()) m_SpeedRequest = arguments[0].Get<int>();
     });
@@ -33,7 +44,7 @@ void TopBar::SetVisible(bool visible) {
     else m_Document->Hide();
 }
 
-void TopBar::Update(const Treasury& treasury, int speed, bool routesOpen) {
+void TopBar::Update(const Treasury& treasury, const IslandEconomyManager& economy, int speed, bool routesOpen) {
     char text[32];
     int net = treasury.IncomePerMinute() - treasury.UpkeepPerMinute();
     std::snprintf(text, sizeof(text), "%lld", (long long)treasury.Coins());
@@ -54,6 +65,17 @@ void TopBar::Update(const Treasury& treasury, int speed, bool routesOpen) {
     set(m_Losing, net < 0, "losing");
     set(m_Speed, speed, "speed");
     set(m_RoutesOpen, routesOpen, "routes_open");
+
+    // Residents per tier on all islands; a tier shows once it has any and stays
+    for (int tier = 0; tier < TIER_COUNT; tier++) {
+        int residents = 0;
+        for (size_t i = 0; i < economy.IslandSlotCount(); i++) residents += economy.IslandAt(i).population[tier];
+        Tier& entry = m_Tiers[tier];
+        if (entry.residents == residents && (entry.shown || residents == 0)) continue;
+        entry.residents = residents;
+        entry.shown = entry.shown || residents > 0;
+        m_Model.DirtyVariable("tiers");
+    }
 }
 
 int TopBar::TakeSpeedRequest() {

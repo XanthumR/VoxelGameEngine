@@ -81,6 +81,7 @@ set(LOGIC_SOURCES
     src/Economy/PopulationSystem.cpp
     src/Economy/Production.cpp
     src/Economy/Treasury.cpp
+    src/Gameplay/BuildingAnimations.cpp
     src/Gameplay/Carts.cpp
     src/Gameplay/FigureModels.cpp
     src/Gameplay/FishingBoats.cpp

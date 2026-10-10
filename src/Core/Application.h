@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Core/LaunchOptions.h"
+#include "imgui.h"
 #include "Gameplay/BuildTool.h"
+#include "Gameplay/BuildingAnimations.h"
 #include "Gameplay/RoadTool.h"
 #include "Gameplay/Carts.h"
 #include "Gameplay/FishingBoats.h"
@@ -54,6 +56,7 @@ private:
 
     bool Init();
     void Spawn();
+    void PlaceShowcase();
     void RunFrame(double frameStartTime, double frameSeconds, float deltaTime);
     void HandleKeys(float deltaTime);
     void UpdatePicking();
@@ -125,6 +128,9 @@ private:
     std::vector<Figure> m_Figures; // This frame's smoke puffs, reserved at setup
     std::vector<VoxelObject> m_VoxelObjects; // This frame's walkers, carts and boats, reserved at setup
     int m_CartModelBase = 0; // First cart model (FigureModels)
+    BuildingAnimations m_Animations; // Moving parts of buildings (sails, signs, animals)
+    ImDrawData m_ImGuiUnderUi, m_ImGuiOverUi; // ImGui's frame split around the game UI
+    int m_PartModelBase = 0;         // Their first model
     DebugOverlay m_Overlay;
     GameUi m_Ui;
     TopBar m_TopBar;

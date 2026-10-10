@@ -12,7 +12,10 @@
 //   --screenshot FILE SECONDS  save the window as a PPM after SECONDS, then quit
 //   --no-vsync                 draw as fast as possible (for measuring: with vsync the GPU idles,
 //                              clocks down and its per-pass times in F3 stretch)
-// The last three make runs reproducible, for before/after screenshot comparisons.
+//   --showcase                 place every building type round the spawn (farms with their modules),
+//                              to look at the models without building them by hand, and start
+//                              with 100000 coins
+// --fixed-time, --camera and --screenshot make runs reproducible, for before/after screenshot comparisons.
 struct LaunchOptions {
     int renderDistance = 24;
     float renderScale = 1.0f;
@@ -24,6 +27,7 @@ struct LaunchOptions {
     std::string screenshotPath;
     double screenshotDelay = -1.0; // < 0: no screenshot
     bool vsync = true;
+    bool showcase = false;
 
     static LaunchOptions Parse(int argc, char** argv);
 };

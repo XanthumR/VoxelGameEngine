@@ -10,7 +10,8 @@
 
 namespace {
 
-const char* FONTS[] = { "assets/ui/fonts/Monocraft.ttf", "assets/ui/fonts/Monocraft-Bold.ttf" };
+// Variable fonts: RmlUi loads each of their weights (Cinzel for titles, Libre Baskerville for text)
+const char* FONTS[] = { "assets/ui/fonts/LibreBaskerville.ttf", "assets/ui/fonts/Cinzel.ttf" };
 
 // The GLFW system interface, with RmlUi's warnings and errors (a broken document) on the console
 class LoggingSystemInterface : public SystemInterface_GLFW {

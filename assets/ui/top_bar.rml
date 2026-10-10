@@ -3,31 +3,49 @@
     <title>Top bar</title>
     <link type="text/rcss" href="theme.rcss"/>
     <style>
+        /* A ribbon hanging from the top edge, as in Anno 1800 */
         body {
             position: absolute;
-            top: 8dp;
+            top: 0;
             left: 50%;
             transform: translateX(-50%);
-            padding: 6dp 10dp;
+            padding: 5dp 18dp 6dp;
+            border-top-width: 0;
+            border-radius: 0 0 8dp 8dp;
         }
-        #treasury { position: relative; padding-right: 6dp; }
-        #coins { font-size: 18dp; }
+        .section { margin: 0 4dp; }
+        #treasury { position: relative; }
+        #coins { font-family: Cinzel; font-size: 19dp; color: #f1d48a; }
+        #coins.bad { color: #ec6b55; }
         /* Taxes and upkeep under the coins while hovered */
-        #treasury .tooltip { display: none; position: absolute; top: 100%; left: 0; margin-top: 8dp; white-space: nowrap; }
+        #treasury .tooltip { display: none; position: absolute; top: 100%; left: 0; margin-top: 10dp; white-space: nowrap; }
         #treasury:hover .tooltip { display: block; }
-        .divider { width: 2dp; height: 24dp; background-color: #b8955c; }
-        .speed { width: 38dp; padding: 4dp 0; }
+        .divider { width: 1dp; height: 28dp; margin: 0 8dp; decorator: linear-gradient(to bottom, #a8874a00, #a8874a, #a8874a00); }
+        .tier { position: relative; margin-right: 12dp; }
+        .tier img { margin-right: 4dp; }
+        .tier .count { font-family: Cinzel; font-weight: bold; font-size: 15dp; color: #f1e7cf; }
+        .tier .tooltip { display: none; position: absolute; top: 100%; left: 0; margin-top: 10dp; white-space: nowrap; }
+        .tier:hover .tooltip { display: block; }
+        .speed { width: 36dp; padding: 3dp 0; }
     </style>
 </head>
 <body class="panel row" data-model="top_bar">
-    <div id="treasury" class="row">
+    <div id="treasury" class="row section">
         <img class="icon" src="icons/coin.tga"/>
-        <span id="coins" class="value" data-class-bad="in_debt">{{coins}}</span>
+        <span id="coins" data-class-bad="in_debt">{{coins}}</span>
         <span data-class-good="!losing" data-class-bad="losing">{{net}}</span>
         <div class="tooltip">
             <div>Taxes  <span class="good">+{{taxes}}</span> / min</div>
             <div>Upkeep <span class="bad">-{{upkeep}}</span> / min</div>
         </div>
+    </div>
+    <div class="divider"/>
+    <div class="row section">
+        <div class="slot" data-for="tier : tiers"><div class="row tier" data-if="tier.shown">
+            <img class="icon" data-attr-src="tier.icon"/>
+            <span class="count">{{tier.residents}}</span>
+            <div class="tooltip">{{tier.name}}</div>
+        </div></div>
     </div>
     <div class="divider"/>
     <button class="speed" data-class-selected="speed == 0" data-event-click="set_speed(0)">||</button>

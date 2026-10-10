@@ -11,8 +11,10 @@
             min-width: 560dp;
             max-width: 1440dp;
         }
-        .tabs .tab { width: 130dp; flex: 0 0 auto; }
-        .tabs .tab.locked { color: #8a7a60; }
+        .tabs .tab { width: 150dp; flex: 0 0 auto; display: flex; flex-direction: row; align-items: center; justify-content: center; }
+        .tabs .tab img { margin-right: 6dp; }
+        .tabs .tab.locked { color: #6f6c66; border-color: #3d382c; }
+        .tabs .tab.locked img { image-color: #ffffff55; }
         .tab-hint { margin-left: 8dp; }
         #entries { display: flex; flex-direction: row; flex-wrap: wrap; align-items: stretch; }
         /* One building: name on top, its cost below, the hotkey in the corner */
@@ -23,16 +25,20 @@
             height: 100%;
             padding: 6dp 6dp;
             text-align: left;
+            font-family: "Libre Baskerville";
+            font-weight: normal;
+            font-size: 12dp;
         }
         .slot { display: block; margin: 0 6dp 6dp 0; }
         .entry .picture { display: block; width: 104dp; height: 78dp; margin: 0 auto 2dp; }
-        .entry .name { display: block; margin-bottom: 4dp; white-space: normal; }
+        .entry .picture { decorator: none; }
+        .entry .name { display: block; margin-bottom: 4dp; white-space: normal; font-family: Cinzel; font-weight: bold; font-size: 12dp; }
         .entry .cost { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; font-weight: normal; }
         /* An icon and its amount wrap together */
         .entry .cost .pair { display: flex; flex-direction: row; align-items: center; margin-right: 8dp; white-space: nowrap; }
         .entry .cost img { margin-right: 3dp; }
-        .entry .hotkey { position: absolute; top: 4dp; right: 6dp; font-size: 12dp; color: #d9c49a; }
-        .entry.selected .hotkey { color: #5a3d16; }
+        .entry .hotkey { position: absolute; top: 4dp; right: 6dp; font-size: 11dp; color: #a8874a; }
+        .entry.selected .hotkey { color: #3a2a10; }
         #cancel { align-self: center; }
         #status { margin-top: 8dp; }
         #status .hint { margin-left: 12dp; }
@@ -42,7 +48,7 @@
     <div class="row">
         <div class="tabs">
             <div class="tab" data-for="t, i : tabs" data-class-selected="tab == i" data-class-locked="t.locked"
-                 data-event-click="set_tab(i)">{{t.name}}</div>
+                 data-event-click="set_tab(i)"><img class="icon small" data-attr-src="t.icon"/><span>{{t.name}}</span></div>
         </div>
         <span class="tab-hint muted">[Tab]</span>
     </div>

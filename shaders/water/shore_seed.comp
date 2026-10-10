@@ -18,10 +18,11 @@ const int MAX_DEPTH = 24;
 // sea must not count as land, or surf would form around wherever it was at the last rebuild
 const int FIGURE_FIRST = 47;
 const int FIGURE_LAST = 59;
+const int SMOKE_DARK = 182;
 
 bool isWaterVoxel(ivec3 p) {
     int id = int(getVoxelVal(p) * 255.0 + 0.5);
-    return id == WATER_ID || (id >= FIGURE_FIRST && id <= FIGURE_LAST);
+    return id == WATER_ID || (id >= FIGURE_FIRST && id <= FIGURE_LAST) || id == SMOKE_DARK;
 }
 
 void main() {

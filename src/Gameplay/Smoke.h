@@ -37,15 +37,19 @@ public:
 
     // Whether a building is lived in or working, so its chimneys smoke
     static bool InUse(const GameObjectRegistry& objects, GameObjectId id);
+    static bool BlackSmoke(uint16_t type); // Heavy industry: coal smoke
+    void SetAlwaysInUse(bool always) { m_AlwaysInUse = always; } // Every chimney smokes (--showcase)
 
 private:
     struct Puff {
         glm::vec3 position; // Voxels
         float age;          // Seconds
         uint8_t seed;
+        bool dark = false;  // Coal smoke (heavy industry)
     };
 
     uint32_t Random();
+    bool m_AlwaysInUse = false;
 
     std::vector<Puff> m_Puffs;
     std::vector<float> m_Timers; // Per object slot and emitter: seconds until the next puff, < 0 = not started

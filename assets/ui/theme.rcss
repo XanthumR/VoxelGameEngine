@@ -1,47 +1,48 @@
-/* The game UI's look, shared by every document: parchment panels framed in dark wood with a brass
-   line, a blocky pixel font (Monocraft) to match the voxels, wooden buttons. Sizes are in dp so the UI scales with the display. */
+/* The game UI's look, shared by every document, after Anno 1800's: dark slate panels with a fine
+   gold frame, titles in Roman capitals (Cinzel), text in a book serif (Libre Baskerville), gold for
+   what matters, dark buttons rimmed in gold. Sizes are in dp so the UI scales with the display. */
 
 /* RmlUi has no built-in styles: block elements first */
 body, div, p, h1, h2, h3, header, footer, section { display: block; }
 body {
-    font-family: Monocraft;
-    font-size: 14dp;
-    color: #3b2a1a;
+    font-family: "Libre Baskerville";
+    font-size: 13dp;
+    color: #e8dfca;
 }
-h1, h2, h3 { font-weight: bold; color: #4a2f17; }
+h1, h2, h3 { font-family: Cinzel; font-weight: bold; color: #dcbc6e; }
 h1 { font-size: 24dp; }
 h2 { font-size: 18dp; margin-bottom: 4dp; }
-h3 { font-size: 15dp; margin: 6dp 0 2dp; }
+h3 { font-size: 14dp; margin: 8dp 0 3dp; }
 p { margin-bottom: 6dp; }
 strong { font-weight: bold; }
 
-/* --- Panels --- */
+/* --- Panels: slate, a gold hairline, an inner bevel and a soft shadow --- */
 .panel {
     padding: 10dp 14dp 12dp;
-    border: 4dp #4a3020;
-    border-radius: 7dp;
-    decorator: linear-gradient(to bottom, #f4e9cf, #e4d0a6);
-    box-shadow: #c9a24a 0 0 0 2dp inset, #00000080 0 6dp 18dp;
+    border: 1dp #a8874a;
+    border-radius: 3dp;
+    decorator: linear-gradient(to bottom, #2b333dF2, #1a1f26F2);
+    box-shadow: #00000099 0 8dp 22dp, #f0d89a1a 0 1dp 0 0 inset, #0b0e12 0 0 0 3dp inset, #a8874a66 0 0 0 4dp inset;
 }
-/* A title strip of dark wood across the panel's top */
+/* The title: gold Roman capitals on a darker band with a gold rule under it */
 .panel .title {
-    margin: -10dp -14dp 8dp;
-    padding: 5dp 14dp 6dp;
-    font-family: Monocraft;
+    margin: -10dp -14dp 10dp;
+    padding: 7dp 14dp 6dp;
+    font-family: Cinzel;
     font-weight: bold;
-    font-size: 18dp;
-    color: #f2d98c;
-    decorator: linear-gradient(to bottom, #6b4527, #4a3020);
-    border-bottom: 2dp #c9a24a;
+    font-size: 16dp;
+    color: #e2c275;
+    decorator: linear-gradient(to bottom, #151a20, #0f1317);
+    border-bottom: 1dp #a8874a;
 }
-.separator { height: 2dp; margin: 6dp 0; background-color: #b8955c80; }
+.separator { height: 1dp; margin: 8dp 0; decorator: linear-gradient(to right, #a8874a00, #a8874a, #a8874a00); }
 
 /* --- Text --- */
-.muted { color: #7a6650; }
-.good { color: #2f7a3a; }
-.warn { color: #b06a10; }
-.bad { color: #a8321e; }
-.value { font-weight: bold; }
+.muted { color: #9c9584; }
+.good { color: #9bcf6a; }
+.warn { color: #e8b04a; }
+.bad { color: #ec6b55; }
+.value { font-weight: bold; color: #f1e7cf; }
 
 /* --- Rows of things side by side --- */
 .row { display: flex; flex-direction: row; align-items: center; }
@@ -55,94 +56,96 @@ img.icon.small { width: 16dp; height: 16dp; }
 .good-amount { display: inline-flex; flex-direction: row; align-items: center; margin-right: 10dp; }
 .good-amount img { margin-right: 3dp; }
 
-/* --- Buttons --- */
+/* --- Buttons: dark, rimmed in gold, lit on hover --- */
 button {
     display: inline-block;
     padding: 5dp 12dp;
     text-align: center;
     white-space: nowrap;
+    font-family: Cinzel;
     font-weight: bold;
-    color: #f6ebd0;
-    border: 2dp #2f1e10;
-    border-radius: 4dp;
-    decorator: linear-gradient(to bottom, #8d6038, #6a4424);
-    box-shadow: #d7b25a60 0 1dp 0 0 inset;
+    font-size: 13dp;
+    color: #e8dfca;
+    border: 1dp #a8874a;
+    border-radius: 2dp;
+    decorator: linear-gradient(to bottom, #3a4552, #232a33);
+    box-shadow: #ffffff14 0 1dp 0 0 inset;
     cursor: pointer;
 }
-button:hover { decorator: linear-gradient(to bottom, #a3713f, #7c5029); color: #fff6dc; }
-button:active { decorator: linear-gradient(to bottom, #5e3c1f, #744a28); }
-/* A toggle that is on (the game speed in use, an open window) */
-button.selected { border-color: #6b4a10; decorator: linear-gradient(to bottom, #e7c062, #c0912f); color: #2f1e10; }
-button.primary { border-color: #6b4a10; decorator: linear-gradient(to bottom, #d9ae4a, #b0832a); color: #2f1e10; }
-button.primary:hover { decorator: linear-gradient(to bottom, #e8c060, #c29436); }
+button:hover { decorator: linear-gradient(to bottom, #4a5767, #2c3540); color: #fff3d6; border-color: #e2c275; }
+button:active { decorator: linear-gradient(to bottom, #1b2027, #2a323c); }
+/* A toggle that is on (the game speed in use, an open window), and the main action */
+button.selected, button.primary { color: #1e1a12; border-color: #f0d89a; decorator: linear-gradient(to bottom, #e9c97c, #b38b3e); }
+button.primary:hover { decorator: linear-gradient(to bottom, #f3d68e, #c39a48); }
 button:disabled, button[disabled], button.disabled {
-    color: #b9a98e;
-    decorator: linear-gradient(to bottom, #8a7a64, #6f6252);
+    color: #6f6c66;
+    border-color: #4a4538;
+    decorator: linear-gradient(to bottom, #2a2f36, #1e2228);
     cursor: unavailable;
 }
 
 /* Load / unload toggles (trade routes) */
-button.load { border-color: #1f4a22; decorator: linear-gradient(to bottom, #4f9a4a, #357032); }
-button.unload { border-color: #5a3108; decorator: linear-gradient(to bottom, #d08a1e, #a5650f); }
+button.load { color: #f1f7e8; border-color: #8fc76a; decorator: linear-gradient(to bottom, #4c7a35, #2f5321); }
+button.unload { color: #fff4e0; border-color: #e8b04a; decorator: linear-gradient(to bottom, #9a6a1c, #6b4510); }
 
-/* --- Tabs: a row of buttons, the selected one lit in brass --- */
+/* --- Tabs: dark plaques, the open one gold --- */
 .tabs { display: flex; flex-direction: row; margin-bottom: 8dp; }
 .tab {
     flex: 1;
-    padding: 4dp 6dp;
+    padding: 5dp 8dp;
     margin-right: 4dp;
     text-align: center;
     white-space: nowrap;
-    font-family: Monocraft;
+    font-family: Cinzel;
     font-weight: bold;
     font-size: 13dp;
-    color: #e8d6b0;
-    border: 2dp #2f1e10;
-    border-radius: 4dp 4dp 0 0;
-    decorator: linear-gradient(to bottom, #6b4527, #4a3020);
+    color: #cfc4ab;
+    border: 1dp #6e5a33;
+    border-radius: 2dp;
+    decorator: linear-gradient(to bottom, #2b333d, #1a1f26);
     cursor: pointer;
 }
 .tab:last-child { margin-right: 0; }
-.tab:hover { color: #fff1cc; }
-.tab.selected { color: #2f1e10; decorator: linear-gradient(to bottom, #e7c062, #c0912f); }
+.tab:hover { color: #fff3d6; border-color: #e2c275; }
+.tab.selected { color: #1e1a12; border-color: #f0d89a; decorator: linear-gradient(to bottom, #e9c97c, #b38b3e); }
 
 /* --- Bars: need supply, productivity, cycle progress --- */
 progress {
     display: block;
     width: 100%;
-    height: 10dp;
-    border: 1dp #4a3020;
-    border-radius: 3dp;
-    background-color: #00000030;
+    height: 8dp;
+    border: 1dp #5d4b2a;
+    border-radius: 1dp;
+    background-color: #0b0e12;
 }
-progress fill { border-radius: 2dp; background-color: #4f9a4a; }
-progress.warn fill { background-color: #d08a1e; }
-progress.bad fill { background-color: #b8432a; }
+progress fill { decorator: linear-gradient(to bottom, #a6d66f, #5f9a36); }
+progress.warn fill { decorator: linear-gradient(to bottom, #f2c35d, #b9842a); }
+progress.bad fill { decorator: linear-gradient(to bottom, #f07b62, #a63a26); }
 
 /* --- Info rows (InfoLines): icon, text, a value on the right, maybe a bar --- */
-.line { margin-bottom: 3dp; }
+.line { margin-bottom: 4dp; }
 .line .row > * { margin-right: 6dp; }
-.line .heading { font-weight: bold; color: #4a2f17; }
-.line progress { height: 6dp; margin-top: 2dp; margin-bottom: 2dp; }
+.line .heading { font-family: Cinzel; font-weight: bold; color: #dcbc6e; }
+.line progress { height: 5dp; margin-top: 2dp; margin-bottom: 2dp; }
 /* A smaller panel (tooltips) */
-.panel.compact { padding: 6dp 10dp 8dp; font-size: 13dp; }
-.panel.compact .title { margin: -6dp -10dp 6dp; padding: 3dp 10dp 4dp; font-size: 15dp; }
+.panel.compact { padding: 6dp 10dp 8dp; font-size: 12dp; }
+.panel.compact .title { margin: -6dp -10dp 6dp; padding: 5dp 10dp 4dp; font-size: 14dp; }
 
-/* --- Scrollbars (RmlUi draws only styled ones): a wooden bar in a faint track --- */
-scrollbarvertical { width: 10dp; margin-left: 4dp; }
-scrollbarvertical slidertrack { background-color: #00000020; border-radius: 4dp; }
-scrollbarvertical sliderbar { background-color: #8d6038; border-radius: 4dp; }
-scrollbarvertical sliderbar:hover { background-color: #a3713f; }
+/* --- Scrollbars (RmlUi draws only styled ones): a gold bar in a dark track --- */
+scrollbarvertical { width: 8dp; margin-left: 4dp; }
+scrollbarvertical slidertrack { background-color: #0b0e12; border-radius: 3dp; }
+scrollbarvertical sliderbar { background-color: #8a6f3c; border-radius: 3dp; }
+scrollbarvertical sliderbar:hover { background-color: #c9a55a; }
 scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; height: 0; }
 
 /* --- Tooltips: a small dark card near the cursor --- */
 .tooltip {
     padding: 6dp 10dp;
-    font-size: 13dp;
-    color: #f2e6c8;
-    background-color: #2a1c10ee;
-    border: 1dp #c9a24a;
-    border-radius: 4dp;
-    box-shadow: #00000080 0 3dp 10dp;
+    font-size: 12dp;
+    color: #e8dfca;
+    background-color: #12161bF2;
+    border: 1dp #a8874a;
+    border-radius: 2dp;
+    box-shadow: #00000099 0 4dp 12dp;
 }
-.tooltip .muted { color: #bfae8c; }
+.tooltip .muted { color: #9c9584; }
