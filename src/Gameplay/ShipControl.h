@@ -29,6 +29,7 @@ public:
 
     ShipId Selected() const { return m_Selected; }
     void Deselect() { m_Selected = INVALID_SHIP; }
+    void Select(ShipId id) { m_Selected = id; }
     bool LastOrderFailed() const { return m_OrderFailed; }
 
 private:

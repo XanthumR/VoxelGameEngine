@@ -40,6 +40,8 @@ void Simulation::FixedUpdate(float tickSeconds) {
     m_Ships.Update(m_Objects, m_Occupancy, m_Economy);
     // The stock trends of the islands' goods
     m_Economy.RecordTrends(m_TickCount);
+    // What the player is told about
+    m_Notifications.Update(m_Objects, m_Economy, m_Ships, m_Treasury, m_TickCount);
 
     m_TickCount++;
     m_SimulationSeconds += tickSeconds;

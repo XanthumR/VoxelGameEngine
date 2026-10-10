@@ -98,6 +98,7 @@ public:
     // The building clicked with nothing selected (its panel is open); INVALID when none
     GameObjectId InspectedBuilding() const { return m_InspectedBuilding; }
     void ClearInspection() { m_InspectedBuilding = INVALID_GAME_OBJECT; }
+    void Inspect(GameObjectId id) { m_InspectedBuilding = id; } // Opens its object menu (a notification clicked)
 
     // Producers: how the previewed spot does on the chain's location rule, and the tiles that count
     bool HasLocationPreview() const { return m_HasLocation; }

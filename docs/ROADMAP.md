@@ -812,6 +812,7 @@ Milestone 7 moved the UI to RmlUi and the last restyle gave it Anno 1800's look 
 **U5. Notifications**
 - A `NotificationSystem` in the simulation: events with a kind, an island and a place, deduplicated and rate-limited (one per kind and building a minute): a producer missing an input or without workers, a house about to downgrade, storage full, a ship idle or arrived, a tier reached, coins running out.
 - A feed down the right side: icon, one line, fades after 20 s; clicking moves the camera there and selects the building.
+- Done: `src/Simulation/Notifications.h` (in the simulation, deterministic; the feed reads them by sequence number) and `src/UI/NotificationFeed.h`. A ship notifies only when it docks while on no route (routes dock all the time). Tests: a lasting problem told once, a tier reached, the treasury.
 
 **U6. Statistics**
 - Per island and good, production and consumption per minute (counters in `ProductionSystem` and `PopulationSystem`, smoothed); per tier the residents; the income breakdown (taxes per tier, upkeep per building type).

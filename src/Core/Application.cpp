@@ -174,7 +174,7 @@ bool Application::Init() {
     }
 
     // The game UI (RmlUi); Dear ImGui stays for the debug windows
-    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context()) || !m_IslandPanel.Init(m_Ui.Context()) ||
+    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context()) || !m_IslandPanel.Init(m_Ui.Context()) || !m_NotificationFeed.Init(m_Ui.Context()) ||
         !m_BuildingInfo.Init(m_Ui.Context()) || !m_ShipPanel.Init(m_Ui.Context()) || !m_TradeRoutes.Init(m_Ui.Context())) {
         std::cout << "Failed to initialize the game UI (RmlUi)" << std::endl;
         return false;
@@ -495,6 +495,12 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (m_TopBar.TakeRoutesToggle()) m_RoutesOpen = !m_RoutesOpen;
     m_BuildMenu.ApplyRequests(m_BuildTool);
     m_BuildingInfo.ApplyRequests(m_Simulation, m_BuildTool);
+    // A notification clicked: the camera goes there, its building opens or its ship is selected
+    if (Notification clicked; m_NotificationFeed.TakeClick(clicked) && clicked.located) {
+        m_StrategyCamera.PanTo(glm::vec3((float)clicked.column.x, (float)(SEA_LEVEL + ISLAND_HEIGHT), (float)clicked.column.y) / VOXELS_PER_UNIT);
+        if (clicked.ship != INVALID_SHIP && m_Simulation.Ships().IsAlive(clicked.ship)) m_ShipControl.Select(clicked.ship);
+        else if (m_Simulation.Objects().IsAlive(clicked.building)) m_BuildTool.Inspect(clicked.building);
+    }
     m_ShipPanel.ApplyRequests(m_Simulation, m_ShipControl);
     if (!m_TradeRoutes.ApplyRequests(m_Simulation, m_ShipControl.Selected())) m_RoutesOpen = false;
 
@@ -544,6 +550,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     glm::vec2 cursor((float)cursorX * m_WindowWidth / std::max(1, windowWidth), (float)cursorY * m_WindowHeight / std::max(1, windowHeight));
     m_BuildMenu.Update(m_BuildTool, m_Simulation, cursor, glm::ivec2(m_WindowWidth, m_WindowHeight));
     m_IslandPanel.Update(m_PanelIsland, m_Simulation.Economy(), strategy);
+    m_NotificationFeed.SetVisible(strategy);
+    m_NotificationFeed.Update(m_Simulation, glfwGetTime());
     {
         // The hovered building's tooltip, unless the build tool has a selection or its panel is open
         GameObjectId hovered = m_BuildTool.HoveredBuilding();

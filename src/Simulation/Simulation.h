@@ -11,6 +11,7 @@
 #include "Simulation/Placement.h"
 #include "Simulation/RoadNetwork.h"
 #include "Simulation/Ships.h"
+#include "Simulation/Notifications.h"
 #include "Simulation/TreeRegistry.h"
 
 #include <cstdint>
@@ -49,6 +50,7 @@ public:
     const Treasury& Coins() const { return m_Treasury; }
     const ProductionSystem& Production() const { return m_Production; }
     const PopulationSystem& Population() const { return m_Population; }
+    const NotificationSystem& Notifications() const { return m_Notifications; }
 
     // Everything placement checks against, for this world
     PlacementContext MakePlacementContext(const VoxelWorld& world) { return { world, m_Islands, m_Occupancy, m_Roads, &m_Objects }; }
@@ -75,6 +77,7 @@ private:
     ProductionSystem m_Production;
     Treasury m_Treasury;
     ShipSystem m_Ships;
+    NotificationSystem m_Notifications;
 
     uint64_t m_TickCount = 0;
     double m_SimulationSeconds = 0.0;

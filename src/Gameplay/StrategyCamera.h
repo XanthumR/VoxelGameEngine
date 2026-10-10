@@ -21,6 +21,8 @@ public:
 
     // Looks at this point (world units); keeps the current yaw, pitch and zoom
     void SetTarget(glm::vec3 target);
+    // Glides there instead (ease in and out, longer for longer ways); panning by hand stops it
+    void PanTo(glm::vec3 target);
     void SetYaw(float yaw);
 
     // mouseFree: the UI is not using the mouse, so edge pan, drag and zoom may react
@@ -43,6 +45,10 @@ private:
     float m_Pitch = 55.0f;    // Degrees below the horizon
     float m_Distance = 320.0f; // Voxels
     float m_PendingScroll = 0.0f;
+
+    // PanTo: from, to, how far along (0..1, >= 1 when not panning) and how long it takes
+    glm::vec3 m_PanFrom{ 0.0f }, m_PanTo{ 0.0f };
+    float m_PanProgress = 1.0f, m_PanSeconds = 1.0f;
 
     bool m_Dragging = false;
     double m_DragX = 0.0, m_DragY = 0.0;

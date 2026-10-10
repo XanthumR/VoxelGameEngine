@@ -22,7 +22,17 @@ StrategyCamera::StrategyCamera() {
 
 void StrategyCamera::SetTarget(glm::vec3 target) {
     m_Target = target;
+    m_PanProgress = 1.0f; // Ends a glide
     UpdatePose();
+}
+
+void StrategyCamera::PanTo(glm::vec3 target) {
+    m_PanFrom = m_Target;
+    m_PanTo = target;
+    m_PanProgress = 0.0f;
+    // Half a second for a short way, at most two for a long one (in camera distances)
+    float distances = glm::length(target - m_Target) / std::max(m_Distance / VOXELS_PER_UNIT, 1e-4f);
+    m_PanSeconds = std::clamp(0.4f + distances * 0.25f, 0.5f, 2.0f);
 }
 
 void StrategyCamera::SetYaw(float yaw) {
@@ -78,13 +88,20 @@ void StrategyCamera::Update(GLFWwindow* window, float deltaTime, bool mouseFree,
     }
 
     float worldDistance = m_Distance / VOXELS_PER_UNIT;
+    bool middle = mouseFree && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+    if (pan != glm::vec2(0.0f) || middle) m_PanProgress = 1.0f; // Taking over by hand ends a glide
+    if (m_PanProgress < 1.0f) {
+        m_PanProgress = std::min(1.0f, m_PanProgress + deltaTime / m_PanSeconds);
+        float t = m_PanProgress;
+        float eased = t * t * (3.0f - 2.0f * t); // Smoothstep: eases in and out
+        m_Target = m_PanFrom + (m_PanTo - m_PanFrom) * eased;
+    }
     if (pan != glm::vec2(0.0f)) {
         glm::vec2 direction = glm::normalize(pan);
         m_Target += (right * direction.x + forward * direction.y) * (PAN_SPEED * worldDistance * deltaTime);
     }
 
     // Middle-drag pan: the ground follows the cursor (scaled by zoom)
-    bool middle = mouseFree && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
     if (middle && m_Dragging) {
         float pixelsToWorld = worldDistance * 1.5f / (float)std::max(height, 1);
         m_Target -= right * (float)(cursorX - m_DragX) * pixelsToWorld;

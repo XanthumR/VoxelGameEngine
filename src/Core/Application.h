@@ -30,6 +30,7 @@
 #include "UI/BuildMenu.h"
 #include "UI/BuildingInfo.h"
 #include "UI/IslandPanel.h"
+#include "UI/NotificationFeed.h"
 #include "UI/ShipPanel.h"
 #include "UI/TradeRoutes.h"
 #include "UI/GameUi.h"
@@ -136,6 +137,7 @@ private:
     TopBar m_TopBar;
     BuildMenu m_BuildMenu;
     IslandPanel m_IslandPanel;
+    NotificationFeed m_NotificationFeed;
     BuildingInfo m_BuildingInfo;
     ShipPanel m_ShipPanel;
     TradeRoutes m_TradeRoutes;

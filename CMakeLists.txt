@@ -89,6 +89,7 @@ set(LOGIC_SOURCES
     src/Gameplay/Walkers.cpp
     src/Simulation/BuildingLook.cpp
     src/Simulation/BuildingModels.cpp
+    src/Simulation/Notifications.cpp
     src/Simulation/GameClock.cpp
     src/Simulation/GameObjects.cpp
     src/Simulation/IslandRegistry.cpp
@@ -135,6 +136,7 @@ set(GAME_SOURCES
     src/UI/Hud.cpp
     src/UI/InfoLines.cpp
     src/UI/IslandPanel.cpp
+    src/UI/NotificationFeed.cpp
     src/UI/RmlBackend.cpp
     src/UI/ShipPanel.cpp
     src/UI/TopBar.cpp

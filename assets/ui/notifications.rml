@@ -1,0 +1,30 @@
+<rml>
+<head>
+    <title>Notifications</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        /* Down the right side, newest on top; a click goes there */
+        body { position: absolute; top: 70dp; right: 12dp; width: 340dp; }
+        .note {
+            display: flex; flex-direction: row; align-items: center;
+            margin-bottom: 6dp; padding: 6dp 10dp;
+            border: 1dp #a8874a; border-radius: 2dp;
+            decorator: linear-gradient(to bottom, #2b333dF5, #1a1f26F5);
+            box-shadow: #00000080 0 3dp 8dp;
+            cursor: pointer;
+        }
+        .note:hover { border-color: #f0d89a; }
+        .note img { margin-right: 8dp; flex: 0 0 auto; }
+        .note span { white-space: normal; font-size: 12dp; }
+        .note.good { border-left: 4dp #9bcf6a; }
+        .note.warn { border-left: 4dp #e8b04a; }
+        .note.bad { border-left: 4dp #ec6b55; }
+    </style>
+</head>
+<body data-model="notifications">
+    <div data-for="e : entries"><div class="note" data-class-good="e.tone == 1" data-class-warn="e.tone == 2" data-class-bad="e.tone == 3"
+            data-style-opacity="e.opacity" data-event-click="open(e.index)">
+        <img class="icon" data-attr-src="e.icon"/><span>{{e.text}}</span>
+    </div></div>
+</body>
+</rml>
