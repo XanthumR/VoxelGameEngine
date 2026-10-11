@@ -31,6 +31,7 @@
 #include "UI/BuildingInfo.h"
 #include "UI/IslandPanel.h"
 #include "UI/NotificationFeed.h"
+#include "UI/Statistics.h"
 #include "UI/ShipPanel.h"
 #include "UI/TradeRoutes.h"
 #include "UI/GameUi.h"
@@ -138,6 +139,7 @@ private:
     BuildMenu m_BuildMenu;
     IslandPanel m_IslandPanel;
     NotificationFeed m_NotificationFeed;
+    Statistics m_Statistics;
     BuildingInfo m_BuildingInfo;
     ShipPanel m_ShipPanel;
     TradeRoutes m_TradeRoutes;
@@ -159,7 +161,7 @@ private:
 
     // Edge state for the hotkeys
     bool m_EscapeWasPressed = false, m_TabWasPressed = false, m_F1WasPressed = false, m_F3WasPressed = false;
-    bool m_F5WasPressed = false, m_F6WasPressed = false, m_SpaceWasPressed = false;
+    bool m_F5WasPressed = false, m_F6WasPressed = false, m_SpaceWasPressed = false, m_F2WasPressed = false;
     bool m_PageUpWasPressed = false, m_PageDownWasPressed = false;
     bool m_PWasPressed = false, m_PlusWasPressed = false, m_MinusWasPressed = false;
 

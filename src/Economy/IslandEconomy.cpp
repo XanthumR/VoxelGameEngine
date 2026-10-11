@@ -49,21 +49,38 @@ int IslandEconomyManager::Add(IslandId island, ItemType item, int amount) {
     return added;
 }
 
+namespace {
+
+// The change of a counter over the sampled time, scaled to a minute
+int PerMinute(const IslandStorage& storage, int now, const std::array<int, ITEM_COUNT> IslandStorage::Sample::*field, size_t item) {
+    if (storage.stockSamples < 2) return 0;
+    int oldest = storage.stockSamples < TREND_SAMPLES ? 0 : storage.stockHead;
+    int intervals = std::min(storage.stockSamples, TREND_SAMPLES) - 1;
+    return (now - (storage.history[oldest].*field)[item]) * (TREND_SAMPLES - 1) / intervals;
+}
+
+} // namespace
+
 int IslandStorage::TrendPerMinute(ItemType item) const {
-    if (stockSamples < 2) return 0;
-    int oldest = stockSamples < TREND_SAMPLES ? 0 : stockHead;
-    int intervals = std::min(stockSamples, TREND_SAMPLES) - 1;
-    int change = Amount(item) - stockHistory[oldest][(size_t)item];
-    return change * (TREND_SAMPLES - 1) / intervals; // Scaled to a minute
+    return PerMinute(*this, Amount(item), &Sample::stock, (size_t)item);
+}
+
+int IslandStorage::MadePerMinute(ItemType item) const {
+    return PerMinute(*this, made[(size_t)item], &Sample::made, (size_t)item);
+}
+
+int IslandStorage::UsedPerMinute(ItemType item) const {
+    return PerMinute(*this, used[(size_t)item], &Sample::used, (size_t)item);
 }
 
 void IslandEconomyManager::RecordTrends(uint64_t tick) {
     if (tick % TREND_INTERVAL_TICKS != 0) return;
     for (IslandStorage& storage : m_Islands) {
+        IslandStorage::Sample sample{ storage.amounts, storage.made, storage.used };
         if (storage.stockSamples < TREND_SAMPLES) {
-            storage.stockHistory[storage.stockSamples++] = storage.amounts;
+            storage.history[storage.stockSamples++] = sample;
         } else {
-            storage.stockHistory[storage.stockHead] = storage.amounts; // Over the oldest
+            storage.history[storage.stockHead] = sample; // Over the oldest
             storage.stockHead = (storage.stockHead + 1) % TREND_SAMPLES;
         }
     }

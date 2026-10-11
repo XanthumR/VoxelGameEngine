@@ -137,6 +137,7 @@ set(GAME_SOURCES
     src/UI/InfoLines.cpp
     src/UI/IslandPanel.cpp
     src/UI/NotificationFeed.cpp
+    src/UI/Statistics.cpp
     src/UI/RmlBackend.cpp
     src/UI/ShipPanel.cpp
     src/UI/TopBar.cpp

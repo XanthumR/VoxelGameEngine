@@ -40,6 +40,7 @@ public:
 
     int TakeSpeedRequest();   // -1 when the speed was not clicked
     bool TakeRoutesToggle();  // The routes button was clicked
+    bool TakeStatisticsToggle(); // The statistics button was clicked
 
 private:
     Rml::ElementDocument* m_Document = nullptr;
@@ -52,5 +53,5 @@ private:
     std::vector<Tier> m_Tiers; // One per population tier, bound once
 
     int m_SpeedRequest = -1;
-    bool m_RoutesToggle = false;
+    bool m_RoutesToggle = false, m_StatisticsToggle = false;
 };

@@ -1,0 +1,41 @@
+<rml>
+<head>
+    <title>Statistics</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body { position: absolute; left: 50%; transform: translateX(-50%); top: 80dp; width: 720dp; }
+        .title { display: flex; flex-direction: row; align-items: center; }
+        .title button { padding: 2dp 8dp; font-size: 12dp; margin-left: 6dp; }
+        .title button.close { padding: 0 6dp; font-size: 13dp; }
+        .table { max-height: 460dp; overflow-y: auto; }
+        .tr { display: flex; flex-direction: row; align-items: center; padding: 3dp 4dp; border-bottom: 1dp #a8874a22; }
+        .tr.head { font-family: Cinzel; font-weight: bold; font-size: 12dp; color: #dcbc6e; border-bottom: 1dp #a8874a; }
+        .tr.group { margin-top: 6dp; background-color: #0f1317; font-family: Cinzel; font-weight: bold; color: #dcbc6e; }
+        .tr .name { flex: 1; display: flex; flex-direction: row; align-items: center; }
+        .tr .name img { margin-right: 6dp; }
+        .tr .cell { width: 96dp; text-align: right; }
+        .summary { display: block; margin-top: 8dp; }
+    </style>
+</head>
+<body class="panel" data-model="statistics">
+    <div class="title"><span>Statistics: {{title}}</span><span class="spacer"/>
+        <button data-class-selected="all_islands" data-event-click="toggle_islands"><span>All islands</span></button>
+        <button class="close" data-event-click="close"><span>X</span></button></div>
+    <div class="tabs">
+        <div class="tab" data-class-selected="tab == 0" data-event-click="set_tab(0)">Production</div>
+        <div class="tab" data-class-selected="tab == 1" data-event-click="set_tab(1)">Population</div>
+        <div class="tab" data-class-selected="tab == 2" data-event-click="set_tab(2)">Finance</div>
+    </div>
+    <div class="tr head"><span class="name"></span><span class="cell">{{col_a}}</span><span class="cell">{{col_b}}</span>
+        <span class="cell">{{col_c}}</span><span class="cell">{{col_d}}</span><span class="cell">{{col_e}}</span></div>
+    <div class="table">
+        <div data-for="r : rows"><div class="tr" data-class-group="r.heading">
+            <span class="name"><img class="icon small" data-if="r.icon != ''" data-attr-src="r.icon"/><span>{{r.name}}</span></span>
+            <span class="cell">{{r.a}}</span><span class="cell">{{r.b}}</span><span class="cell">{{r.c}}</span><span class="cell">{{r.d}}</span>
+            <span class="cell value" data-class-good="r.tone == 1" data-class-warn="r.tone == 2" data-class-bad="r.tone == 3"
+                  data-class-muted="r.tone == 4">{{r.e}}</span>
+        </div></div>
+    </div>
+    <span class="summary muted">{{summary}} | F2 closes</span>
+</body>
+</rml>

@@ -80,3 +80,16 @@ TEST(IslandEconomyTest, TrendIsTheChangeOverTheLastMinute) {
     for (uint64_t tick = 6 * TREND_INTERVAL_TICKS + 1; tick <= 12 * TREND_INTERVAL_TICKS; tick++) economy.RecordTrends(tick);
     EXPECT_EQ(storage.TrendPerMinute(ItemType::Fish), 0); // Steady for a minute now
 }
+
+TEST(IslandEconomyTest, MadeAndUsedPerMinute) {
+    IslandEconomyManager economy;
+    economy.OnWarehouseAdded(1);
+    IslandStorage& storage = *economy.Find(1);
+    for (uint64_t tick = 0; tick <= 6 * TREND_INTERVAL_TICKS; tick++) {
+        if (tick % 100 == 0) storage.made[(size_t)ItemType::Bread] += 2; // 12 a minute
+        if (tick % 300 == 0) storage.used[(size_t)ItemType::Bread] += 3; // 6 a minute
+        economy.RecordTrends(tick);
+    }
+    EXPECT_EQ(storage.MadePerMinute(ItemType::Bread), 12);
+    EXPECT_EQ(storage.UsedPerMinute(ItemType::Bread), 6);
+}

@@ -174,7 +174,7 @@ bool Application::Init() {
     }
 
     // The game UI (RmlUi); Dear ImGui stays for the debug windows
-    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context()) || !m_IslandPanel.Init(m_Ui.Context()) || !m_NotificationFeed.Init(m_Ui.Context()) ||
+    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context()) || !m_IslandPanel.Init(m_Ui.Context()) || !m_NotificationFeed.Init(m_Ui.Context()) || !m_Statistics.Init(m_Ui.Context()) ||
         !m_BuildingInfo.Init(m_Ui.Context()) || !m_ShipPanel.Init(m_Ui.Context()) || !m_TradeRoutes.Init(m_Ui.Context())) {
         std::cout << "Failed to initialize the game UI (RmlUi)" << std::endl;
         return false;
@@ -312,6 +312,8 @@ void Application::HandleKeys(float deltaTime) {
     // selected it quits
     if (KeyPressed(GLFW_KEY_ESCAPE, m_EscapeWasPressed)) {
         if (m_CameraMode == CameraMode::Strategy && m_BuildTool.Cancel()) {
+        } else if (m_CameraMode == CameraMode::Strategy && m_Statistics.IsOpen()) {
+            m_Statistics.Close();
         } else if (m_CameraMode == CameraMode::Strategy && m_ShipControl.Selected() != INVALID_SHIP) {
             m_ShipControl.Deselect();
         } else if (m_CameraMode == CameraMode::Strategy && m_BuildTool.InspectedBuilding() != INVALID_GAME_OBJECT) {
@@ -333,6 +335,7 @@ void Application::HandleKeys(float deltaTime) {
     }
 
     if (KeyPressed(GLFW_KEY_F3, m_F3WasPressed)) m_Overlay.Visible() = !m_Overlay.Visible();
+    if (KeyPressed(GLFW_KEY_F2, m_F2WasPressed) && m_CameraMode == CameraMode::Strategy) m_Statistics.Toggle();
     // Game speed: P or Space pauses, + and - step through 1x, 2x, 4x
     bool plus = glfwGetKey(m_Window, GLFW_KEY_EQUAL) == GLFW_PRESS || glfwGetKey(m_Window, GLFW_KEY_KP_ADD) == GLFW_PRESS;
     bool minus = glfwGetKey(m_Window, GLFW_KEY_MINUS) == GLFW_PRESS || glfwGetKey(m_Window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS;
@@ -493,6 +496,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     // Game UI clicks (from last frame's events)
     if (int speed = m_TopBar.TakeSpeedRequest(); speed >= 0) m_GameSpeed = speed;
     if (m_TopBar.TakeRoutesToggle()) m_RoutesOpen = !m_RoutesOpen;
+    if (m_TopBar.TakeStatisticsToggle()) m_Statistics.Toggle();
     m_BuildMenu.ApplyRequests(m_BuildTool);
     m_BuildingInfo.ApplyRequests(m_Simulation, m_BuildTool);
     // A notification clicked: the camera goes there, its building opens or its ship is selected
@@ -550,6 +554,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     glm::vec2 cursor((float)cursorX * m_WindowWidth / std::max(1, windowWidth), (float)cursorY * m_WindowHeight / std::max(1, windowHeight));
     m_BuildMenu.Update(m_BuildTool, m_Simulation, cursor, glm::ivec2(m_WindowWidth, m_WindowHeight));
     m_IslandPanel.Update(m_PanelIsland, m_Simulation.Economy(), strategy);
+    m_Statistics.Update(m_Simulation, m_PanelIsland, strategy);
     m_NotificationFeed.SetVisible(strategy);
     m_NotificationFeed.Update(m_Simulation, glfwGetTime());
     {

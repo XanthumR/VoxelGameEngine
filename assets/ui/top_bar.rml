@@ -62,5 +62,6 @@
     <button class="speed" data-class-selected="speed == 4" data-event-click="set_speed(4)">4x</button>
     <div class="divider"/>
     <button class="row" data-class-selected="routes_open" data-event-click="toggle_routes"><img class="icon small" src="icons/ship.tga"/><span>Routes</span></button>
+    <button class="row" data-event-click="toggle_statistics"><img class="icon small" src="icons/statistics.tga"/><span>Statistics</span></button>
 </body>
 </rml>

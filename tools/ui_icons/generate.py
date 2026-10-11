@@ -339,6 +339,14 @@ def trend_down(d):
     d.polygon([(8, 14), (14, 6), (10, 6), (10, 2), (6, 2), (6, 6), (2, 6)], fill=red, outline=INK)
 
 
+def statistics(d):
+    # A bar chart
+    gold, ink = (226, 190, 100), INK
+    for x, top in ((2, 9), (6, 5), (10, 2)):
+        d.rectangle((x, top, x + 3, 14), fill=gold, outline=ink)
+    d.line((1, 15, 15, 15), fill=ink)
+
+
 def theatre(d):
     # Comedy and tragedy masks
     light, dark = (240, 230, 200), (200, 170, 90)
@@ -360,7 +368,7 @@ ICONS = {
     "grain": grain, "flour": flour, "bread": bread, "tallow": tallow, "soap": soap, "clay": clay, "beef": beef,
     "iron": iron, "coal": coal, "steel": steel, "steel_beams": steel_beams, "canned_food": canned_food,
     "sewing_machines": sewing_machines, "artisan": artisan, "marketplace": marketplace, "school": school, "theatre": theatre,
-    "construction": construction, "demolish": demolish, "move": move, "copy": copy, "trend_up": trend_up, "trend_down": trend_down,
+    "construction": construction, "demolish": demolish, "move": move, "copy": copy, "trend_up": trend_up, "trend_down": trend_down, "statistics": statistics,
 }
 
 if __name__ == "__main__":

@@ -817,6 +817,7 @@ Milestone 7 moved the UI to RmlUi and the last restyle gave it Anno 1800's look 
 **U6. Statistics**
 - Per island and good, production and consumption per minute (counters in `ProductionSystem` and `PopulationSystem`, smoothed); per tier the residents; the income breakdown (taxes per tier, upkeep per building type).
 - A statistics window (F2): tabs Production, Population, Finance; a good's row shows its producers' count and the balance, red when negative.
+- Done: `IslandStorage::made` / `used` counted where goods are made and used, sampled with the stock (`MadePerMinute`, `UsedPerMinute`); `src/UI/Statistics.h`; a Statistics button in the top bar; Esc closes the window. Ship transfers count as neither. Test: the rates.
 
 **U7. Minimap and pause menu**
 - Minimap at the bottom right: islands from `IslandRegistry` (land cells), the player's buildings as dots, ships, the camera's view as a box; click to move the camera there; a compass button resets the rotation.

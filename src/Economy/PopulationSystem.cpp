@@ -106,6 +106,7 @@ void PopulationSystem::Consume(const GameObjectRegistry& objects, IslandEconomyM
                 owed = std::min(owed + dueThisCycle, OWED_PER_GOOD + dueThisCycle);
                 int wholeGoods = owed / OWED_PER_GOOD;
                 int taken = economy.Remove(storage.island, need.item, wholeGoods);
+                storage.used[(size_t)need.item] += taken; // Statistics
                 owed -= taken * OWED_PER_GOOD;
 
                 // This cycle's supply: everything owed was delivered, or (nothing due yet) the good is in stock

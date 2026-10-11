@@ -28,14 +28,24 @@ struct IslandStorage {
     // Goods owed per tier and need, in 1/60000 of a good (consumption is per minute, cycles per second)
     std::array<std::array<int32_t, MAX_NEEDS>, TIER_COUNT> owed = {};
 
-    // The stock of every good, the last TREND_SAMPLES samples (oldest at stockHead once full)
-    std::array<std::array<int, ITEM_COUNT>, TREND_SAMPLES> stockHistory = {};
+    // Goods made by the island's producers and used (by residents, and as producers' inputs), since
+    // the island was settled
+    std::array<int, ITEM_COUNT> made = {}, used = {};
+
+    // The stock, made and used of every good, the last TREND_SAMPLES samples (oldest at stockHead once full)
+    struct Sample {
+        std::array<int, ITEM_COUNT> stock, made, used;
+    };
+    std::array<Sample, TREND_SAMPLES> history = {};
     int stockSamples = 0, stockHead = 0;
 
     int CapacityPerItem() const { return warehouseCount * WAREHOUSE_CAPACITY; }
     int Amount(ItemType item) const { return amounts[(size_t)item]; }
     // How the stock of a good changed per minute, over the last minute (less, scaled, until a minute is sampled)
     int TrendPerMinute(ItemType item) const;
+    // How many of a good were made / used per minute, over the last minute
+    int MadePerMinute(ItemType item) const;
+    int UsedPerMinute(ItemType item) const;
 };
 
 // The per-island economies. An island gets its storage when its first warehouse is built; only the

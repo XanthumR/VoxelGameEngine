@@ -31,6 +31,7 @@ A city-builder and trade game in the style of Anno 1800, built on a custom C++ v
 | Right click | Cancel the tool or selection, close the building's panel; give a selected ship a move order |
 | P or Space, + / - | Pause, change game speed |
 | Esc | Put back a moved building, drop the tool or selection, or quit |
+| F2 | Statistics: production and use of every good, population, finance |
 | F3 | Debug overlay and minimap |
 | F5 / F6 | Debug: chunk viewer, light visualizer |
 | F1 | Free-fly debug camera (Tab frees the mouse) |

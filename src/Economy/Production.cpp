@@ -252,7 +252,7 @@ void ProductionSystem::UpdateWorkforce(const GameObjectRegistry& objects, Island
 void ProductionSystem::Produce(GameObjectRegistry& objects, IslandEconomyManager& economy, TreeRegistry& trees, GameObjectId id, uint64_t tick) {
     ProductionComponent& production = objects.Production(id);
     const ProductionChain& chain = ChainOf(objects, id);
-    const IslandStorage* storage = economy.Find(objects.Building(id).island);
+    IslandStorage* storage = economy.Find(objects.Building(id).island);
     production.productivity = 0;
 
     if (production.paused) {
@@ -291,7 +291,11 @@ void ProductionSystem::Produce(GameObjectRegistry& objects, IslandEconomyManager
 
     // A cycle is done: inputs in, one output out
     production.progress -= cycle;
-    for (int i = 0; i < chain.inputCount; i++) production.inputs[i]--;
+    for (int i = 0; i < chain.inputCount; i++) {
+        production.inputs[i]--;
+        storage->used[(size_t)chain.inputs[i]]++; // Statistics
+    }
+    storage->made[(size_t)chain.output]++;
     production.output++;
     production.cycles++;
 

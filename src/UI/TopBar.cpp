@@ -45,6 +45,7 @@ bool TopBar::Init(Rml::Context* context) {
         if (!arguments.empty()) m_SpeedRequest = arguments[0].Get<int>();
     });
     model.BindEventCallback("toggle_routes", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) { m_RoutesToggle = true; });
+    model.BindEventCallback("toggle_statistics", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) { m_StatisticsToggle = true; });
     m_Model = model.GetModelHandle();
 
     m_Document = context->LoadDocument("assets/ui/top_bar.rml");
@@ -126,6 +127,12 @@ int TopBar::TakeSpeedRequest() {
     int request = m_SpeedRequest;
     m_SpeedRequest = -1;
     return request;
+}
+
+bool TopBar::TakeStatisticsToggle() {
+    bool toggle = m_StatisticsToggle;
+    m_StatisticsToggle = false;
+    return toggle;
 }
 
 bool TopBar::TakeRoutesToggle() {
