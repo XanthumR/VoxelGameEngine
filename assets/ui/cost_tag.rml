@@ -16,5 +16,6 @@
     <div class="row pair" data-if="planks > 0"><img class="icon small" src="icons/planks.tga"/><span data-class-bad="lack_planks">{{planks}}</span></div>
     <div class="row pair" data-if="bricks > 0"><img class="icon small" src="icons/bricks.tga"/><span data-class-bad="lack_bricks">{{bricks}}</span></div>
     <div class="row pair" data-if="steel_beams > 0"><img class="icon small" src="icons/steel_beams.tga"/><span data-class-bad="lack_steel_beams">{{steel_beams}}</span></div>
+    <div class="row pair" data-if="windows > 0"><img class="icon small" src="icons/windows.tga"/><span data-class-bad="lack_windows">{{windows}}</span></div>
 </body>
 </rml>

@@ -261,3 +261,17 @@ TEST(PopulationTest, ArtisanUpgradeTakesBricks) {
     f.Stock(ItemType::Bricks, cost.bricks);
     EXPECT_TRUE(PopulationSystem::CanUpgrade(f.objects, f.economy, house));
 }
+
+TEST(PopulationTest, InvestorUpgradeTakesWindows) {
+    const BuildingCost& cost = UpgradeCost(TIER_ENGINEERS);
+    EXPECT_GT(cost.windows, 0);
+    PopulationFixture f;
+    GameObjectId house = f.AddBuilding(BUILDING_ENGINEER_HOUSE, { 12, 2 });
+    f.objects.Residence(house).upgradeTicks = PopulationSystem::UPGRADE_TICKS;
+    f.Stock(ItemType::Planks, cost.planks);
+    f.Stock(ItemType::Bricks, cost.bricks);
+    f.Stock(ItemType::SteelBeams, cost.steelBeams);
+    EXPECT_FALSE(PopulationSystem::CanUpgrade(f.objects, f.economy, house)); // No windows
+    f.Stock(ItemType::Windows, cost.windows);
+    EXPECT_TRUE(PopulationSystem::CanUpgrade(f.objects, f.economy, house));
+}

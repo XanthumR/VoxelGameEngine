@@ -19,11 +19,13 @@ namespace {
 constexpr int MAX_ENTRIES = 20; // Per group
 constexpr int GROUP_COUNT = 3;
 constexpr std::array<const char*, GROUP_COUNT> GROUP_NAMES = { "Houses and public buildings", "Production", "Trade and roads" };
-constexpr std::array<const char*, (int)BuildCategory::Count> TAB_NAMES = { "Farmers", "Workers", "Artisans", "Infrastructure" };
+constexpr std::array<const char*, (int)BuildCategory::Count> TAB_NAMES = { "Farmers", "Workers", "Artisans", "Engineers", "Investors",
+    "Infrastructure" };
 constexpr std::array<const char*, (int)BuildCategory::Count> TAB_ICONS = { "icons/farmer.tga", "icons/worker.tga", "icons/artisan.tga",
-    "icons/construction.tga" };
+    "icons/engineer.tga", "icons/investor.tga", "icons/construction.tga" };
 constexpr int REQUEST_OFFSET = 6; // Keeps the tools (-3 to -5), ROAD (-2) and NO_TYPE (-1) above the "no request" 0
-constexpr const char* COST_NAMES[4] = { "coins", "planks", "bricks", "steel_beams" };
+constexpr int COST_COUNT = 1 + MATERIAL_COUNT; // Coins, then the materials
+constexpr const char* COST_NAMES[COST_COUNT] = { "coins", "planks", "bricks", "steel_beams", "windows" };
 
 // The group a build menu entry goes in
 int GroupOf(int type) {
@@ -170,6 +172,7 @@ bool BuildMenu::Init(Rml::Context* context) {
         entry.RegisterMember("planks", &Entry::planks);
         entry.RegisterMember("bricks", &Entry::bricks);
         entry.RegisterMember("steel_beams", &Entry::steelBeams);
+        entry.RegisterMember("windows", &Entry::windows);
         entry.RegisterMember("selected", &Entry::selected);
         entry.RegisterMember("locked", &Entry::locked);
         entry.RegisterMember("unlock", &Entry::unlock);
@@ -219,7 +222,7 @@ bool BuildMenu::Init(Rml::Context* context) {
 
     Rml::DataModelConstructor cost = context->CreateDataModel("cost_tag");
     if (!cost) return false;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < COST_COUNT; i++) {
         cost.Bind(COST_NAMES[i], &m_Cost[i]);
         cost.Bind(Rml::String("lack_") + COST_NAMES[i], &m_Lacking[i]);
     }
@@ -276,6 +279,7 @@ void BuildMenu::FillEntries(const BuildTool& tool) {
             entry.planks = BUILDING_COSTS[entry.type].planks;
             entry.bricks = BUILDING_COSTS[entry.type].bricks;
             entry.steelBeams = BUILDING_COSTS[entry.type].steelBeams;
+            entry.windows = BUILDING_COSTS[entry.type].windows;
         }
         std::vector<Entry>& entries = m_Groups[GroupOf(entry.type)].entries;
         if (entries.size() < (size_t)MAX_ENTRIES) entries.push_back(entry);
@@ -328,10 +332,13 @@ void BuildMenu::UpdateCostTag(const BuildTool& tool, const Simulation& simulatio
     const BuildingCost& cost = BUILDING_COSTS[type];
     const IslandStorage* storage = simulation.Economy().Find(tool.PreviewIsland());
     std::array<int, MATERIAL_COUNT> materials = cost.Materials();
-    int values[4] = { cost.coins, materials[0], materials[1], materials[2] };
-    bool lacking[4] = { simulation.Coins().Coins() < cost.coins, false, false, false };
-    for (int i = 0; i < MATERIAL_COUNT; i++) lacking[i + 1] = materials[i] > 0 && (!storage || storage->Amount(MATERIALS[i]) < materials[i]);
-    for (int i = 0; i < 4; i++) {
+    int values[COST_COUNT] = { cost.coins };
+    bool lacking[COST_COUNT] = { simulation.Coins().Coins() < cost.coins };
+    for (int i = 0; i < MATERIAL_COUNT; i++) {
+        values[i + 1] = materials[i];
+        lacking[i + 1] = materials[i] > 0 && (!storage || storage->Amount(MATERIALS[i]) < materials[i]);
+    }
+    for (int i = 0; i < COST_COUNT; i++) {
         if (m_Cost[i] != values[i]) {
             m_Cost[i] = values[i];
             m_CostModel.DirtyVariable(COST_NAMES[i]);

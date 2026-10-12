@@ -360,6 +360,133 @@ def theatre(d):
     d.arc((9, 10, 13, 13), 200, 340, fill=INK)
 
 
+# --- Milestone 8.2: the Engineers' and Investors' goods, tiers and services ---
+
+GLASS = (150, 200, 190)
+GOLD = (236, 190, 60)
+GOLD_DARK = (170, 122, 30)
+COPPER = (196, 112, 64)
+
+
+def quartz_sand(d):
+    sand = (224, 206, 150)
+    d.pieslice((1, 6, 14, 20), 180, 360, fill=sand, outline=INK)
+    for x, y in ((5, 10), (9, 9), (7, 12), (11, 12)):
+        d.point((x, y), fill=(250, 245, 230))
+
+
+def glass(d):
+    d.polygon([(3, 2), (12, 2), (14, 13), (1, 13)], fill=GLASS, outline=INK)
+    d.line((4, 4, 3, 11), fill=(220, 245, 240))
+    d.line((6, 4, 5, 8), fill=(220, 245, 240))
+
+
+def windows(d):
+    d.rectangle((2, 1, 13, 14), fill=WOOD_LIGHT, outline=INK)
+    for x, y in ((4, 3), (9, 3), (4, 9), (9, 9)):
+        d.rectangle((x, y, x + 2, y + 3), fill=(90, 140, 190))
+        d.point((x, y), fill=(200, 230, 245))
+
+
+def copper(d):
+    d.polygon([(2, 9), (6, 4), (12, 5), (14, 10), (9, 14), (3, 13)], fill=COPPER, outline=INK)
+    d.line((6, 6, 10, 6), fill=(236, 160, 110))
+    d.point((10, 11), fill=(90, 150, 120))
+
+
+def glasses(d):
+    d.ellipse((1, 5, 7, 11), fill=GLASS, outline=INK)
+    d.ellipse((8, 5, 14, 11), fill=GLASS, outline=INK)
+    d.line((7, 7, 8, 7), fill=INK)
+    d.point((3, 7), fill=(230, 250, 245))
+    d.point((10, 7), fill=(230, 250, 245))
+
+
+def filaments(d):
+    d.line((1, 13, 3, 3), fill=COPPER)
+    d.line((14, 13, 12, 3), fill=COPPER)
+    for i, x in enumerate(range(3, 13)):
+        d.point((x, 4 + (i % 2) * 2), fill=(255, 170, 60))
+        d.point((x, 5), fill=(255, 210, 110))
+
+
+def light_bulbs(d):
+    d.ellipse((3, 0, 12, 10), fill=(250, 236, 160), outline=INK)
+    d.rectangle((5, 10, 10, 14), fill=(170, 170, 176), outline=INK)
+    d.line((5, 12, 10, 12), fill=INK)
+    d.line((6, 4, 9, 4), fill=(255, 160, 40))
+    d.point((5, 3), fill=(255, 255, 230))
+
+
+def grapes(d):
+    purple = (110, 44, 120)
+    for x, y in ((3, 4), (7, 4), (11, 4), (5, 7), (9, 7), (7, 10)):
+        d.ellipse((x - 2, y - 1, x + 2, y + 3), fill=purple, outline=INK)
+    d.line((7, 0, 7, 3), fill=WOOD_DARK)
+    d.polygon([(8, 1), (13, 0), (11, 3)], fill=(70, 140, 50))
+
+
+def champagne(d):
+    green = (50, 100, 70)
+    d.rectangle((5, 6, 10, 15), fill=green, outline=INK)
+    d.polygon([(6, 6), (7, 2), (8, 2), (9, 6)], fill=green, outline=INK)
+    d.rectangle((6, 0, 9, 2), fill=GOLD, outline=INK)
+    d.rectangle((6, 9, 9, 12), fill=(236, 228, 205))
+
+
+def gold(d):
+    for x, y in ((1, 9), (7, 9), (4, 4)):
+        d.polygon([(x, y + 5), (x + 2, y), (x + 7, y), (x + 8, y + 5)], fill=GOLD, outline=INK)
+        d.line((x + 3, y + 1, x + 6, y + 1), fill=(255, 236, 150))
+
+
+def jewelry(d):
+    d.ellipse((2, 4, 13, 15), outline=INK, width=1)
+    d.ellipse((3, 5, 12, 14), outline=GOLD, width=2)
+    d.polygon([(5, 4), (7, 0), (8, 0), (10, 4), (7, 6)], fill=(200, 40, 60), outline=INK)
+
+
+def engineer(d):
+    cap = (70, 80, 100)
+    d.ellipse((4, 5, 11, 14), fill=SKIN, outline=INK)
+    d.rectangle((3, 3, 12, 6), fill=cap, outline=INK)
+    d.rectangle((3, 6, 7, 7), fill=cap, outline=INK)
+    d.point((6, 10), fill=INK)
+    d.point((9, 10), fill=INK)
+    d.line((7, 12, 8, 12), fill=(120, 80, 60))
+
+
+def investor(d):
+    hat = (28, 26, 30)
+    d.ellipse((4, 7, 11, 15), fill=SKIN, outline=INK)
+    d.rectangle((1, 6, 14, 7), fill=hat, outline=INK)
+    d.rectangle((4, 0, 11, 6), fill=hat, outline=INK)
+    d.line((5, 5, 10, 5), fill=(140, 30, 40))
+    d.point((6, 11), fill=INK)
+    d.point((9, 11), fill=INK)
+    d.line((5, 13, 10, 13), fill=(90, 60, 40))
+
+
+def university(d):
+    stone = (170, 165, 150)
+    d.rectangle((1, 8, 14, 14), fill=stone, outline=INK)
+    d.rectangle((6, 3, 9, 14), fill=stone, outline=INK)
+    d.polygon([(5, 3), (7, 0), (8, 0), (10, 3)], fill=(70, 78, 90), outline=INK)
+    d.point((7, 5), fill=(240, 236, 220))
+    for x in (2, 4, 11, 13):
+        d.line((x, 10, x, 12), fill=(60, 90, 130))
+    d.rectangle((7, 11, 8, 14), fill=WOOD_DARK)
+
+
+def bank(d):
+    marble = (236, 230, 218)
+    d.polygon([(1, 5), (8, 1), (15, 5)], fill=marble, outline=INK)
+    d.rectangle((1, 13, 14, 15), fill=marble, outline=INK)
+    for x in (2, 6, 9, 13):
+        d.rectangle((x, 6, x + 1, 12), fill=marble, outline=INK)
+    d.point((8, 3), fill=GOLD)
+
+
 ICONS = {
     "wood": wood, "planks": planks, "fish": fish, "wool": wool, "work_clothes": work_clothes,
     "bricks": bricks, "sausages": sausages, "pigs": pigs,
@@ -369,6 +496,9 @@ ICONS = {
     "iron": iron, "coal": coal, "steel": steel, "steel_beams": steel_beams, "canned_food": canned_food,
     "sewing_machines": sewing_machines, "artisan": artisan, "marketplace": marketplace, "school": school, "theatre": theatre,
     "construction": construction, "demolish": demolish, "move": move, "copy": copy, "trend_up": trend_up, "trend_down": trend_down, "statistics": statistics,
+    "quartz_sand": quartz_sand, "glass": glass, "windows": windows, "copper": copper, "glasses": glasses, "filaments": filaments,
+    "light_bulbs": light_bulbs, "grapes": grapes, "champagne": champagne, "gold": gold, "jewelry": jewelry,
+    "engineer": engineer, "investor": investor, "university": university, "bank": bank,
 }
 
 if __name__ == "__main__":

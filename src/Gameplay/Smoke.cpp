@@ -35,7 +35,9 @@ bool SmokeSystem::BlackSmoke(uint16_t type) {
     case BUILDING_FURNACE:
     case BUILDING_STEELWORKS:
     case BUILDING_CANNERY:
-    case BUILDING_SEWING_MACHINE_FACTORY: return true;
+    case BUILDING_SEWING_MACHINE_FACTORY:
+    case BUILDING_GLASSWORKS:
+    case BUILDING_FILAMENT_FACTORY: return true;
     default: return false;
     }
 }

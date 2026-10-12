@@ -11,8 +11,8 @@
 class IslandEconomyManager;
 
 // Construction materials, taken from the island's storage (in BuildingCost's order)
-constexpr int MATERIAL_COUNT = 3;
-constexpr std::array<ItemType, MATERIAL_COUNT> MATERIALS = { ItemType::Planks, ItemType::Bricks, ItemType::SteelBeams };
+constexpr int MATERIAL_COUNT = 4;
+constexpr std::array<ItemType, MATERIAL_COUNT> MATERIALS = { ItemType::Planks, ItemType::Bricks, ItemType::SteelBeams, ItemType::Windows };
 
 // What a building costs to place and to keep (coins per minute). Index = building type. A house
 // type that only comes from upgrades costs its materials when a house upgrades to it.
@@ -22,8 +22,9 @@ struct BuildingCost {
     int16_t upkeep; // Coins per minute
     int16_t bricks = 0;
     int16_t steelBeams = 0;
+    int16_t windows = 0;
 
-    std::array<int, MATERIAL_COUNT> Materials() const { return { planks, bricks, steelBeams }; }
+    std::array<int, MATERIAL_COUNT> Materials() const { return { planks, bricks, steelBeams, windows }; }
 };
 
 constexpr std::array<BuildingCost, BUILDING_TYPES.size()> BUILDING_COSTS = { {
@@ -60,10 +61,26 @@ constexpr std::array<BuildingCost, BUILDING_TYPES.size()> BUILDING_COSTS = { {
     { 600, 4, 40, 8 },      // Steelworks
     { 700, 4, 40, 6, 2 },   // Cannery
     { 800, 4, 50, 6, 3 },   // Sewing Machine Factory
+    { 0, 2, 0, 2, 2 },            // Engineer House (upgrade)
+    { 2000, 6, 80, 12, 4, 4 },    // University
+    { 400, 4, 20, 2 },            // Sand Mine
+    { 800, 4, 40, 8, 2 },         // Glassworks
+    { 900, 4, 50, 8, 2 },         // Window Makers
+    { 600, 4, 30, 4, 2 },         // Copper Mine
+    { 1200, 4, 70, 8, 4, 2 },     // Spectacle Factory
+    { 1000, 4, 60, 8, 4 },        // Filament Factory
+    { 1400, 4, 80, 8, 4, 3 },     // Light Bulb Factory
+    { 0, 0, 0, 2, 2, 3 },         // Investor House (upgrade)
+    { 3000, 6, 100, 12, 6, 6 },   // Bank
+    { 400, 4, 25, 2 },            // Vineyard
+    { 40, 0, 0 },                 // Vine Rows
+    { 1600, 4, 90, 10, 4, 4 },    // Champagne Cellar
+    { 1000, 4, 50, 6, 4 },        // Gold Mine
+    { 2000, 4, 120, 10, 4, 4 },   // Goldsmiths
 } };
 
 // Coins per minute ten residents pay with every need met, per tier
-constexpr std::array<int, TIER_COUNT> TAX_PER_TEN_RESIDENTS = { 10, 25, 45 };
+constexpr std::array<int, TIER_COUNT> TAX_PER_TEN_RESIDENTS = { 10, 25, 45, 70, 100 };
 
 // What a house of this tier takes to move up a tier: the materials of the next tier's house
 constexpr const BuildingCost& UpgradeCost(int tier) {

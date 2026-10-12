@@ -125,7 +125,17 @@ constexpr uint8_t PERSON_COAT_ARTISAN = 179;
 constexpr uint8_t PERSON_COAT_ARTISAN_GREEN = 180;
 constexpr uint8_t PERSON_BOWLER = 181;
 constexpr uint8_t SMOKE_DARK = 182; // Coal smoke of heavy industry: a figure block like SMOKE_LIGHT
-constexpr uint8_t EXTRA_MATERIALS_LAST = 182;
+constexpr uint8_t PERSON_JACKET_ENGINEER = 183;
+constexpr uint8_t PERSON_JACKET_ENGINEER_BROWN = 184;
+constexpr uint8_t PERSON_SUIT_INVESTOR = 185;
+constexpr uint8_t PERSON_SUIT_INVESTOR_WINE = 186;
+constexpr uint8_t PERSON_TOP_HAT = 187;
+constexpr uint8_t GLASS_GREEN = 188;  // Bottles, glass panes in a workshop
+constexpr uint8_t COPPER = 189;
+constexpr uint8_t GOLD = 190;
+constexpr uint8_t GRAPE = 191;
+constexpr uint8_t MARBLE = 192;
+constexpr uint8_t EXTRA_MATERIALS_LAST = 192;
 } // namespace Block
 
 // Grass tufts and water are drawn, but the player, raycasts and projectiles pass through them

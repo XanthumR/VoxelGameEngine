@@ -34,6 +34,8 @@ SMOKE_EMITTER, BOAT_BERTH = 100, 101
 WHEAT, WHEAT_STALK, CLAY, COAL, IRON_ORE, STEEL, FIRE = 160, 161, 162, 163, 164, 165, 166
 CATTLE_BROWN, CATTLE_WHITE, BREAD, SOAP, BRASS, VELVET, BRICK_RED = 167, 168, 169, 170, 171, 172, 173
 PLASTER_BLUE, PLASTER_PINK, ROOF_GREEN, SACK, CANVAS = 174, 175, 176, 177, 178
+# Milestone 8.2
+GLASS_GREEN, COPPER, GOLD, GRAPE, MARBLE = 188, 189, 190, 191, 192
 
 # In-game colors (shaders/render/shade.comp), for the .vox palette
 COLORS = {
@@ -53,6 +55,7 @@ COLORS = {
     165: (140, 148, 158), 166: (255, 140, 38), 167: (107, 61, 31), 168: (230, 224, 214), 169: (194, 128, 56),
     170: (219, 224, 204), 171: (204, 163, 61), 172: (128, 20, 31), 173: (168, 77, 51), 174: (140, 168, 194),
     175: (219, 168, 158), 176: (92, 148, 128), 177: (204, 184, 140), 178: (230, 222, 199),
+    188: (92, 158, 122), 189: (189, 107, 61), 190: (245, 199, 61), 191: (92, 36, 102), 192: (235, 230, 219),
 }
 
 
@@ -1468,54 +1471,6 @@ def pasture():
     return m
 
 
-def iron_mine():
-    """36 x 36 x 40: an iron mine: a rocky hill with rust-red ore veins, a timbered tunnel mouth,
-    rails out to the front with ore carts, a headframe with its wheel on top, ore heaps."""
-    m = Model(36, 36, 40)
-    # The hill, highest at the back
-    for v in range(36):
-        for u in range(36):
-            d = ((u - 18) ** 2 * 0.6 + (v - 30) ** 2) ** 0.5
-            h = int(22 - d * 1.1 + ((u * 7 + v * 13) % 5) * 0.4)
-            if h < 1:
-                continue
-            for y in range(h):
-                vein = (u * 3 + y * 5 + v * 2) % 11 == 0 or (u + y * 2 - v) % 13 == 0
-                m.set(u, v, y, IRON_ORE if vein else (STONE_DARK if (u + v + y) % 4 == 0 else 3))
-            m.set(u, v, h, 1 if h > 3 else 3)  # Grass on the top, stone low down
-    # The tunnel mouth: a timber frame in the hill's front face
-    for v in range(10, 26):
-        m.box(14, v, 0, 21, v, 7, AIR)
-    for v in (12, 16, 20):
-        m.box(13, v, 0, 13, v, 8, TIMBER_DARK)
-        m.box(22, v, 0, 22, v, 8, TIMBER_DARK)
-        m.box(13, v, 8, 22, v, 8, TIMBER_DARK)
-    m.box(14, 24, 0, 21, 25, 7, COAL)  # Darkness inside
-    # Rails to the front, with two ore carts
-    for v in range(0, 24):
-        m.set(15, v, 0, IRON)
-        m.set(20, v, 0, IRON)
-        if v % 2 == 0:
-            m.box(14, v, 0, 21, v, 0, TIMBER_DARK)
-            m.set(15, v, 0, IRON)
-            m.set(20, v, 0, IRON)
-    for cart_v in (3, 14):
-        m.box(15, cart_v, 1, 20, cart_v + 4, 3, IRON)
-        m.box(16, cart_v + 1, 3, 19, cart_v + 3, 4, IRON_ORE)
-    # Headframe on top of the hill: two legs, a brace and a wheel
-    for u in (14, 22):
-        for y in range(22, 36):
-            m.set(u + (y - 22) // 5 * (1 if u == 14 else -1), 28, y, TIMBER_DARK)
-    m.box(14, 28, 30, 22, 28, 30, TIMBER_DARK)
-    # Its wheel turns: a moving part
-    # Ore heaps and a cart of coal
-    for cu, cv, r, block in ((5, 5, 4.0, IRON_ORE), (30, 5, 3.5, IRON_ORE), (5, 13, 3.0, 3)):
-        for u, v in disc_cells(cu, cv, r):
-            h = int(r - ((u + 0.5 - cu) ** 2 + (v + 0.5 - cv) ** 2) ** 0.5)
-            m.box(u, v, 0, u, v, max(0, h), block)
-    return m
-
-
 def charcoal_kiln():
     """36 x 36 x 28: a charcoal burner's place: two smoking earth-covered mounds, stacks of logs
     waiting, baskets of charcoal and the collier's hut."""
@@ -2040,7 +1995,644 @@ def moving_parts():
     wander('cattle_farm', 'calf', (22, 8), (3, 2), 1)
     wander('pig_farm', 'pig', (7, 11), (2, 1), 1)
     wander('sheep_farm', 'sheep', (9, 6), (3, 2), 1)
+    moving_parts_82(part)
     return files, lines
+
+
+# --- Milestone 8.2: the Engineers and the Investors -------------------------------------------
+
+def hip_roof(m, u0, v0, u1, v1, y0, block, cap=None):
+    """A roof sloping in from all four sides, a layer in per voxel up; cap on the last layer."""
+    step = 0
+    while u0 + step <= u1 - step and v0 + step <= v1 - step:
+        last = u0 + step + 1 > u1 - step - 1 or v0 + step + 1 > v1 - step - 1
+        if last:
+            m.box(u0 + step, v0 + step, y0 + step, u1 - step, v1 - step, y0 + step, cap or block)
+        else:
+            m.ring(u0 + step, v0 + step, u1 - step, v1 - step, y0 + step, y0 + step, block)
+        step += 1
+
+
+def columns(m, us, v, y0, y1, block=MARBLE, base=STONE_LIGHT):
+    """Round-ish 2 x 2 columns with a base and a capital."""
+    for u in us:
+        m.box(u, v, y0 + 1, u + 1, v + 1, y1 - 1, block)
+        m.box(u - 1, v - 1, y0, u + 2, v + 2, y0, base)
+        m.box(u - 1, v - 1, y1, u + 2, v + 2, y1, base)
+
+
+def engineer_house(variant):
+    """36 x 36 x 64: a tall brick town house: a stone ground floor with a bay window, three brick
+    floors with stone-trimmed windows, a cornice, a slate mansard roof with dormers, chimneys."""
+    brick = [BRICK_RED, CHIMNEY_BRICK][variant]
+    trim = [STONE_LIGHT, PLASTER_CREAM][variant]
+    m = Model(36, 36, 64)
+    u0, u1, v0, v1 = 3, 32, 6, 33
+    m.ring(u0, v0, u1, v1, 0, 10, STONE_LIGHT)
+    quoins(m, u0, v0, u1, v1, 0, 10)
+    m.box(16, v0, 0, 19, v0, 8, DOOR_WOOD)
+    m.box(15, v0, 9, 20, v0, 10, trim)
+    m.box(15, v0 - 3, 0, 20, v0 - 1, 0, STONE_LIGHT)  # Steps
+    m.box(16, v0 - 2, 1, 19, v0 - 1, 1, STONE_LIGHT)
+    # The bay window, out over the pavement
+    m.box(5, v0 - 3, 1, 12, v0 - 1, 1, STONE_LIGHT)
+    m.ring(5, v0 - 3, 12, v0, 2, 8, WINDOW_FRAME)
+    m.box(6, v0 - 3, 3, 11, v0 - 3, 7, WINDOW_GLASS)
+    m.box(5, v0 - 2, 3, 5, v0 - 1, 7, WINDOW_GLASS)
+    m.box(12, v0 - 2, 3, 12, v0 - 1, 7, WINDOW_GLASS)
+    m.box(5, v0 - 3, 9, 12, v0, 9, ROOF_SLATE)
+    window(m, 24, v0, 3, 4, 5, None, None, facing=-1)
+    for floor_y in (13, 24, 35):
+        m.ring(u0, v0, u1, v1, floor_y - 2, floor_y + 8, brick)
+        m.ring(u0, v0, u1, v1, floor_y - 2, floor_y - 2, trim)
+        for u in (6, 12, 21, 27):
+            m.box(u, v0, floor_y, u + 2, v0, floor_y + 6, WINDOW_GLASS)
+            m.box(u - 1, v0 - 1, floor_y - 1, u + 3, v0 - 1, floor_y - 1, trim)  # Sill
+            m.box(u - 1, v0, floor_y + 7, u + 3, v0, floor_y + 7, trim)          # Lintel
+            m.box(u, v1, floor_y, u + 2, v1, floor_y + 6, WINDOW_GLASS)
+        for v in (12, 20, 27):
+            m.box(u0, v, floor_y, u0, v + 1, floor_y + 6, WINDOW_GLASS)
+            m.box(u1, v, floor_y, u1, v + 1, floor_y + 6, WINDOW_GLASS)
+    m.box(14, v0 - 2, 22, 21, v0 - 1, 22, trim)  # A balcony with an iron rail
+    for u in range(14, 22, 2):
+        m.box(u, v0 - 2, 23, u, v0 - 2, 25, IRON)
+    m.box(14, v0 - 2, 25, 21, v0 - 2, 25, IRON)
+    m.box(u0 - 1, v0 - 1, 44, u1 + 1, v1 + 1, 45, trim)  # Cornice
+    for step in range(10):
+        m.ring(u0 + step // 2, v0 + step // 2, u1 - step // 2, v1 - step // 2, 46 + step, 46 + step, ROOF_SLATE)
+    m.box(u0 + 5, v0 + 5, 56, u1 - 5, v1 - 5, 56, ROOF_SLATE)
+    for u in (7, 15, 23):
+        m.box(u, v0 + 1, 47, u + 4, v0 + 3, 52, brick)
+        m.box(u + 1, v0 + 1, 48, u + 3, v0 + 1, 51, WINDOW_GLASS)
+        m.box(u - 1, v0, 53, u + 5, v0 + 4, 53, ROOF_SLATE)
+    chimney(m, 6, 26, 45, 62)
+    chimney(m, 27, 26, 45, 62)
+    m.box(0, 0, 0, 35, v0 - 1, 0, STONE_LIGHT)
+    lamp_post(m, 33, 2, 10)
+    return m
+
+
+def investor_house(variant):
+    """36 x 36 x 76: a grand white villa: a columned porch with a balcony over it, tall windows with
+    gold-trimmed balconies, a copper mansard roof with dormers and a lantern, a front garden with a
+    fountain."""
+    plaster = [PLASTER_WHITE, PLASTER_PINK][variant]
+    m = Model(36, 36, 76)
+    u0, u1, v0, v1 = 3, 32, 11, 33
+    m.ring(u0, v0, u1, v1, 0, 1, STONE_DARK)
+    m.ring(u0, v0, u1, v1, 2, 50, plaster)
+    quoins(m, u0, v0, u1, v1, 2, 50, MARBLE, step=1)
+    for y in (16, 30, 44):
+        m.ring(u0, v0, u1, v1, y, y, MARBLE)
+    m.box(15, v0, 2, 20, v0, 12, DOOR_WOOD)
+    m.box(14, v0, 13, 21, v0, 14, GOLD)
+    # The porch: four columns, a balcony on top
+    m.box(11, v0 - 6, 0, 24, v0 - 1, 1, MARBLE)
+    columns(m, (12, 16, 19, 23), v0 - 5, 2, 14)
+    m.box(11, v0 - 6, 15, 24, v0 - 1, 16, MARBLE)
+    for u in range(11, 25, 2):
+        m.box(u, v0 - 6, 17, u, v0 - 6, 19, IRON)
+    m.box(11, v0 - 6, 19, 24, v0 - 6, 19, GOLD)
+    # Tall windows on three floors, each with a little balcony on the upper two
+    for floor_y in (4, 18, 32):
+        for u in (6, 11, 23, 28):
+            m.box(u, v0, floor_y, u + 2, v0, floor_y + 9, WINDOW_GLASS)
+            m.box(u - 1, v0, floor_y + 10, u + 3, v0, floor_y + 11, MARBLE)
+            if floor_y > 4:
+                m.box(u - 1, v0 - 2, floor_y - 1, u + 3, v0 - 1, floor_y - 1, MARBLE)
+                m.box(u - 1, v0 - 2, floor_y, u + 3, v0 - 2, floor_y + 1, IRON)
+            m.box(u, v1, floor_y, u + 2, v1, floor_y + 9, WINDOW_GLASS)
+        for v in (15, 22, 28):
+            m.box(u0, v, floor_y, u0, v + 2, floor_y + 9, WINDOW_GLASS)
+            m.box(u1, v, floor_y, u1, v + 2, floor_y + 9, WINDOW_GLASS)
+    m.box(16, v0, 20, 19, v0, 29, WINDOW_GLASS)  # The balcony door over the porch
+    m.box(u0 - 1, v0 - 1, 51, u1 + 1, v1 + 1, 52, MARBLE)  # Cornice
+    for step in range(12):
+        m.ring(u0 + step // 2, v0 + step // 2, u1 - step // 2, v1 - step // 2, 53 + step, 53 + step, ROOF_GREEN)
+    m.box(u0 + 6, v0 + 6, 65, u1 - 6, v1 - 6, 65, ROOF_GREEN)
+    m.box(u0 + 6, v0 + 6, 66, u1 - 6, v1 - 6, 66, GOLD)
+    for u in (8, 16, 24):
+        m.box(u, v0 + 1, 54, u + 4, v0 + 3, 60, plaster)
+        m.box(u + 1, v0 + 1, 55, u + 3, v0 + 1, 59, WINDOW_GLASS)
+        m.box(u - 1, v0, 61, u + 5, v0 + 4, 61, ROOF_GREEN)
+    # A lantern on the roof
+    m.box(16, 20, 67, 19, 23, 71, PLASTER_WHITE)
+    m.box(16, 20, 69, 19, 20, 70, WINDOW_GLASS)
+    m.box(15, 19, 72, 20, 24, 72, ROOF_GREEN)
+    m.box(17, 21, 73, 18, 22, 75, GOLD)
+    chimney(m, 5, 28, 52, 70)
+    chimney(m, 28, 28, 52, 70)
+    # Garden: lawn, gravel, a fountain, clipped hedges
+    m.box(0, 0, 0, 35, 4, 0, COBBLE)
+    for u in (1, 29):
+        m.box(u, 1, 1, u + 5, 3, 3, LEAVES)
+    cylinder(m, 6.0, 7.0, 3.0, 0, 1, MARBLE)
+    cylinder(m, 6.0, 7.0, 2.0, 1, 1, WELL_WATER)
+    m.box(5, 6, 2, 6, 7, 4, MARBLE)
+    m.set(5, 6, 5, WELL_WATER)
+    cylinder(m, 30.0, 7.0, 2.5, 0, 0, FLOWER_RED)
+    return m
+
+
+def university():
+    """48 x 48 x 64: a stone university: a long hall with tall pointed windows and buttresses, a
+    clock tower in the middle with a spire, a lawn quad in front with a tree, paths and lamps."""
+    m = Model(48, 48, 64)
+    u0, u1, v0, v1 = 3, 44, 18, 44
+    m.ring(u0, v0, u1, v1, 0, 1, STONE_DARK)
+    m.ring(u0, v0, u1, v1, 2, 22, STONE_LIGHT)
+    quoins(m, u0, v0, u1, v1, 2, 22, STONE_DARK)
+    for u in range(u0 + 3, u1 - 2, 5):  # Buttresses and pointed windows between them
+        m.box(u, v0 - 1, 0, u + 1, v0 - 1, 16, STONE_DARK)
+        m.box(u + 2, v0, 5, u + 3, v0, 16, WINDOW_GLASS)
+        m.set(u + 2, v0, 17, STONE_DARK)
+        m.set(u + 3, v0, 17, STONE_DARK)
+        m.box(u + 2, v1, 5, u + 3, v1, 16, WINDOW_GLASS)
+    gable_roof(m, u0, u1, v0, v1, 22, 36, ROOF_SLATE, STONE_DARK, overhang=1, gable_wall=STONE_LIGHT)
+    # The clock tower: square, a clock face, an open belfry, a spire
+    t0, t1, w0, w1 = 19, 28, 12, 21
+    m.box(t0, w0, 0, t1, w1, 44, STONE_LIGHT)
+    quoins(m, t0, w0, t1, w1, 0, 44, STONE_DARK)
+    m.box(22, w0, 0, 25, w0, 9, DOOR_WOOD)
+    m.box(21, w0, 10, 26, w0, 10, STONE_DARK)
+    m.box(22, w0, 14, 25, w0, 20, WINDOW_GLASS)
+    m.box(t0, w0, 30, t1, w1, 30, STONE_LIGHT)
+    disc(m, 23, w0 - 1, 33, 3.2, PLASTER_WHITE, 'uy')  # The clock face (hands: a moving part)
+    disc(m, 23, w0 - 1, 33, 0.6, BRASS, 'uy')
+    m.box(t0, w0, 39, t1, w1, 39, STONE_DARK)
+    for u, v in ((t0, w0), (t1, w0), (t0, w1), (t1, w1)):
+        m.box(u, v, 40, u, v, 44, STONE_LIGHT)
+    m.box(22, 15, 40, 25, 18, 43, AIR)
+    m.box(23, 16, 41, 24, 17, 42, BRASS)  # The bell
+    for step in range(10):
+        m.box(t0 + step // 2, w0 + step // 2, 45 + step, t1 - step // 2, w1 - step // 2, 45 + step, ROOF_SLATE)
+    m.box(23, 16, 55, 24, 17, 58, IRON)  # Flag pole on the spire (the flag is a moving part)
+    # The quad: lawn with gravel paths, a tree, lamps
+    m.box(0, 0, 0, 47, 10, 0, COBBLE)
+    m.box(22, 0, 0, 25, 11, 0, STONE_LIGHT)
+    tree(m, 8, 6, 1, height=10, crown=5)
+    tree(m, 39, 6, 1, height=10, crown=5)
+    for u in (17, 30):
+        lamp_post(m, u, 3, 10)
+    return m
+
+
+def bank():
+    """48 x 48 x 60: a marble bank like a temple: wide steps, six columns, a pediment with gold, a
+    gold name band, bronze doors, a small copper dome behind."""
+    m = Model(48, 48, 60)
+    u0, u1, v0, v1 = 5, 42, 16, 44
+    m.ring(u0, v0, u1, v1, 0, 30, MARBLE)
+    m.ring(u0, v0, u1, v1, 0, 1, STONE_LIGHT)
+    for y in (10, 20):
+        m.ring(u0, v0, u1, v1, y, y, STONE_LIGHT)
+    for v in range(v0 + 4, v1 - 2, 6):
+        for u in (u0, u1):
+            m.box(u, v, 4, u, v + 2, 16, WINDOW_GLASS)
+    m.box(19, v0, 2, 28, v0, 18, COPPER)  # Bronze doors
+    m.box(23, v0, 2, 24, v0, 18, GOLD)
+    # Steps and the portico
+    for i in range(4):
+        m.box(5 + i, 2 + i, i, 42 - i, v0 - 1, i, MARBLE)
+    columns(m, (8, 14, 20, 26, 32, 38), 8, 4, 28)
+    m.box(5, 6, 29, 42, v0 - 1, 31, MARBLE)
+    m.box(6, 6, 30, 41, 6, 30, GOLD)  # The name band
+    for step in range(10):
+        m.box(5 + step * 2, 6, 32 + step, 42 - step * 2, v1, 32 + step, MARBLE)
+    m.box(22, 6, 34, 25, 6, 37, GOLD)  # A medallion in the pediment
+    # A copper dome over the hall, with a gold finial
+    dome(m, 24.0, 32.0, 8.0, 42, ROOF_GREEN)
+    m.box(23, 31, 51, 24, 32, 54, GOLD)
+    m.box(23, 31, 55, 24, 32, 58, IRON)  # Flag pole (the flag is a moving part)
+    for u in (2, 45):
+        lamp_post(m, u, 2, 12)
+    return m
+
+
+def sand_mine():
+    """36 x 36 x 26: a quartz sand pit: sand dug out in terraces, heaps of washed sand, a sieve on a
+    frame, a conveyor up to a hopper, wheelbarrows and a hut."""
+    m = Model(36, 36, 26)
+    for v in range(36):
+        for u in range(36):
+            d = ((u - 15) ** 2 + (v - 18) ** 2 * 1.2) ** 0.5
+            if d < 9:
+                m.set(u, v, 0, 4)  # Sand (block 4) in the pit
+            elif d < 14:
+                m.box(u, v, 0, u, v, 1 + int((14 - d) * 0.5), 4)
+    for cu, cv, r in ((30.0, 6.0, 4.0), (29.0, 15.0, 3.0)):
+        for u, v in disc_cells(cu, cv, r):
+            h = int(r - ((u + 0.5 - cu) ** 2 + (v + 0.5 - cv) ** 2) ** 0.5)
+            m.box(u, v, 0, u, v, max(0, h), PLASTER_CREAM)  # Washed sand
+    # A sieve: a tilted mesh on legs
+    for u in (4, 10):
+        m.box(u, 30, 0, u, 30, 5, TIMBER_DARK)
+        m.box(u, 34, 0, u, 34, 3, TIMBER_DARK)
+    for v in range(30, 35):
+        m.box(4, v, 5 - (v - 30) // 2, 10, v, 5 - (v - 30) // 2, IRON if v % 2 else FENCE_WOOD)
+    # Conveyor from the pit to a hopper
+    for i in range(14):
+        m.box(16 + i, 22, 1 + i // 2, 17 + i, 23, 1 + i // 2, TIMBER_LIGHT)
+        if i % 3 == 0:
+            m.box(16 + i, 22, 0, 16 + i, 22, i // 2, TIMBER_DARK)
+    m.box(29, 20, 7, 33, 25, 12, TIMBER_DARK)
+    m.box(30, 21, 12, 32, 24, 13, 4)
+    m.ring(25, 28, 34, 35, 0, 7, TIMBER_LIGHT)
+    m.box(28, 28, 0, 30, 28, 5, DOOR_WOOD)
+    gable_roof(m, 25, 34, 28, 35, 7, 12, ROOF_TILE_RED, ROOF_TILE_DARK, overhang=1, gable_wall=TIMBER_LIGHT)
+    m.box(4, 4, 1, 6, 6, 2, TIMBER_LIGHT)
+    m.box(5, 5, 2, 5, 5, 2, 4)
+    return m
+
+
+def glassworks():
+    """36 x 36 x 48: a glassworks: a tall brick glass cone with glowing furnace mouths, a brick
+    workshop, crates of green glass and a cart of sand."""
+    m = Model(36, 36, 48)
+    # The cone
+    for y in range(0, 44):
+        r = 11.0 - y * 0.18
+        cylinder(m, 18.0, 22.0, max(2.5, r), y, y, BRICK_RED if (y // 3) % 3 else CHIMNEY_BRICK, hollow=True)
+    m.box(17, 21, 44, 18, 22, 44, AIR)
+    m.set(17, 21, 44, SMOKE_EMITTER)
+    for u in (12, 22):
+        m.box(u, 11, 0, u + 2, 12, 3, FIRE)  # Furnace mouths
+        m.box(u - 1, 11, 4, u + 3, 11, 4, STONE_DARK)
+    m.box(16, 11, 0, 19, 12, 7, DOOR_WOOD)
+    # The workshop on the side
+    m.ring(1, 4, 9, 18, 0, 9, BRICK_RED)
+    m.box(4, 4, 0, 6, 4, 6, DOOR_WOOD)
+    gable_roof(m, 1, 9, 4, 18, 9, 14, ROOF_SLATE, STONE_DARK, overhang=1, gable_wall=BRICK_RED)
+    for u, v in ((25, 2), (29, 2), (27, 5)):
+        crate(m, u, v)
+        m.box(u, v, 3, u + 2, v + 2, 3, GLASS_GREEN)
+    m.box(28, 30, 1, 34, 34, 2, TIMBER_LIGHT)
+    m.box(29, 31, 3, 33, 33, 3, 4)
+    return m
+
+
+def window_makers():
+    """36 x 36 x 38: a carpenter's workshop for windows: a two-storey timber house with big glazed
+    doors, window frames stacked against the wall, panes on a rack, a work bench outside."""
+    m = Model(36, 36, 38)
+    u0, u1, v0, v1 = 3, 30, 10, 31
+    m.ring(u0, v0, u1, v1, 0, 1, STONE_DARK)
+    timber_frame(m, u0, u1, v0, v1, 2, 12, PLASTER_CREAM, post_spacing=5)
+    m.box(u0, v0 - 1, 13, u1, v1, 13, TIMBER_DARK)
+    timber_frame(m, u0, u1, v0 - 1, v1, 14, 22, PLASTER_WHITE, post_spacing=5)
+    m.box(12, v0, 2, 21, v0, 11, WINDOW_FRAME)  # Big glazed doors
+    m.box(13, v0, 3, 20, v0, 10, WINDOW_GLASS)
+    m.box(16, v0, 3, 17, v0, 10, WINDOW_FRAME)
+    for u in (6, 24):
+        window(m, u, v0, 5, 3, 4, SHUTTER_BLUE, None, facing=-1)
+    for u in (6, 12, 19, 25):
+        window(m, u, v0 - 1, 16, 3, 4, SHUTTER_BLUE, None, facing=-1)
+    gable_roof(m, u0, u1, v0 - 1, v1, 22, 34, ROOF_TILE_RED, ROOF_TILE_DARK, overhang=2, gable_wall=PLASTER_WHITE)
+    chimney(m, 25, 24, 13, 37)
+    # Frames stacked against the wall, panes on a rack, a bench
+    for i, u in enumerate((3, 6, 9)):
+        m.box(u, v0 - 2 - i % 2, 0, u + 2, v0 - 2 - i % 2, 6, WINDOW_FRAME)
+        m.box(u + 1, v0 - 2 - i % 2, 1, u + 1, v0 - 2 - i % 2, 5, WINDOW_GLASS)
+    for u in (24, 31):
+        m.box(u, 3, 0, u, 3, 6, TIMBER_DARK)
+    for y in (2, 4, 6):
+        m.box(24, 3, y, 31, 3, y, TIMBER_LIGHT)
+        m.box(25, 2, y + 1, 30, 2, y + 1, WINDOW_GLASS)
+    m.box(14, 2, 2, 21, 4, 2, TIMBER_LIGHT)
+    for u, v in ((14, 2), (21, 2), (14, 4), (21, 4)):
+        m.box(u, v, 0, u, v, 1, TIMBER_DARK)
+    m.box(16, 3, 3, 19, 3, 3, WINDOW_FRAME)
+    return m
+
+
+def mine(ore, sluice=False):
+    """36 x 36 x 40: a mine: a rocky hill with veins of its ore, a timbered tunnel mouth, rails out
+    to the front with ore carts, a headframe with its wheel on top, ore heaps (and for gold a
+    sluice where the ore is washed)."""
+    m = Model(36, 36, 40)
+    # The hill, highest at the back
+    for v in range(36):
+        for u in range(36):
+            d = ((u - 18) ** 2 * 0.6 + (v - 30) ** 2) ** 0.5
+            h = int(22 - d * 1.1 + ((u * 7 + v * 13) % 5) * 0.4)
+            if h < 1:
+                continue
+            for y in range(h):
+                vein = (u * 3 + y * 5 + v * 2) % 11 == 0 or (u + y * 2 - v) % 13 == 0
+                m.set(u, v, y, ore if vein else (STONE_DARK if (u + v + y) % 4 == 0 else 3))
+            m.set(u, v, h, 1 if h > 3 else 3)  # Grass on the top, stone low down
+    # The tunnel mouth: a timber frame in the hill's front face
+    for v in range(10, 26):
+        m.box(14, v, 0, 21, v, 7, AIR)
+    for v in (12, 16, 20):
+        m.box(13, v, 0, 13, v, 8, TIMBER_DARK)
+        m.box(22, v, 0, 22, v, 8, TIMBER_DARK)
+        m.box(13, v, 8, 22, v, 8, TIMBER_DARK)
+    m.box(14, 24, 0, 21, 25, 7, COAL)  # Darkness inside
+    # Rails to the front, with two ore carts
+    for v in range(0, 24):
+        m.set(15, v, 0, IRON)
+        m.set(20, v, 0, IRON)
+        if v % 2 == 0:
+            m.box(14, v, 0, 21, v, 0, TIMBER_DARK)
+            m.set(15, v, 0, IRON)
+            m.set(20, v, 0, IRON)
+    for cart_v in (3, 14):
+        m.box(15, cart_v, 1, 20, cart_v + 4, 3, IRON)
+        m.box(16, cart_v + 1, 3, 19, cart_v + 3, 4, ore)
+    # Headframe on top of the hill: two legs and a brace (its wheel turns: a moving part)
+    for u in (14, 22):
+        for y in range(22, 36):
+            m.set(u + (y - 22) // 5 * (1 if u == 14 else -1), 28, y, TIMBER_DARK)
+    m.box(14, 28, 30, 22, 28, 30, TIMBER_DARK)
+    # Ore heaps and a heap of spoil
+    for cu, cv, r, block in ((5, 5, 4.0, ore), (30, 5, 3.5, ore), (5, 13, 3.0, 3)):
+        for u, v in disc_cells(cu, cv, r):
+            h = int(r - ((u + 0.5 - cu) ** 2 + (v + 0.5 - cv) ** 2) ** 0.5)
+            m.box(u, v, 0, u, v, max(0, h), block)
+    if sluice:
+        # A sluice: a sloping trough of water on trestles past the ore heap
+        for i in range(10):
+            u = 24 + i
+            y = 4 - i // 3
+            m.box(u, 11, y, u, 13, y, TIMBER_LIGHT)
+            m.box(u, 12, y + 1, u, 12, y + 1, WELL_WATER)
+            if i % 3 == 0:
+                m.box(u, 11, 0, u, 11, y - 1, TIMBER_DARK)
+                m.box(u, 13, 0, u, 13, y - 1, TIMBER_DARK)
+    return m
+
+
+def iron_mine():
+    return mine(IRON_ORE)
+
+
+def copper_mine():
+    return mine(COPPER)
+
+
+def gold_mine():
+    return mine(GOLD, sluice=True)
+
+
+def spectacle_factory():
+    """36 x 36 x 44: an optician's workshop: a two-storey house of blue plaster over a stone
+    ground floor with a wide shop window, a great pair of spectacles hanging over the door, crates."""
+    m = Model(36, 36, 44)
+    u0, u1, v0, v1 = 3, 32, 9, 33
+    m.ring(u0, v0, u1, v1, 0, 11, STONE_LIGHT)
+    quoins(m, u0, v0, u1, v1, 0, 11)
+    m.box(6, v0, 2, 15, v0, 9, WINDOW_FRAME)
+    m.box(7, v0, 3, 14, v0, 8, WINDOW_GLASS)
+    m.box(7, v0 + 1, 3, 14, v0 + 1, 3, TIMBER_LIGHT)
+    for u in range(8, 14, 2):
+        m.set(u, v0 + 1, 4, BRASS)
+    m.box(19, v0, 1, 22, v0, 9, DOOR_WOOD)
+    m.box(25, v0, 3, 29, v0, 8, WINDOW_GLASS)
+    m.box(u0, v0, 12, u1, v1, 12, STONE_LIGHT)
+    m.ring(u0, v0, u1, v1, 13, 26, PLASTER_BLUE)
+    quoins(m, u0, v0, u1, v1, 13, 26, STONE_LIGHT, step=1)
+    for u in (6, 12, 19, 25):
+        window(m, u, v0, 16, 3, 6, SHUTTER_BLUE, None, facing=-1)
+        window(m, u, v1, 16, 3, 6, None, None, facing=+1)
+    gable_roof(m, u0, u1, v0, v1, 26, 38, ROOF_SLATE, STONE_DARK, overhang=2, gable_wall=PLASTER_BLUE)
+    chimney(m, 26, 25, 26, 43)
+    m.box(20, v0 - 4, 13, 20, v0 - 1, 13, IRON)  # The sign's bracket (the spectacles are a moving part)
+    crate(m, 3, 3)
+    crate(m, 7, 3)
+    crate(m, 5, 3, 3)
+    return m
+
+
+def filament_factory():
+    """36 x 36 x 48: a filament works: a brick hall with a sawtooth roof, carbonizing ovens glowing
+    along its side, a tall chimney, coal heaps and coils of filament on a cart."""
+    m = Model(36, 36, 48)
+    u0, u1, v0, v1 = 3, 26, 8, 33
+    m.ring(u0, v0, u1, v1, 0, 0, STONE_DARK)
+    brick_walls(m, u0, v0, u1, v1, 1, 14)
+    quoins(m, u0, v0, u1, v1, 1, 14, STONE_LIGHT)
+    for u in (6, 11, 18):
+        arched_window(m, u, v0, 4, 3, 6, facing=-1)
+    m.box(14, v0, 1, 16, v0, 9, DOOR_WOOD)
+    m.box(u0, v0, 15, u1, v1, 15, ROOF_SLATE)
+    for tooth in range(v0, v1, 7):
+        for i in range(7):
+            v = tooth + i
+            if v > v1:
+                break
+            m.box(u0, v, 15 + i, u1, v, 15 + i, ROOF_SLATE)
+        m.box(u0, min(tooth + 6, v1), 16, u1, min(tooth + 6, v1), 21, WINDOW_GLASS)
+    # Ovens along the right side, glowing
+    for v in (12, 19, 26):
+        m.box(27, v, 0, 32, v + 4, 6, BRICK_RED)
+        dome(m, 29.5, v + 2.0, 3.0, 6, BRICK_RED)
+        m.box(27, v + 1, 1, 27, v + 3, 3, FIRE)
+    factory_chimney(m, 28, 30, 0, 47, size=4)
+    for cu, cv in ((5.0, 3.0), (11.0, 3.5)):
+        for u, v in disc_cells(cu, cv, 2.8):
+            h = int(2.8 - ((u + 0.5 - cu) ** 2 + (v + 0.5 - cv) ** 2) ** 0.5)
+            m.box(u, v, 0, u, v, max(0, h), COAL)
+    m.box(19, 2, 1, 25, 5, 1, TIMBER_LIGHT)
+    for u in (20, 23):
+        cylinder(m, u + 0.5, 3.5, 1.4, 2, 3, COPPER, hollow=True)
+    return m
+
+
+def light_bulb_factory():
+    """36 x 36 x 46: a light bulb works: a modern brick factory with rows of big windows, a glass
+    roof, and a giant light bulb on the roof that glows at night; crates of bulbs at the dock."""
+    m = Model(36, 36, 46)
+    u0, u1, v0, v1 = 3, 32, 10, 33
+    m.ring(u0, v0, u1, v1, 0, 0, STONE_DARK)
+    brick_walls(m, u0, v0, u1, v1, 1, 22)
+    quoins(m, u0, v0, u1, v1, 1, 22, STONE_LIGHT)
+    m.ring(u0, v0, u1, v1, 11, 11, STONE_LIGHT)
+    for floor_y in (3, 14):
+        for u in range(5, 31, 4):
+            if floor_y == 3 and 14 <= u <= 20:
+                continue
+            m.box(u, v0, floor_y, u + 2, v0, floor_y + 6, WINDOW_GLASS)
+            m.box(u, v1, floor_y, u + 2, v1, floor_y + 6, WINDOW_GLASS)
+    m.box(15, v0, 1, 20, v0, 9, DOOR_WOOD)
+    m.box(u0, v0, 23, u1, v1, 23, STONE_LIGHT)
+    for v in range(v0 + 2, v1 - 1, 5):  # Glass roof lights
+        m.box(u0 + 3, v, 24, u1 - 3, v + 2, 24, WINDOW_GLASS)
+    # The giant bulb on the roof: a glass globe on a brass screw base
+    m.box(16, 20, 24, 19, 23, 27, BRASS)
+    for y in range(28, 30):
+        m.box(16, 20, y, 19, 23, y, IRON if y % 2 else BRASS)
+    cylinder(m, 18.0, 22.0, 6.0, 30, 34, AWNING_WHITE)  # Frosted glass
+    dome(m, 18.0, 22.0, 6.0, 35, AWNING_WHITE)
+    m.box(17, 19, 32, 18, 19, 35, FLOWER_YELLOW)  # The filament's glow through the front
+    factory_chimney(m, 27, 27, 23, 45, size=3)
+    # Loading dock
+    m.box(3, v0 - 4, 0, 13, v0 - 1, 1, STONE_LIGHT)
+    for u in (4, 8):
+        crate(m, u, v0 - 4, 2)
+    m.box(9, v0 - 3, 5, 10, v0 - 2, 6, WINDOW_GLASS)
+    return m
+
+
+def vineyard():
+    """36 x 36 x 30: a winegrower's farm: an ochre farmhouse with a tiled roof and a pergola of
+    vines, a wine press, barrels and baskets of grapes."""
+    m = Model(36, 36, 30)
+    u0, u1, v0, v1 = 3, 22, 14, 33
+    m.ring(u0, v0, u1, v1, 0, 1, STONE_DARK)
+    m.ring(u0, v0, u1, v1, 2, 12, PLASTER_OCHRE)
+    quoins(m, u0, v0, u1, v1, 2, 12, STONE_LIGHT)
+    m.box(10, v0, 2, 13, v0, 9, DOOR_WOOD)
+    for u in (5, 17):
+        window(m, u, v0, 5, 2, 3, SHUTTER_GREEN, FLOWER_RED, facing=-1)
+    gable_roof(m, u0, u1, v0, v1, 12, 24, ROOF_TILE_RED, ROOF_TILE_DARK, overhang=2, gable_wall=PLASTER_OCHRE)
+    chimney(m, 18, 28, 12, 27)
+    # Pergola of vines in front of the house
+    for u in (3, 9, 15, 21):
+        m.box(u, 5, 0, u, 5, 8, TIMBER_DARK)
+        m.box(u, 11, 0, u, 11, 8, TIMBER_DARK)
+    for v in range(5, 12):
+        for u in range(3, 22):
+            if (u + v) % 3:
+                m.set(u, v, 9, LEAVES)
+            if (u * 3 + v * 5) % 11 == 0:
+                m.set(u, v, 8, GRAPE)
+    # A wine press, barrels, baskets of grapes
+    m.box(26, 18, 0, 31, 23, 2, BARREL)
+    m.box(27, 19, 3, 30, 22, 3, GRAPE)
+    m.box(28, 20, 4, 29, 21, 8, TIMBER_DARK)
+    m.box(26, 20, 8, 31, 21, 8, TIMBER_DARK)
+    for u, v in ((25, 3), (29, 3), (27, 7)):
+        barrel(m, u, v)
+    for u in (25, 29):
+        m.box(u, 28, 0, u + 2, 30, 1, TIMBER_LIGHT)
+        m.box(u, 28, 2, u + 2, 30, 2, GRAPE)
+    return m
+
+
+def vine_rows():
+    """36 x 36 x 12: vine rows (a farm module): trellises of posts and wires heavy with leaves and
+    grape clusters, over bare soil."""
+    m = Model(36, 36, 12)
+    for v in range(36):
+        for u in range(36):
+            m.set(u, v, 0, GARDEN_SOIL if v % 6 else 1)
+    for v in range(2, 36, 6):
+        for u in range(1, 35):
+            if u % 6 == 1:
+                m.box(u, v, 1, u, v, 8, TIMBER_DARK)  # Posts
+            m.set(u, v, 4, FENCE_WOOD)                # Wires
+            m.set(u, v, 7, FENCE_WOOD)
+            for y in range(3, 9):
+                for dv in (-1, 0, 1):
+                    if (u * 7 + y * 3 + dv * 5 + v) % 4 != 0:
+                        m.set(u, v + dv, y, LEAVES)
+            if (u * 5 + v) % 7 == 0:
+                m.box(u, v - 1, 3, u, v - 1, 4, GRAPE)
+            if (u * 3 + v) % 9 == 0:
+                m.box(u, v + 1, 4, u, v + 1, 5, GRAPE)
+    return m
+
+
+def champagne_cellar():
+    """36 x 36 x 40: a champagne house: a stone manor with a little tower, an arched cellar door
+    going down into the ground, barrels and racks of green bottles, a courtyard."""
+    m = Model(36, 36, 40)
+    u0, u1, v0, v1 = 3, 26, 12, 33
+    m.ring(u0, v0, u1, v1, 0, 14, STONE_LIGHT)
+    m.ring(u0, v0, u1, v1, 0, 0, STONE_DARK)
+    quoins(m, u0, v0, u1, v1, 0, 14, STONE_DARK)
+    m.box(12, v0, 0, 17, v0, 8, STONE_DARK)  # The arched cellar door
+    m.box(13, v0, 0, 16, v0, 7, DOOR_WOOD)
+    m.box(13, v0, 8, 16, v0, 8, STONE_DARK)
+    for u in (5, 21):
+        window(m, u, v0, 4, 2, 4, SHUTTER_BLUE, FLOWER_YELLOW, facing=-1)
+    for u in (6, 12, 19):
+        window(m, u, v1, 8, 2, 4, None, None, facing=+1)
+    gable_roof(m, u0, u1, v0, v1, 14, 26, ROOF_SLATE, STONE_DARK, overhang=2, gable_wall=STONE_LIGHT)
+    # A round tower at the corner with a pointed roof
+    cylinder(m, 29.0, 16.0, 4.0, 0, 22, STONE_LIGHT)
+    for y in range(23, 33):
+        cylinder(m, 29.0, 16.0, max(0.6, 4.6 - (y - 23) * 0.45), y, y, ROOF_SLATE)
+    m.box(28, 15, 33, 29, 16, 36, GOLD)
+    m.box(28, 12, 8, 29, 12, 11, WINDOW_GLASS)
+    # Courtyard: barrels in rows, a rack of bottles
+    for u in range(4, 24, 4):
+        barrel(m, u, 3)
+    barrel(m, 6, 3, 4)
+    barrel(m, 14, 3, 4)
+    for u in (4, 12):
+        m.box(u, 8, 0, u + 6, 9, 5, TIMBER_DARK)
+        for y in range(1, 5):
+            for i in range(u + 1, u + 6):
+                if (i + y) % 2 == 0:
+                    m.set(i, 8, y, GLASS_GREEN)
+    return m
+
+
+def goldsmiths():
+    """36 x 36 x 46: a goldsmith's shop: a narrow stone house with marble trim, display windows
+    of gold and gems, a gilded sign, iron grilles, a mansard roof."""
+    m = Model(36, 36, 46)
+    u0, u1, v0, v1 = 4, 31, 8, 33
+    m.ring(u0, v0, u1, v1, 0, 30, STONE_LIGHT)
+    quoins(m, u0, v0, u1, v1, 0, 30, MARBLE)
+    for y in (12, 22):
+        m.ring(u0, v0, u1, v1, y, y, MARBLE)
+    for left in (6, 21):  # Display windows with gold and gems behind iron grilles
+        m.box(left, v0, 2, left + 8, v0, 9, WINDOW_FRAME)
+        m.box(left + 1, v0, 3, left + 7, v0, 8, WINDOW_GLASS)
+        m.box(left + 1, v0 + 1, 3, left + 7, v0 + 1, 3, VELVET)
+        for i, block in enumerate((GOLD, FLOWER_RED, GOLD, AWNING_BLUE, GOLD)):
+            m.set(left + 2 + i, v0 + 1, 4, block)
+        for u in range(left + 1, left + 8, 2):
+            m.box(u, v0 - 1, 3, u, v0 - 1, 8, IRON)
+    m.box(16, v0, 1, 19, v0, 9, COPPER)
+    m.box(15, v0, 10, 20, v0, 10, GOLD)
+    for floor_y in (14, 24):
+        for u in (7, 13, 20, 26):
+            m.box(u, v0, floor_y, u + 2, v0, floor_y + 5, WINDOW_GLASS)
+            m.box(u - 1, v0 - 1, floor_y - 1, u + 3, v0 - 1, floor_y - 1, MARBLE)
+    m.box(u0 - 1, v0 - 1, 31, u1 + 1, v1 + 1, 31, MARBLE)
+    for step in range(8):
+        m.ring(u0 + step // 2, v0 + step // 2, u1 - step // 2, v1 - step // 2, 32 + step, 32 + step, ROOF_SLATE)
+    m.box(u0 + 4, v0 + 4, 40, u1 - 4, v1 - 4, 40, ROOF_SLATE)
+    for u in (10, 21):
+        m.box(u, v0 + 1, 33, u + 4, v0 + 3, 37, STONE_LIGHT)
+        m.box(u + 1, v0 + 1, 34, u + 3, v0 + 1, 36, WINDOW_GLASS)
+    chimney(m, 24, 26, 31, 45)
+    m.box(28, v0 - 4, 12, 28, v0 - 1, 12, IRON)  # The sign's bracket (the sign is a moving part)
+    m.box(0, 0, 0, 35, v0 - 2, 0, STONE_LIGHT)
+    lamp_post(m, 2, 2, 11)
+    return m
+
+
+def moving_parts_82(part):
+    """The moving parts of the 8.2 buildings (see moving_parts)."""
+    def mine_wheel(c):
+        spokes(c, 18, 27, 35, 4, IRON, 'uy', 3)
+    part('copper_mine', 'wheel', (18, 27, 35), 'spin', 'forward', 1.4, 0, mine_wheel)
+    part('gold_mine', 'wheel', (18, 27, 35), 'spin', 'forward', 1.2, 0, mine_wheel)
+    # University: the flag on the spire, the clock hand
+    part('university', 'flag', (23, 16, 58), 'swing', 'up', 1.6, 0.5,
+         lambda c: flag(c, 23, 16, 58, 6, (AWNING_BLUE, AWNING_WHITE, AWNING_BLUE), 1))
+    part('university', 'clock', (23, 11, 33), 'spin', 'forward', 0.25, 0, lambda c: c.box(23, 11, 33, 23, 11, 35, IRON))
+    # Bank: its flag
+    part('bank', 'flag', (23, 31, 58), 'swing', 'up', 1.5, 0.5, lambda c: flag(c, 23, 31, 58, 6, (VELVET, GOLD, VELVET), 1))
+    # Hanging shop signs: a pair of spectacles, a gold ring
+    def spectacles(c):
+        for cu in (18, 22):
+            for a, b in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                c.set(cu + a, 5, 10 + b, BRASS)
+            c.set(cu, 5, 10, WINDOW_GLASS)
+        c.set(20, 5, 10, BRASS)
+        c.box(20, 5, 11, 20, 5, 12, IRON)
+    part('spectacle_factory', 'sign', (20, 5, 13), 'swing', 'across', 1.5, 0.25, spectacles)
+    def ring_sign(c):
+        for a, b in ((-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)):
+            c.set(28 + a, 4, 9 + b, GOLD)
+        c.set(28, 4, 11, AWNING_BLUE)  # The gem
+    part('goldsmiths', 'sign', (28, 4, 12), 'swing', 'across', 1.4, 0.25, ring_sign)
 
 
 def main():
@@ -2086,6 +2678,24 @@ def main():
         'steelworks_1': steelworks(),
         'cannery_1': cannery(),
         'sewing_machine_factory_1': sewing_machine_factory(),
+        'engineer_house_1': engineer_house(0),
+        'engineer_house_2': engineer_house(1),
+        'university_1': university(),
+        'sand_mine_1': sand_mine(),
+        'glassworks_1': glassworks(),
+        'window_makers_1': window_makers(),
+        'copper_mine_1': copper_mine(),
+        'spectacle_factory_1': spectacle_factory(),
+        'filament_factory_1': filament_factory(),
+        'light_bulb_factory_1': light_bulb_factory(),
+        'investor_house_1': investor_house(0),
+        'investor_house_2': investor_house(1),
+        'bank_1': bank(),
+        'vineyard_1': vineyard(),
+        'vine_rows_1': vine_rows(),
+        'champagne_cellar_1': champagne_cellar(),
+        'gold_mine_1': gold_mine(),
+        'goldsmiths_1': goldsmiths(),
     }
     # The moving parts and their manifest are always written
     files, lines = moving_parts()

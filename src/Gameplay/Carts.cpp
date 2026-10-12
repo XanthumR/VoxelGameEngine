@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-static_assert(Block::CARGO_FIRST + ITEM_COUNT - 1 == 128, "a cargo color per good: CART_PALETTE in shaders/render/shade.comp");
+static_assert(Block::CARGO_FIRST + ITEM_COUNT - 1 == 139, "a cargo color per good: CART_PALETTE in shaders/render/shade.comp");
 
 namespace {
 

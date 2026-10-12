@@ -282,7 +282,8 @@ void MoneyLines(InfoLines& lines, GameObjectId building, const GameObjectRegistr
         std::snprintf(text, sizeof(text), cost.upkeep > 0 ? "-%d / min" : "none", cost.upkeep);
     }
     money.value = text;
-    BuildingCost refund = { (int16_t)(cost.coins / 2), (int16_t)(cost.planks / 2), 0, (int16_t)(cost.bricks / 2), (int16_t)(cost.steelBeams / 2) };
+    BuildingCost refund = { (int16_t)(cost.coins / 2), (int16_t)(cost.planks / 2), 0, (int16_t)(cost.bricks / 2), (int16_t)(cost.steelBeams / 2),
+        (int16_t)(cost.windows / 2) };
     char materials[64];
     if (MaterialsText(refund, materials, sizeof(materials))) std::snprintf(text, sizeof(text), "Demolish refunds %d coins, %s", refund.coins, materials);
     else std::snprintf(text, sizeof(text), "Demolish refunds %d coins", refund.coins);

@@ -31,7 +31,7 @@ public:
     struct Entry {
         int type = 0; // Building type, or BuildTool::ROAD
         Rml::String name, hotkey, image; // image: its picture, relative to assets/ui
-        int coins = 0, planks = 0, bricks = 0, steelBeams = 0;
+        int coins = 0, planks = 0, bricks = 0, steelBeams = 0, windows = 0;
         bool selected = false;
         bool locked = false;  // Its tier is not reached yet
         Rml::String unlock;   // What unlocks it
@@ -73,8 +73,8 @@ private:
     void UpdateCostTag(const BuildTool& tool, const Simulation& simulation, glm::vec2 cursor, glm::ivec2 size);
     Rml::ElementDocument* m_CostTag = nullptr;
     Rml::DataModelHandle m_CostModel;
-    int m_Cost[4] = {};       // Coins, planks, bricks, steel beams
-    bool m_Lacking[4] = {};   // The treasury or the island has too few
+    int m_Cost[5] = {};       // Coins, planks, bricks, steel beams, windows
+    bool m_Lacking[5] = {};   // The treasury or the island has too few
 
     // The card of the hovered building
     void UpdateCard(glm::vec2 cursor, glm::ivec2 size, const BuildTool& tool);

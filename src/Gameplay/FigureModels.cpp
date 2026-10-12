@@ -35,14 +35,19 @@ int Swing(int frame) {
 } // namespace
 
 // About 11 voxels tall: legs and arms swinging, a straw hat (Farmers), a cap (Workers) or a long
-// coat and a bowler hat (Artisans)
+// coat and a bowler hat (Artisans), a jacket and a flat cap (Engineers), a dark suit and a top hat
+// (Investors)
 VoxelObjectModel BuildPersonModel(int tier, int variant, int frame) {
-    VoxelObjectModel model = Empty(glm::ivec3(5, 11, 4));
+    VoxelObjectModel model = Empty(glm::ivec3(5, 13, 4)); // Room for a top hat
     ModelWriter w{ model, 2, 2 }; // s -2..2, t -2..1
     uint8_t skin = (variant & 1) ? Block::PERSON_SKIN_DARK : Block::PERSON_SKIN;
-    uint8_t shirt = tier == TIER_FARMERS ? ((variant & 2) ? Block::PERSON_SHIRT_FARMER_GREEN : Block::PERSON_SHIRT_FARMER)
-                  : tier == TIER_WORKERS ? ((variant & 2) ? Block::PERSON_SHIRT_WORKER_GREY : Block::PERSON_SHIRT_WORKER)
-                                         : ((variant & 2) ? Block::PERSON_COAT_ARTISAN_GREEN : Block::PERSON_COAT_ARTISAN);
+    bool alternate = (variant & 2) != 0;
+    uint8_t shirt = tier == TIER_FARMERS    ? (alternate ? Block::PERSON_SHIRT_FARMER_GREEN : Block::PERSON_SHIRT_FARMER)
+                  : tier == TIER_WORKERS    ? (alternate ? Block::PERSON_SHIRT_WORKER_GREY : Block::PERSON_SHIRT_WORKER)
+                  : tier == TIER_ARTISANS   ? (alternate ? Block::PERSON_COAT_ARTISAN_GREEN : Block::PERSON_COAT_ARTISAN)
+                  : tier == TIER_ENGINEERS  ? (alternate ? Block::PERSON_JACKET_ENGINEER_BROWN : Block::PERSON_JACKET_ENGINEER)
+                                            : (alternate ? Block::PERSON_SUIT_INVESTOR_WINE : Block::PERSON_SUIT_INVESTOR);
+    bool longCoat = tier >= TIER_ARTISANS;
     uint8_t trousers = (variant & 4) ? Block::PERSON_TROUSERS_BLUE : Block::PERSON_TROUSERS;
     int swing = Swing(frame);
 
@@ -56,8 +61,8 @@ VoxelObjectModel BuildPersonModel(int tier, int variant, int frame) {
     }
     // Hips and torso, two deep (an Artisan's coat reaches down over the hips)
     for (int s = -1; s <= 1; s++) {
-        w.Put(s, 0, 4, tier == TIER_ARTISANS ? shirt : trousers);
-        if (tier == TIER_ARTISANS) w.Put(s, -1, 4, shirt);
+        w.Put(s, 0, 4, longCoat ? shirt : trousers);
+        if (longCoat) w.Put(s, -1, 4, shirt);
         for (int y = 5; y <= 7; y++) {
             w.Put(s, 0, y, shirt);
             w.Put(s, -1, y, shirt);
@@ -83,14 +88,27 @@ VoxelObjectModel BuildPersonModel(int tier, int variant, int frame) {
             w.Put(s, 0, 10, Block::PERSON_STRAW_HAT);
             w.Put(s, -1, 10, Block::PERSON_STRAW_HAT);
         }
-    } else if (tier == TIER_ARTISANS) {
-        for (int s = -1; s <= 1; s++) {
-            for (int t = -2; t <= 1; t++) w.Put(s, t, 9, Block::PERSON_BOWLER); // Brim
-            w.Put(s, 0, 10, Block::PERSON_BOWLER);
-            w.Put(s, -1, 10, Block::PERSON_BOWLER);
+    } else if (tier == TIER_INVESTORS) {
+        for (int s = -2; s <= 2; s++) {
+            for (int t = -2; t <= 1; t++) {
+                if (std::abs(s) + (t == -2 || t == 1 ? 1 : 0) <= 2) w.Put(s, t, 9, Block::PERSON_TOP_HAT); // Brim
+            }
         }
-        w.Put(-2, 0, 9, Block::PERSON_BOWLER);
-        w.Put(2, 0, 9, Block::PERSON_BOWLER);
+        for (int y = 10; y <= 12; y++) { // A tall crown
+            for (int s = -1; s <= 1; s++) {
+                w.Put(s, 0, y, Block::PERSON_TOP_HAT);
+                w.Put(s, -1, y, Block::PERSON_TOP_HAT);
+            }
+        }
+    } else if (tier == TIER_ARTISANS || tier == TIER_ENGINEERS) {
+        uint8_t hat = tier == TIER_ARTISANS ? Block::PERSON_BOWLER : Block::PERSON_CAP; // A bowler or a flat cap
+        for (int s = -1; s <= 1; s++) {
+            for (int t = -2; t <= 1; t++) w.Put(s, t, 9, hat); // Brim
+            w.Put(s, 0, 10, hat);
+            w.Put(s, -1, 10, hat);
+        }
+        w.Put(-2, 0, 9, hat);
+        w.Put(2, 0, 9, hat);
     } else {
         for (int s = -1; s <= 1; s++) {
             for (int t = -1; t <= 1; t++) w.Put(s, t, 9, Block::PERSON_CAP); // Cap with a visor

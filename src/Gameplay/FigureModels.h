@@ -20,7 +20,8 @@ VoxelObjectModel BuildPersonModel(int tier, int variant, int frame);
 constexpr int CART_FRAMES = 4, CART_LOADS = 1 + 2 * 4;
 constexpr int CART_MODEL_COUNT = CART_FRAMES * CART_LOADS;
 constexpr bool CargoIsPiled(ItemType item) {
-    return item == ItemType::Wood || item == ItemType::Pigs || item == ItemType::Clay || item == ItemType::Coal || item == ItemType::Iron;
+    return item == ItemType::Wood || item == ItemType::Pigs || item == ItemType::Clay || item == ItemType::Coal || item == ItemType::Iron ||
+           item == ItemType::QuartzSand || item == ItemType::Copper || item == ItemType::Gold || item == ItemType::Grapes;
 }
 constexpr int CartModelOffset(int frame, bool piled, int amount) { return frame * CART_LOADS + (amount <= 0 ? 0 : 1 + (piled ? 4 : 0) + (amount - 1)); }
 VoxelObjectModel BuildCartModel(int frame, bool piled, int amount);

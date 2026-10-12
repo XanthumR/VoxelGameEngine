@@ -44,3 +44,10 @@ pasture cow 15 16 0 wander - 8 7
 cattle_farm calf 22 8 0 wander - 3 2
 pig_farm pig 7 11 0 wander - 2 1
 sheep_farm sheep 9 6 0 wander - 3 2
+copper_mine copper_mine_wheel 18 27 35 spin forward 1.4 0
+gold_mine gold_mine_wheel 18 27 35 spin forward 1.2 0
+university university_flag 23 16 58 swing up 1.6 0.5
+university university_clock 23 11 33 spin forward 0.25 0
+bank bank_flag 23 31 58 swing up 1.5 0.5
+spectacle_factory spectacle_factory_sign 20 5 13 swing across 1.5 0.25
+goldsmiths goldsmiths_sign 28 4 12 swing across 1.4 0.25

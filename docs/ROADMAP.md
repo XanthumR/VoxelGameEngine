@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way (8.1 done) and the UI milestone is done; 8.2 is next.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way (8.1 and 8.2 done) and the UI milestone is done; 8.3 is next.
 
 ## Roadmap
 
@@ -745,7 +745,7 @@ Each building gets a `.vox` model from `tools/building_models/generate.py` (new 
 
 - Done (8.1): all of the above. Placement and demolish refunds handle the three materials; the building panel lists an upgrade's materials; service buildings show the houses they serve; hovering or placing one tints the road reach of its type. The ship panel lists only the goods the island or the ship has, the island panel only the goods in stock. Tests cover service reach, material checks and the Artisan upgrade.
 
-### 8.2 Engineers and Investors (planned)
+### 8.2 Engineers and Investors
 
 | Tier (house) | Needs |
 |---|---|
@@ -753,6 +753,8 @@ Each building gets a `.vox` model from `tools/building_models/generate.py` (new 
 | Investors (50) | Marketplace, University, Glasses, Light Bulbs, Champagne, Jewelry, Bank |
 
 Chains: Sand Mine (coast) → Glassworks (Glass); Window Makers (Wood + Glass → Windows, the new construction material); Copper Mine → Spectacle Factory (Glass + Copper → Glasses); Filament Factory (Coal → Filaments) → Light Bulb Factory (Glass + Filaments); Vineyard (modules) → Champagne Cellar (Grapes + Glass); Gold Mine → Goldsmiths (Jewelry). Service buildings: University, Bank.
+
+- Done (8.2): all of the above. 11 new goods, the Engineer and Investor houses, the University and Bank (ranges 26 and 28), 12 producers and the Vine Rows module, each with a `.vox` model (new materials 188-192: green glass, copper, gold, grape, marble), a build menu picture and icons. Windows are the fourth construction material: the Investor House upgrade and the late buildings cost them. Engineers wear a jacket and cap, Investors a suit and top hat. The mines share one model generator with the iron mine and have its turning wheel; the University and Bank fly flags, the University clock turns, the goldsmith and optician hang swinging signs. The glassworks and filament factory smoke black. A test covers the Investor upgrade needing windows.
 
 ### 8.3 NPC traders (planned)
 

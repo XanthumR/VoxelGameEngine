@@ -13,12 +13,14 @@ enum class ServiceType : uint8_t {
     Marketplace, // Also brings the goods: a house outside every marketplace's reach gets none
     School,
     Theatre,
+    University,
+    Bank,
     Count
 };
 
 constexpr int SERVICE_COUNT = (int)ServiceType::Count;
-constexpr std::array<const char*, SERVICE_COUNT> SERVICE_NAMES = { "Marketplace", "School", "Variety Theatre" };
-constexpr std::array<int, SERVICE_COUNT> SERVICE_ROAD_RANGE = { 20, 16, 24 }; // Road tiles each type reaches
+constexpr std::array<const char*, SERVICE_COUNT> SERVICE_NAMES = { "Marketplace", "School", "Variety Theatre", "University", "Bank" };
+constexpr std::array<int, SERVICE_COUNT> SERVICE_ROAD_RANGE = { 20, 16, 24, 26, 28 }; // Road tiles each type reaches
 
 enum class NeedKind : uint8_t {
     Service, // Met by being in a service building's reach
@@ -44,10 +46,12 @@ constexpr const char* NeedName(const Need& need) {
 }
 
 constexpr int MAX_NEEDS = 8;
-constexpr int TIER_COUNT = 3;
+constexpr int TIER_COUNT = 5;
 constexpr int TIER_FARMERS = 0;
 constexpr int TIER_WORKERS = 1;
 constexpr int TIER_ARTISANS = 2;
+constexpr int TIER_ENGINEERS = 3;
+constexpr int TIER_INVESTORS = 4;
 
 struct PopulationTier {
     const char* name;
@@ -80,6 +84,24 @@ constexpr std::array<PopulationTier, TIER_COUNT> POPULATION_TIERS = { {
         GoodNeed(ItemType::CannedFood, 5, 25),
         GoodNeed(ItemType::SewingMachines, 5, 15),
         ServiceNeed(ServiceType::Theatre, 5),
+    } } },
+    { "Engineers", 40, 7, { {
+        ServiceNeed(ServiceType::Marketplace, 4),
+        ServiceNeed(ServiceType::Theatre, 4),
+        GoodNeed(ItemType::CannedFood, 5, 25),
+        GoodNeed(ItemType::SewingMachines, 5, 15),
+        GoodNeed(ItemType::Glasses, 7, 15),
+        GoodNeed(ItemType::LightBulbs, 7, 20),
+        ServiceNeed(ServiceType::University, 8),
+    } } },
+    { "Investors", 50, 7, { {
+        ServiceNeed(ServiceType::Marketplace, 5),
+        ServiceNeed(ServiceType::University, 5),
+        GoodNeed(ItemType::Glasses, 6, 15),
+        GoodNeed(ItemType::LightBulbs, 6, 20),
+        GoodNeed(ItemType::Champagne, 10, 15),
+        GoodNeed(ItemType::Jewelry, 10, 10),
+        ServiceNeed(ServiceType::Bank, 8),
     } } },
 } };
 

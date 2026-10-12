@@ -12,9 +12,13 @@ constexpr size_t MAX_LINES = 64;
 constexpr std::array<const char*, ITEM_COUNT> ITEM_ICONS = { "icons/wood.tga", "icons/planks.tga", "icons/fish.tga", "icons/wool.tga",
     "icons/work_clothes.tga", "icons/bricks.tga", "icons/sausages.tga", "icons/pigs.tga", "icons/grain.tga", "icons/flour.tga", "icons/bread.tga",
     "icons/tallow.tga", "icons/soap.tga", "icons/clay.tga", "icons/beef.tga", "icons/iron.tga", "icons/coal.tga", "icons/steel.tga",
-    "icons/steel_beams.tga", "icons/canned_food.tga", "icons/sewing_machines.tga" };
-constexpr std::array<const char*, TIER_COUNT> TIER_ICONS = { "icons/farmer.tga", "icons/worker.tga", "icons/artisan.tga" };
-constexpr std::array<const char*, SERVICE_COUNT> SERVICE_ICONS = { "icons/marketplace.tga", "icons/school.tga", "icons/theatre.tga" };
+    "icons/steel_beams.tga", "icons/canned_food.tga", "icons/sewing_machines.tga", "icons/quartz_sand.tga", "icons/glass.tga", "icons/windows.tga",
+    "icons/copper.tga", "icons/glasses.tga", "icons/filaments.tga", "icons/light_bulbs.tga", "icons/grapes.tga", "icons/champagne.tga",
+    "icons/gold.tga", "icons/jewelry.tga" };
+constexpr std::array<const char*, TIER_COUNT> TIER_ICONS = { "icons/farmer.tga", "icons/worker.tga", "icons/artisan.tga", "icons/engineer.tga",
+    "icons/investor.tga" };
+constexpr std::array<const char*, SERVICE_COUNT> SERVICE_ICONS = { "icons/marketplace.tga", "icons/school.tga", "icons/theatre.tga",
+    "icons/university.tga", "icons/bank.tga" };
 
 } // namespace
 

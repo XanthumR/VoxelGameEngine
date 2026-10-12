@@ -233,8 +233,8 @@ const vec3 MODEL_PALETTE[40] = vec3[](
 // Horse carts, block IDs 102-106, and the goods they carry from 108 on in ItemType order
 // (src/World/BlockTypes.h; 107 is the cargo placeholder, never drawn)
 const int CART_FIRST = 102;
-const int CART_LAST = 128;
-const vec3 CART_PALETTE[27] = vec3[](
+const int CART_LAST = 139;
+const vec3 CART_PALETTE[38] = vec3[](
     vec3(0.46, 0.29, 0.16), // 102 horse coat
     vec3(0.12, 0.08, 0.06), // 103 horse mane, tail, hooves
     vec3(0.34, 0.17, 0.09), // 104 harness leather
@@ -261,14 +261,25 @@ const vec3 CART_PALETTE[27] = vec3[](
     vec3(0.56, 0.60, 0.64), // 125 cargo: steel
     vec3(0.40, 0.44, 0.50), // 126 cargo: steel beams
     vec3(0.74, 0.76, 0.80), // 127 cargo: canned food
-    vec3(0.18, 0.18, 0.20)  // 128 cargo: sewing machines
+    vec3(0.18, 0.18, 0.20), // 128 cargo: sewing machines
+    vec3(0.86, 0.80, 0.62), // 129 cargo: quartz sand
+    vec3(0.62, 0.82, 0.80), // 130 cargo: glass
+    vec3(0.70, 0.86, 0.90), // 131 cargo: windows
+    vec3(0.72, 0.42, 0.24), // 132 cargo: copper
+    vec3(0.80, 0.70, 0.40), // 133 cargo: glasses
+    vec3(0.30, 0.26, 0.22), // 134 cargo: filaments
+    vec3(0.96, 0.90, 0.60), // 135 cargo: light bulbs
+    vec3(0.40, 0.18, 0.42), // 136 cargo: grapes
+    vec3(0.30, 0.42, 0.24), // 137 cargo: champagne
+    vec3(0.95, 0.76, 0.22), // 138 cargo: gold
+    vec3(0.82, 0.72, 0.90)  // 139 cargo: jewelry
 );
 
 // More building materials and the upper tiers' clothes, block IDs 160-181 (src/World/BlockTypes.h)
 const int EXTRA_MATERIALS_FIRST = 160;
-const int EXTRA_MATERIALS_LAST = 182;
+const int EXTRA_MATERIALS_LAST = 192;
 const int FIRE_ID = 166;
-const vec3 EXTRA_PALETTE[23] = vec3[](
+const vec3 EXTRA_PALETTE[33] = vec3[](
     vec3(0.88, 0.72, 0.30), // 160 wheat
     vec3(0.62, 0.64, 0.24), // 161 wheat stalk
     vec3(0.66, 0.38, 0.22), // 162 clay
@@ -291,7 +302,17 @@ const vec3 EXTRA_PALETTE[23] = vec3[](
     vec3(0.40, 0.26, 0.16), // 179 artisan coat
     vec3(0.24, 0.32, 0.26), // 180 artisan coat, green
     vec3(0.12, 0.10, 0.09), // 181 bowler hat
-    vec3(0.13, 0.12, 0.12)  // 182 coal smoke
+    vec3(0.13, 0.12, 0.12), // 182 coal smoke
+    vec3(0.22, 0.28, 0.40), // 183 engineer jacket
+    vec3(0.36, 0.27, 0.19), // 184 engineer jacket, brown
+    vec3(0.09, 0.09, 0.11), // 185 investor suit
+    vec3(0.32, 0.09, 0.12), // 186 investor suit, wine red
+    vec3(0.06, 0.06, 0.07), // 187 top hat
+    vec3(0.36, 0.62, 0.48), // 188 green glass
+    vec3(0.74, 0.42, 0.24), // 189 copper
+    vec3(0.96, 0.78, 0.24), // 190 gold
+    vec3(0.36, 0.14, 0.40), // 191 grape
+    vec3(0.92, 0.90, 0.86)  // 192 marble
 );
 
 vec3 getAlbedo(int voxelID, ivec3 mapPos) {

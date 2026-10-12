@@ -32,6 +32,13 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
 | Furnace | `furnace_n.vox` | 36 x 36 x up to 52 |
 | Steelworks | `steelworks_n.vox` | 36 x 48 x up to 52 |
 | Cannery, Sewing Machine Factory | `cannery_n.vox`, `sewing_machine_factory_n.vox` | 36 x 36 x up to 40, 46 |
+| Engineer House, Investor House | `engineer_house_n.vox`, `investor_house_n.vox` | 36 x 36 x up to 64, 76 |
+| University, Bank | `university_n.vox`, `bank_n.vox` | 48 x 48 x up to 64, 60 |
+| Sand Mine, Glassworks, Window Makers | `sand_mine_n.vox`, `glassworks_n.vox`, `window_makers_n.vox` | 36 x 36 x up to 26, 48, 38 |
+| Copper Mine, Gold Mine | `copper_mine_n.vox`, `gold_mine_n.vox` | 36 x 36 x up to 40, 44 |
+| Spectacle Factory, Filament Factory, Light Bulb Factory | `spectacle_factory_n.vox`, `filament_factory_n.vox`, `light_bulb_factory_n.vox` | 36 x 36 x up to 44, 48, 46 |
+| Vineyard, Vine Rows | `vineyard_n.vox`, `vine_rows_n.vox` | 36 x 36 x up to 30, 12 |
+| Champagne Cellar, Goldsmiths | `champagne_cellar_n.vox`, `goldsmiths_n.vox` | 36 x 36 x up to 40, 46 |
 
 ## Rules
 
@@ -45,7 +52,7 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
   - The game rotates the model in quarter turns when the player presses R.
 - **Palette:** palette index = block ID.
   - The colors saved in these files are the in-game colors, so what you see in MagicaVoxel is what you get.
-  - Use the building materials, indices **60–99** and **160–178**:
+  - Use the building materials, indices **60–99**, **160–178** and **188–192**:
 
     | Range | Materials |
     |---|---|
@@ -83,6 +90,7 @@ procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warni
     | 174–175 | plaster (blue, pink) |
     | 176 | green copper roof |
     | 177–178 | sack, sail canvas |
+    | 188–192 | green glass, copper, gold, grape, marble |
 
   - The older blocks (1–50) also work. Changing a color in the palette changes nothing in the game: colors come from `shaders/render/shade.comp`.
 - **Markers:** two palette indices are not drawn. The game reads their positions instead:

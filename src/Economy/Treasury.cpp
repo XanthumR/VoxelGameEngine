@@ -35,7 +35,7 @@ void Treasury::Update(const GameObjectRegistry& objects) {
 
 PlacementError Treasury::CheckMaterials(const BuildingCost& cost, IslandId island, const IslandEconomyManager& economy) {
     constexpr std::array<PlacementError, MATERIAL_COUNT> ERRORS = { PlacementError::NotEnoughPlanks, PlacementError::NotEnoughBricks,
-        PlacementError::NotEnoughSteelBeams };
+        PlacementError::NotEnoughSteelBeams, PlacementError::NotEnoughWindows };
     const IslandStorage* storage = economy.Find(island);
     std::array<int, MATERIAL_COUNT> materials = cost.Materials();
     for (int i = 0; i < MATERIAL_COUNT; i++) {

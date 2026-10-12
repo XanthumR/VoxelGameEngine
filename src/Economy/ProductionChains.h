@@ -29,7 +29,7 @@ struct ProductionChain {
     uint8_t fullSpeedCount;  // Trees or modules for full productivity
 };
 
-constexpr std::array<ProductionChain, 21> PRODUCTION_CHAINS = { {
+constexpr std::array<ProductionChain, 32> PRODUCTION_CHAINS = { {
     { TIER_FARMERS, 5, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Fish, 300, LocationRule::Coast, 2, 0 },              // Fishery
     { TIER_FARMERS, 5, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Wood, 200, LocationRule::Trees, 6, 6 },              // Lumberjack
     { TIER_FARMERS, 5, 1, { ItemType::Wood, ItemType::Wood }, ItemType::Planks, 200, LocationRule::None, 0, 0 },             // Sawmill
@@ -51,6 +51,17 @@ constexpr std::array<ProductionChain, 21> PRODUCTION_CHAINS = { {
     { TIER_WORKERS, 20, 1, { ItemType::Steel, ItemType::Steel }, ItemType::SteelBeams, 450, LocationRule::None, 0, 0 },      // Steelworks
     { TIER_ARTISANS, 20, 2, { ItemType::Beef, ItemType::Iron }, ItemType::CannedFood, 300, LocationRule::None, 0, 0 },       // Cannery
     { TIER_ARTISANS, 20, 2, { ItemType::Wood, ItemType::Steel }, ItemType::SewingMachines, 300, LocationRule::None, 0, 0 },  // Sewing Machine Factory
+    { TIER_WORKERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::QuartzSand, 300, LocationRule::Coast, 2, 0 },       // Sand Mine
+    { TIER_WORKERS, 20, 1, { ItemType::QuartzSand, ItemType::QuartzSand }, ItemType::Glass, 300, LocationRule::None, 0, 0 }, // Glassworks
+    { TIER_ARTISANS, 20, 2, { ItemType::Wood, ItemType::Glass }, ItemType::Windows, 450, LocationRule::None, 0, 0 },         // Window Makers
+    { TIER_WORKERS, 15, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Copper, 300, LocationRule::None, 0, 0 },            // Copper Mine
+    { TIER_ENGINEERS, 25, 2, { ItemType::Glass, ItemType::Copper }, ItemType::Glasses, 300, LocationRule::None, 0, 0 },      // Spectacle Factory
+    { TIER_WORKERS, 20, 1, { ItemType::Coal, ItemType::Coal }, ItemType::Filaments, 300, LocationRule::None, 0, 0 },         // Filament Factory
+    { TIER_ENGINEERS, 30, 2, { ItemType::Glass, ItemType::Filaments }, ItemType::LightBulbs, 300, LocationRule::None, 0, 0 }, // Light Bulb Factory
+    { TIER_WORKERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Grapes, 600, LocationRule::Modules, 3, 4 },         // Vineyard
+    { TIER_INVESTORS, 25, 2, { ItemType::Grapes, ItemType::Glass }, ItemType::Champagne, 300, LocationRule::None, 0, 0 },    // Champagne Cellar
+    { TIER_ENGINEERS, 20, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Gold, 450, LocationRule::None, 0, 0 },            // Gold Mine
+    { TIER_INVESTORS, 25, 1, { ItemType::Gold, ItemType::Gold }, ItemType::Jewelry, 300, LocationRule::None, 0, 0 },         // Goldsmiths
 } };
 
 constexpr int PRODUCER_BUFFER = 4; // Goods a producer holds of its output and of each input

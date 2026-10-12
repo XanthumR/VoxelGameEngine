@@ -82,6 +82,7 @@
                             <div class="pair" data-if="entry.planks > 0"><img class="icon small" src="icons/planks.tga"/><span>{{entry.planks}}</span></div>
                             <div class="pair" data-if="entry.bricks > 0"><img class="icon small" src="icons/bricks.tga"/><span>{{entry.bricks}}</span></div>
                             <div class="pair" data-if="entry.steel_beams > 0"><img class="icon small" src="icons/steel_beams.tga"/><span>{{entry.steel_beams}}</span></div>
+                            <div class="pair" data-if="entry.windows > 0"><img class="icon small" src="icons/windows.tga"/><span>{{entry.windows}}</span></div>
                         </div></div>
                         <div class="cost" data-if="entry.coins == 0"><span>1x1 tiles</span></div>
                         <span class="hotkey">{{entry.hotkey}}</span>
