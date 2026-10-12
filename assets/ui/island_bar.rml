@@ -5,10 +5,10 @@
     <style>
         /* The island under the camera, at the top left as in Anno 1800 */
         body { position: absolute; top: 0; left: 12dp; padding: 6dp 12dp 7dp; border-top-width: 0; border-radius: 0 0 8dp 8dp; }
-        .name { font-family: Cinzel; font-weight: bold; font-size: 17dp; color: #e2c275; margin-right: 12dp; }
+        .name { font-family: Monocraft; font-weight: bold; font-size: 17dp; color: #e2c275; margin-right: 12dp; }
         .tier { margin-right: 10dp; }
         .tier img { margin-right: 3dp; }
-        .tier span { font-family: Cinzel; font-weight: bold; color: #f1e7cf; }
+        .tier span { font-family: Monocraft; font-weight: bold; color: #f1e7cf; }
         button { padding: 3dp 8dp; font-size: 12dp; display: flex; flex-direction: row; align-items: center; margin-left: 4dp; }
         button img { margin-right: 5dp; }
     </style>

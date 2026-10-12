@@ -1,15 +1,15 @@
 /* The game UI's look, shared by every document, after Anno 1800's: dark slate panels with a fine
-   gold frame, titles in Roman capitals (Cinzel), text in a book serif (Libre Baskerville), gold for
-   what matters, dark buttons rimmed in gold. Sizes are in dp so the UI scales with the display. */
+   gold frame, gold for what matters, dark buttons rimmed in gold; the lettering is pixelated like the
+   world, Monocraft (after Minecraft's), bold for titles. Sizes are in dp so the UI scales with the display. */
 
 /* RmlUi has no built-in styles: block elements first */
 body, div, p, h1, h2, h3, header, footer, section { display: block; }
 body {
-    font-family: "Libre Baskerville";
+    font-family: Monocraft;
     font-size: 13dp;
     color: #e8dfca;
 }
-h1, h2, h3 { font-family: Cinzel; font-weight: bold; color: #dcbc6e; }
+h1, h2, h3 { font-family: Monocraft; font-weight: bold; color: #dcbc6e; }
 h1 { font-size: 24dp; }
 h2 { font-size: 18dp; margin-bottom: 4dp; }
 h3 { font-size: 14dp; margin: 8dp 0 3dp; }
@@ -28,7 +28,7 @@ strong { font-weight: bold; }
 .panel .title {
     margin: -10dp -14dp 10dp;
     padding: 7dp 14dp 6dp;
-    font-family: Cinzel;
+    font-family: Monocraft;
     font-weight: bold;
     font-size: 16dp;
     color: #e2c275;
@@ -62,7 +62,7 @@ button {
     padding: 5dp 12dp;
     text-align: center;
     white-space: nowrap;
-    font-family: Cinzel;
+    font-family: Monocraft;
     font-weight: bold;
     font-size: 13dp;
     color: #e8dfca;
@@ -96,7 +96,7 @@ button.unload { color: #fff4e0; border-color: #e8b04a; decorator: linear-gradien
     margin-right: 4dp;
     text-align: center;
     white-space: nowrap;
-    font-family: Cinzel;
+    font-family: Monocraft;
     font-weight: bold;
     font-size: 13dp;
     color: #cfc4ab;
@@ -125,7 +125,7 @@ progress.bad fill { decorator: linear-gradient(to bottom, #f07b62, #a63a26); }
 /* --- Info rows (InfoLines): icon, text, a value on the right, maybe a bar --- */
 .line { margin-bottom: 4dp; }
 .line .row > * { margin-right: 6dp; }
-.line .heading { font-family: Cinzel; font-weight: bold; color: #dcbc6e; }
+.line .heading { font-family: Monocraft; font-weight: bold; color: #dcbc6e; }
 .line progress { height: 5dp; margin-top: 2dp; margin-bottom: 2dp; }
 /* A smaller panel (tooltips) */
 .panel.compact { padding: 6dp 10dp 8dp; font-size: 12dp; }

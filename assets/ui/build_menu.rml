@@ -20,7 +20,7 @@
         #groups { display: flex; flex-direction: row; align-items: flex-start; }
         /* A group of buildings under its heading, a gold rule between groups */
         .group { display: block; flex: 0 0 auto; margin-right: 10dp; padding-right: 10dp; border-right: 1dp #a8874a55; }
-        .group-name { display: block; margin-bottom: 4dp; font-family: Cinzel; font-weight: bold; font-size: 12dp; color: #dcbc6e; }
+        .group-name { display: block; margin-bottom: 4dp; font-family: Monocraft; font-weight: bold; font-size: 12dp; color: #dcbc6e; }
         .cards { display: flex; flex-direction: row; } /* One row: the biggest group (9) still fits */
         /* One building: its picture, name and cost, the hotkey in the corner */
         .entry {
@@ -30,13 +30,13 @@
             height: 100%;
             padding: 6dp 6dp;
             text-align: left;
-            font-family: "Libre Baskerville";
+            font-family: Monocraft;
             font-weight: normal;
             font-size: 12dp;
         }
         .slot { display: block; margin: 0 6dp 6dp 0; }
         .entry .picture { display: block; width: 104dp; height: 78dp; margin: 0 auto 2dp; decorator: none; }
-        .entry .name { display: block; margin-bottom: 4dp; white-space: normal; font-family: Cinzel; font-weight: bold; font-size: 12dp; }
+        .entry .name { display: block; margin-bottom: 4dp; white-space: normal; font-family: Monocraft; font-weight: bold; font-size: 12dp; }
         .entry .cost { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; font-weight: normal; }
         /* An icon and its amount wrap together */
         .entry .cost .pair { display: flex; flex-direction: row; align-items: center; margin-right: 8dp; white-space: nowrap; }

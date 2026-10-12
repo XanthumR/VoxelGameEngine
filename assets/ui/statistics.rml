@@ -9,8 +9,8 @@
         .title button.close { padding: 0 6dp; font-size: 13dp; }
         .table { max-height: 460dp; overflow-y: auto; }
         .tr { display: flex; flex-direction: row; align-items: center; padding: 3dp 4dp; border-bottom: 1dp #a8874a22; }
-        .tr.head { font-family: Cinzel; font-weight: bold; font-size: 12dp; color: #dcbc6e; border-bottom: 1dp #a8874a; }
-        .tr.group { margin-top: 6dp; background-color: #0f1317; font-family: Cinzel; font-weight: bold; color: #dcbc6e; }
+        .tr.head { font-family: Monocraft; font-weight: bold; font-size: 12dp; color: #dcbc6e; border-bottom: 1dp #a8874a; }
+        .tr.group { margin-top: 6dp; background-color: #0f1317; font-family: Monocraft; font-weight: bold; color: #dcbc6e; }
         .tr .name { flex: 1; display: flex; flex-direction: row; align-items: center; }
         .tr .name img { margin-right: 6dp; }
         .tr .cell { width: 96dp; text-align: right; }

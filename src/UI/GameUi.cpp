@@ -10,8 +10,8 @@
 
 namespace {
 
-// Variable fonts: RmlUi loads each of their weights (Cinzel for titles, Libre Baskerville for text)
-const char* FONTS[] = { "assets/ui/fonts/LibreBaskerville.ttf", "assets/ui/fonts/Cinzel.ttf" };
+// Monocraft, a pixel font after Minecraft's lettering (SIL Open Font License), regular and bold
+const char* FONTS[] = { "assets/ui/fonts/Monocraft.ttf", "assets/ui/fonts/Monocraft-Bold.ttf" };
 
 // The GLFW system interface, with RmlUi's warnings and errors (a broken document) on the console
 class LoggingSystemInterface : public SystemInterface_GLFW {

@@ -9,14 +9,14 @@
         .title { display: flex; flex-direction: row; align-items: center; }
         .title .picture { width: 64dp; height: 48dp; margin: -4dp 10dp -4dp 0; }
         .title .name { display: block; font-size: 18dp; }
-        .title .status { display: block; font-family: "Libre Baskerville"; font-weight: normal; font-size: 12dp; }
+        .title .status { display: block; font-family: Monocraft; font-weight: normal; font-size: 12dp; }
         .title button { padding: 3dp 8dp; margin-left: 4dp; display: flex; flex-direction: row; align-items: center; font-size: 12dp; }
         .title button img { margin-right: 5dp; }
         .title button.close { margin-left: 10dp; padding: 3dp 8dp; }
         #content { display: flex; flex-direction: row; align-items: flex-start; }
         #big { width: 200dp; margin-right: 16dp; }
-        #big .label { display: block; font-family: Cinzel; font-weight: bold; font-size: 12dp; color: #dcbc6e; }
-        #big .value { display: block; font-family: Cinzel; font-size: 30dp; color: #f1e7cf; }
+        #big .label { display: block; font-family: Monocraft; font-weight: bold; font-size: 12dp; color: #dcbc6e; }
+        #big .value { display: block; font-family: Monocraft; font-size: 30dp; color: #f1e7cf; }
         #big .unit { display: block; font-size: 12dp; color: #9c9584; margin-bottom: 4dp; }
         #big progress { height: 6dp; margin-bottom: 8dp; }
         /* The last 10 minutes of productivity, a bar every 30 s */

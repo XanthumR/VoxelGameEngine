@@ -15,7 +15,7 @@
         }
         .section { margin: 0 4dp; }
         #treasury { position: relative; }
-        #coins { font-family: Cinzel; font-size: 19dp; color: #f1d48a; }
+        #coins { font-family: Monocraft; font-size: 19dp; color: #f1d48a; }
         #coins.bad { color: #ec6b55; }
         /* Taxes and upkeep under the coins while hovered */
         #treasury .tooltip { display: none; position: absolute; top: 100%; left: 0; margin-top: 10dp; white-space: nowrap; }
@@ -23,9 +23,9 @@
         .divider { width: 1dp; height: 28dp; margin: 0 8dp; decorator: linear-gradient(to bottom, #a8874a00, #a8874a, #a8874a00); }
         .tier { position: relative; margin-right: 12dp; }
         .tier img { margin-right: 4dp; }
-        .tier .count { font-family: Cinzel; font-weight: bold; font-size: 15dp; color: #f1e7cf; }
+        .tier .count { font-family: Monocraft; font-weight: bold; font-size: 15dp; color: #f1e7cf; }
         .tier .tooltip { display: none; position: absolute; top: 100%; left: 0; margin-top: 10dp; white-space: nowrap; width: 220dp; }
-        .tier .tooltip .heading { display: block; font-family: Cinzel; font-weight: bold; color: #dcbc6e; margin-bottom: 4dp; }
+        .tier .tooltip .heading { display: block; font-family: Monocraft; font-weight: bold; color: #dcbc6e; margin-bottom: 4dp; }
         .tier .tooltip .need img { margin-right: 4dp; }
         .tier:hover .tooltip { display: block; }
         .speed { width: 36dp; padding: 3dp 0; }
