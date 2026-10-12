@@ -26,6 +26,7 @@ uint32_t ColorOf(BuildingRole role) {
     case BuildingRole::Service: return Pack(236, 200, 96);
     case BuildingRole::Storage: return Pack(240, 232, 214);
     case BuildingRole::Module: return Pack(132, 160, 76);
+    case BuildingRole::Trader: return Pack(196, 64, 160); // A trader's
     default: return Pack(184, 98, 64);
     }
 }

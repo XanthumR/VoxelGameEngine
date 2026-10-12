@@ -13,11 +13,13 @@ namespace {
 bool IsHarbor(const GameObjectRegistry& objects, GameObjectId id) {
     if (!objects.IsAlive(id)) return false;
     const BuildingType& type = BUILDING_TYPES[objects.Building(id).type];
-    return type.role == BuildingRole::Storage && type.dockRows > 0;
+    return (type.role == BuildingRole::Storage || type.role == BuildingRole::Trader) && type.dockRows > 0;
 }
 
-const char* ActionText(int action) {
-    return action == (int)StopAction::Load ? "Load" : action == (int)StopAction::Unload ? "Unload" : "-";
+// At a trader's trading post a ship buys instead of loading and sells instead of unloading
+const char* ActionText(int action, bool trader) {
+    if (action == (int)StopAction::Load) return trader ? "Buy" : "Load";
+    return action == (int)StopAction::Unload ? (trader ? "Sell" : "Unload") : "-";
 }
 
 // The harbor before or after current in slot order (wrapping around); the first one when current is none
@@ -132,7 +134,10 @@ void TradeRoutes::Update(bool open, const Simulation& simulation, ShipId selecte
             stop.used = s < route.stopCount;
             if (!stop.used) continue;
             GameObjectId harbor = route.stops[s].harbor;
-            if (IsHarbor(objects, harbor)) {
+            int trader = simulation.Traders().TraderAt(harbor);
+            if (trader >= 0) {
+                std::snprintf(text, sizeof(text), "%s's trading post", TRADERS[trader].name);
+            } else if (IsHarbor(objects, harbor)) {
                 std::snprintf(text, sizeof(text), "Harbor %u, island #%u", (harbor & 0xFFFF) + 1, objects.Building(harbor).island);
             } else {
                 std::snprintf(text, sizeof(text), "(no harbor)");
@@ -140,7 +145,7 @@ void TradeRoutes::Update(bool open, const Simulation& simulation, ShipId selecte
             stop.harbor = text;
             for (int g = 0; g < ITEM_COUNT; g++) {
                 stop.goods[g].action = (int)route.stops[s].actions[g];
-                stop.goods[g].label = ActionText(stop.goods[g].action);
+                stop.goods[g].label = ActionText(stop.goods[g].action, trader >= 0);
             }
         }
     }

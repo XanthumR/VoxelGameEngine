@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way (8.1 and 8.2 done), the UI milestone and the sessions (fixed-size maps, the Old and the New World) are done; 8.3 is next.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 (8.1-8.3), the UI milestone and the sessions (fixed-size maps, the Old and the New World) are done; Milestone 9 is under way (9.1 and 9.2 done).
 
 ## Roadmap
 
@@ -13,10 +13,10 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 5 (done) | Economy | Coins (resident taxes minus building upkeep), build costs in coins + materials, balance UI, game speed control |
 | 6 (done) | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
 | 7 (done) | Game UI (RmlUi) | The player-facing UI moves from Dear ImGui to RmlUi: styled Anno-like panels from markup and style sheets, data-bound to the simulation; ImGui stays for the debug tools |
-| 8 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
+| 8 (done) | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
 | Sessions (done) | Fixed maps, two worlds | Fixed-size maps as in Anno 1800, an Old World and a New World; switch between them; ships cross from one to the other |
 | UI (done) | Anno 1800 interface | The game plays like Anno 1800 through its interface: tool modes, a construction menu with rich tooltips, a docked object menu, island bar and inventory, notifications, statistics, a minimap |
-| 9 | Persistence & polish | Save/load (edited chunks + game objects), notifications, sound, balancing |
+| 9 | Persistence & polish | Save/load, sound, balancing (notifications came with the UI milestone) |
 
 ## Milestone 1, in detail (done)
 
@@ -768,9 +768,40 @@ Chains: Sand Mine (coast) → Glassworks (Glass); Window Makers (Wood + Glass �
 
 - Done (8.2): all of the above. 11 new goods, the Engineer and Investor houses, the University and Bank (ranges 26 and 28), 12 producers and the Vine Rows module, each with a `.vox` model (new materials 188-192: green glass, copper, gold, grape, marble), a build menu picture and icons. Windows are the fourth construction material: the Investor House upgrade and the late buildings cost them. Engineers wear a jacket and cap, Investors a suit and top hat. The mines share one model generator with the iron mine and have its turning wheel; the University and Bank fly flags, the University clock turns, the goldsmith and optician hang swinging signs. The glassworks and filament factory smoke black. A test covers the Investor upgrade needing windows.
 
-### 8.3 NPC traders (planned)
+### 8.3 NPC traders
 
 A trader's island with its own harbor that the player's ships can sail to: it sells and buys a list of goods at fixed prices, and trade route stops there buy or sell instead of loading and unloading.
+
+- Done (8.3): one trader per session, Captain Elias Marlowe in the Old World and Rosalia Vega in the New World (`src/Economy/Traders.h`).
+  - **The island:** each has a small fixed island of their own (`Session::traderTile` in `src/World/Sessions.h`, an oval of 15 x 11 tiles the terrain makes land whatever the noise) in the open sea near where the camera starts in that session. Nobody else may build there (`PlacementError::TraderIsland`, checked in `ValidatePlacement`).
+  - **The trading post:** a building of a new role, `BuildingRole::Trader` (type Trading Post, the harbor's model, not in the build menu). The game places it once all of the island is loaded, at the first spot round the island where it fits, in a fixed order (`Application::PlaceTraders`). The player's tools leave it alone (no move, copy or demolish), it is always busy (smoke, the crane), and it shows on the minimap in purple.
+  - **Trading:** each trader sells a few wares from a stock of up to 50 that refills by one every 5 s, and buys any good. A good's value (`GOOD_VALUES`) is what a trader pays; they ask half as much again. A ship docked at a trading post buys and sells there instead of loading and unloading (`ShipSystem::Transfer`), paid from and into the treasury. The ship panel lists the wares with stock and prices and the cargo to sell (Buy / Sell, 10 at a time); in the route window a trading post can be a stop, where Load buys and Unload sells.
+  - **UI:** the post's tooltip and object menu show the trader, their wares with stock and price, and that they buy anything; the island bar names the trader on their island.
+  - **Tests:** a ship buys and sells at a trading post, buying stops at the coins and the stock, the stock refills, a trade route buys there and sells at home, prices, the trader islands, and no building on them.
+  - **Later:** traders' quests and reputation, several traders per session, wares that change with the session's goods.
+
+## Milestone 9, in detail: persistence and polish
+
+### 9.1 Save and load (done)
+
+- **What is saved:** the game state, not the voxels. Each system writes its state as plain data (`src/Simulation/SaveGame.h`: `SaveWriter`, `SaveReader`) in a fixed order (`Simulation::Save`): the tick, the islands in the order they were found (so they get their IDs back), every game object with its components, the road tiles, the island storages, the population counters, the felled trees and when they grow back, the coins, the traders' posts and stock, the ships with their paths and the trade routes, and the tiers each island has reached. After it comes the view: the camera's focus, turn and zoom, and where it last was in each session. A file starts with a magic word and `SAVE_VERSION`; values are copied byte for byte, so the version goes up whenever a saved struct changes.
+- **What is rebuilt on load:** the occupancy grid, the roads' reach and the buildings' connections (on the next tick), and the world: every chunk is dropped (`ChunkStreamer::Reset`, with a counter so results made for the old world are thrown away), the ground under every building and road is generated again on the main thread with the felled trees left out, the buildings and roads are stamped into it, and the rest streams in as usual. Buildings going up or coming down, a building being moved, the selection, walkers, fishing boats and smoke start afresh.
+- **Safety:** a file is first loaded into a scratch `Simulation`; only when that worked (not cut short, nothing left over, the same islands at the same places) is it loaded for real, so a damaged file never breaks the game under way. Saving writes beside the old file and renames it over it.
+- **UI:** Save game and Load game in the pause menu open the list of saves (`saves/*.sav`, newest first): each with when it was saved, the time played, residents, islands and coins (a `SaveSummary` right after the header, so listing reads only the start of each file), and a delete button. Saving makes a new save named after the date and time, or overwrites one from the list; loading picks one (saves from another version are shown greyed). `--load FILE` starts from a save.
+- **Measured** on the showcase (62 buildings): saving 1.7 ms, loading 93 ms, 297 KB.
+- **Tests** (`tests/SaveGameTests.cpp`): a settlement played for a minute, saved, loaded into a fresh simulation, saves to the same bytes; both then play three more minutes and still save to the same bytes (so nothing that matters was left out); a file cut short fails; the list of saves is newest first and marks saves from another version.
+
+### 9.2 Sound (done)
+
+- **Sounds:** real recordings in the public domain (CC0) from BigSoundBank, cut into game sounds by `tools/sounds/fetch.py` (it downloads them, cross-fades each loop's end into its start so it repeats without a seam, trims the one-shots, and writes `assets/sounds/CREDITS.md`) into `assets/sounds/` (22 kHz mono WAV, 9.5 MB): eight loops of 10-40 s (sea waves, wind, a hand saw, an anvil, a watermill, sheep and cows, an outdoor market, gulls in a harbor) and eight one-shots (a mouse click, a hammer and nails, stones tipped out, a step on gravel, a small bell, coins in a cup, chimes, a gavel). The first version synthesized them; they sounded robotic.
+- **Ambience** (`src/Gameplay/SoundScape`, logic with tests): the sea always, the wind more the higher the camera, and a loop per kind of building in use near the camera's focus (a sawmill or lumberjack saws, mines and factories hammer, mills grind, farms and pens have animals, houses and public buildings make the town's murmur, harbors and fisheries have gulls and lapping water). Each building is heard within a radius that grows with the zoom, fading with distance; the sum is softly capped, and zoomed out the buildings blend into a quieter murmur.
+- **One-shots:** every button of the game UI clicks; placing a building (a thud and hammering), a refused placement, demolishing (rubble), a road tile, a notification (a bell; a tier reached and a house upgrade get a rising chime), buying or selling at a trading post (coins).
+- **Playback** (`src/Audio/AudioSystem`): miniaudio (one header, fetched like the other libraries); the loops always play, their volumes eased toward the levels; four voices per one-shot. Without an audio device the game runs silent. The pause menu has a Sound volume slider; `--mute` silences a run, and runs taking screenshots are always silent.
+- **Later:** music; sounds placed in stereo by where they are on screen; more variants of each sound.
+
+### 9.3 Balancing (planned)
+
+Play the tiers through and tune the numbers: production cycles, consumption, costs and upkeep, taxes, trader prices; the Statistics window gives the figures.
 
 ## UI milestone: the Anno 1800 interface, in detail
 

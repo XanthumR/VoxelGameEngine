@@ -109,7 +109,7 @@ bool IslandPanel::Init(Rml::Context* context) {
     return m_Bar && m_Document && m_Inventory;
 }
 
-void IslandPanel::Update(IslandId island, const IslandEconomyManager& economy, bool visible) {
+void IslandPanel::Update(IslandId island, const IslandEconomyManager& economy, bool visible, const char* trader) {
     visible = visible && island != NO_ISLAND;
     const IslandStorage* storage = economy.Find(island);
     bool settled = storage && storage->warehouseCount > 0;
@@ -117,17 +117,17 @@ void IslandPanel::Update(IslandId island, const IslandEconomyManager& economy, b
     Show(m_Document, visible && m_DetailsOpen);
     Show(m_Inventory, visible && m_InventoryOpen && settled);
     if (!visible) return;
-    UpdateBar(island, economy);
+    UpdateBar(island, economy, trader);
     if (m_DetailsOpen) UpdateDetails(island, economy);
     if (m_InventoryOpen && settled) UpdateInventory(island, economy);
 }
 
-void IslandPanel::UpdateBar(IslandId island, const IslandEconomyManager& economy) {
+void IslandPanel::UpdateBar(IslandId island, const IslandEconomyManager& economy, const char* trader) {
     const IslandStorage* storage = economy.Find(island);
     bool settled = storage && storage->warehouseCount > 0;
     SetIfChanged(m_Name, Rml::String(IslandName(island)), m_BarModel, "name");
     SetIfChanged(m_Settled, settled, m_BarModel, "settled");
-    SetIfChanged(m_Note, Rml::String(settled ? "" : "Not settled"), m_BarModel, "note");
+    SetIfChanged(m_Note, Rml::String(trader ? trader : settled ? "" : "Not settled"), m_BarModel, "note");
     // Its residents, the tiers it has
     m_TierScratch.clear();
     for (int tier = 0; settled && tier < TIER_COUNT; tier++) {

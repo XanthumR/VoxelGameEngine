@@ -18,6 +18,11 @@
 
 namespace {
 
+// A trader's building: the player's tools leave it alone
+bool IsTraders(const GameObjectRegistry& objects, GameObjectId id) {
+    return objects.IsAlive(id) && BUILDING_TYPES[objects.Building(id).type].role == BuildingRole::Trader;
+}
+
 // Edge-triggered press: true only on the frame the key or button goes down
 bool Pressed(bool down, bool& wasDown) {
     bool edge = down && !wasDown;
@@ -92,7 +97,7 @@ void BuildTool::BeginMove(GameObjectId id) {
 // An upgraded house builds a farmer house; a farm module its farm's modules
 void BuildTool::CopyBuilding(GameObjectId id) {
     const GameObjectRegistry& objects = m_Simulation.Objects();
-    if (!objects.IsAlive(id)) return;
+    if (!objects.IsAlive(id) || IsTraders(objects, id)) return;
     const BuildingComponent& building = objects.Building(id);
     const BuildingType& type = BUILDING_TYPES[building.type];
     uint8_t rotation = building.rotation;
@@ -317,7 +322,9 @@ void BuildTool::Update(GLFWwindow* window, const PickResult& hover, bool mouseFr
             m_HasLocation = true;
         }
 
+        if (!moving && leftClick && m_LastCheck.error != PlacementError::None) m_RefusedCount++;
         if (!moving && leftClick && m_LastCheck.error == PlacementError::None) {
+            m_PlacedCount++;
             m_HoveredBuilding = Place((uint16_t)previewType, m_Rotation, minTile);
             m_LastCheck.error = PlacementError::Occupied; // The spot is now taken
             if (ModuleTypeOf(previewType) >= 0) SelectModules(m_HoveredBuilding); // A farm: its pens next, as in Anno
@@ -429,6 +436,20 @@ void BuildTool::AnimateBuildings(float deltaTime, SmokeSystem* dust) {
     }
 }
 
+void BuildTool::Restore() {
+    SelectType(NO_TYPE);
+    m_Constructions.clear();
+    m_Demolitions.clear();
+    m_Moving = m_PressedBuilding = m_InspectedBuilding = INVALID_GAME_OBJECT;
+    m_Carried.clear();
+    m_UnlockedTier = 0; // Found again from the loaded islands' residents
+    const GameObjectRegistry& objects = m_Simulation.Objects();
+    for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
+        GameObjectId id = objects.IdAtSlot(slot);
+        if (id != INVALID_GAME_OBJECT) StampLook(id);
+    }
+}
+
 void BuildTool::StampLook(GameObjectId id) {
     const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(id);
     const BuildingComponent& component = m_Simulation.Objects().Building(id);
@@ -450,6 +471,7 @@ void BuildTool::RefreshLook(GameObjectId id) {
 }
 
 void BuildTool::StartMove(GameObjectId id) {
+    if (IsTraders(m_Simulation.Objects(), id)) return;
     const VoxelAnchorComponent& anchor = m_Simulation.Objects().Anchor(id);
     m_Moving = id;
     m_PressedBuilding = INVALID_GAME_OBJECT;
@@ -587,7 +609,8 @@ void BuildTool::ClearBox(const VoxelAnchorComponent& anchor, const BuildingType&
 // Clears the building's voxels (the ground under it was never changed) and frees its tiles
 void BuildTool::Demolish(GameObjectId id) {
     GameObjectRegistry& objects = m_Simulation.Objects();
-    if (!objects.IsAlive(id)) return;
+    if (!objects.IsAlive(id) || IsTraders(objects, id)) return;
+    m_DemolishedCount++;
 
     const VoxelAnchorComponent anchor = objects.Anchor(id);
     const BuildingComponent component = objects.Building(id);

@@ -50,6 +50,7 @@ void ChunkStreamer::WorkerLoop() {
         Result result;
         result.cx = request.cx; result.cy = request.cy; result.cz = request.cz;
         result.regenerate = request.regenerate;
+        result.epoch = request.epoch;
 
         // Skip requests the player has already flown away from
         int dist = std::max(std::abs(request.cx - m_WorkerPlayerCx.load()), std::abs(request.cz - m_WorkerPlayerCz.load()));
@@ -76,7 +77,7 @@ bool ChunkStreamer::IsWanted(int cx, int cz) const {
 
 void ChunkStreamer::RequestChunk(int cx, int cy, int cz) {
     if (m_InFlight.insert(ChunkKey(cx, cy, cz)).second) {
-        m_Requests.Push({ cx, cy, cz });
+        m_Requests.Push({ cx, cy, cz, false, m_Epoch });
     }
 }
 
@@ -89,10 +90,11 @@ bool ChunkStreamer::SetPlayerChunk(glm::ivec3 chunk) {
 void ChunkStreamer::RegenerateChunk(int cx, int cy, int cz) {
     uint64_t key = ChunkKey(cx, cy, cz);
     if (m_World.FindChunk(cx, cy, cz) || !m_Cache.IsResident(key)) return; // CPU copy, or nothing to replace
-    m_Requests.Push({ cx, cy, cz, true });
+    m_Requests.Push({ cx, cy, cz, true, m_Epoch });
 }
 
 void ChunkStreamer::Integrate(Result& result) {
+    if (result.epoch != m_Epoch) return; // Made for the world before a Reset
     uint64_t key = ChunkKey(result.cx, result.cy, result.cz);
     if (result.regenerate) {
         // Replaces the GPU copy, unless the chunk got CPU data meanwhile (that copy wins)
@@ -236,6 +238,15 @@ void ChunkStreamer::UpdateWindows() {
     m_GpuKeepWindow = gpuKeep;
     m_CpuLoadWindow = cpuLoad;
     m_CpuKeepWindow = cpuKeep;
+}
+
+void ChunkStreamer::Reset() {
+    m_Epoch++;
+    m_Requests.Clear();
+    m_InFlight.clear();
+    m_Cache.ForgetAll();
+    m_World.Clear();
+    m_GpuLoadWindow = m_GpuKeepWindow = m_CpuLoadWindow = m_CpuKeepWindow = Window();
 }
 
 void ChunkStreamer::SetRenderDistance(int chunks) {

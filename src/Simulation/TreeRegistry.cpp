@@ -3,6 +3,7 @@
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/OccupancyGrid.h"
 #include "Simulation/RoadNetwork.h"
+#include "Simulation/SaveGame.h"
 #include "World/TerrainGenerator.h"
 #include "World/VoxModel.h"
 
@@ -85,4 +86,27 @@ void TreeRegistry::Update(uint64_t tick, const OccupancyGrid& occupancy, const R
         if (m_Changes.size() < m_Changes.capacity()) m_Changes.push_back({ root, false });
         m_Revision++;
     }
+}
+
+void TreeRegistry::Save(SaveWriter& out) const {
+    out.Write((uint64_t)m_Felled.size());
+    for (const auto& entry : m_Felled) {
+        out.Write(entry.first);
+        out.Write(entry.second);
+    }
+}
+
+void TreeRegistry::Load(SaveReader& in) {
+    m_Felled.clear();
+    m_FelledSet.Clear();
+    m_Changes.clear();
+    uint64_t count = in.Read<uint64_t>();
+    if (count > 1u << 24) in.Fail();
+    for (uint64_t i = 0; i < count && in.Ok(); i++) {
+        uint64_t key = in.Read<uint64_t>();
+        uint64_t regrow = in.Read<uint64_t>();
+        m_Felled[key] = regrow;
+        m_FelledSet.Add(glm::ivec2((int32_t)(uint32_t)(key >> 32), (int32_t)(uint32_t)key));
+    }
+    m_Revision++;
 }

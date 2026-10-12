@@ -99,6 +99,15 @@ public:
     GameObjectId InspectedBuilding() const { return m_InspectedBuilding; }
     void ClearInspection() { m_InspectedBuilding = INVALID_GAME_OBJECT; }
     void Inspect(GameObjectId id) { m_InspectedBuilding = id; } // Opens its object menu (a notification clicked)
+    // How many buildings the player has placed and demolished, and placements refused (clicked on a
+    // spot where it cannot stand), so far: the sounds play when these go up
+    uint32_t PlacedCount() const { return m_PlacedCount; }
+    uint32_t DemolishedCount() const { return m_DemolishedCount; }
+    uint32_t RefusedCount() const { return m_RefusedCount; }
+
+    // A game was loaded: drops the selection, a move, the buildings going up and coming down, and
+    // stamps every building's look into the world again
+    void Restore();
 
     // Producers: how the previewed spot does on the chain's location rule, and the tiles that count
     bool HasLocationPreview() const { return m_HasLocation; }
@@ -180,6 +189,7 @@ private:
     PlacementCheck m_LastCheck;
     GameObjectId m_HoveredBuilding = INVALID_GAME_OBJECT;
     GameObjectId m_InspectedBuilding = INVALID_GAME_OBJECT;
+    uint32_t m_PlacedCount = 0, m_DemolishedCount = 0, m_RefusedCount = 0;
     BuildPreview m_Preview;
     bool m_HasPlacement = false;
     glm::ivec2 m_PreviewMinTile = glm::ivec2(0);

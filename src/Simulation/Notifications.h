@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <vector>
 
+class SaveReader;
+class SaveWriter;
 class Treasury;
 
 // What the player is told about, as in Anno 1800's notification feed
@@ -56,6 +58,8 @@ public:
         uint64_t tick);
 
     uint32_t LastSequence() const { return m_Sequence; }
+    void Save(SaveWriter& out) const;
+    void Load(SaveReader& in, const ShipSystem& ships);
     // The kept notifications newer than sequence `after`, oldest first
     template <typename Function>
     void ForEachSince(uint32_t after, Function function) const {

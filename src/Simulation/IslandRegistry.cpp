@@ -1,5 +1,6 @@
 #include "Simulation/IslandRegistry.h"
 
+#include "Simulation/SaveGame.h"
 #include "World/TerrainGenerator.h"
 #include "World/WorldConstants.h"
 
@@ -52,6 +53,7 @@ IslandId IslandRegistry::FloodFill(glm::ivec2 startCell) {
     info.id = (IslandId)m_Islands.size() + 1;
     info.minColumn = startCell * CELL_SIZE;
     info.maxColumn = startCell * CELL_SIZE + (CELL_SIZE - 1);
+    info.seedColumn = startCell * CELL_SIZE + CELL_SIZE / 2;
 
     m_FloodStack.clear();
     m_FloodStack.push_back(startCell);
@@ -85,4 +87,19 @@ IslandId IslandRegistry::FloodFill(glm::ivec2 startCell) {
 const IslandInfo* IslandRegistry::Info(IslandId id) const {
     if (id == NO_ISLAND || id > m_Islands.size()) return nullptr;
     return &m_Islands[id - 1];
+}
+
+void IslandRegistry::Save(SaveWriter& out) const {
+    out.Write((uint32_t)m_Islands.size());
+    for (const IslandInfo& island : m_Islands) out.Write(island.seedColumn);
+}
+
+void IslandRegistry::Load(SaveReader& in) {
+    m_CellIsland.clear();
+    m_Islands.clear();
+    uint32_t count = in.Read<uint32_t>();
+    for (uint32_t i = 0; i < count && in.Ok(); i++) {
+        glm::ivec2 seed = in.Read<glm::ivec2>();
+        if (IslandIdAt(seed.x, seed.y) != i + 1) in.Fail(); // A different world
+    }
 }

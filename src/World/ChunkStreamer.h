@@ -60,6 +60,10 @@ public:
     // changed (a tree felled or grown back); chunks with CPU data are edited directly instead
     void RegenerateChunk(int cx, int cy, int cz);
 
+    // Drops every chunk, CPU and GPU, and every request under way (loading a game: the world it
+    // was generated for is gone); the next UpdateWindows streams it all in again
+    void Reset();
+
     // Trees the workers leave out (set before Start)
     void SetFelledTrees(const FelledTrees* felled) { m_Felled = felled; }
 
@@ -71,6 +75,7 @@ private:
     struct Request {
         int cx, cy, cz;
         bool regenerate = false; // Replace the GPU copy even though it is resident
+        uint32_t epoch = 0;      // m_Epoch when it was asked for
     };
 
     struct Result {
@@ -79,6 +84,7 @@ private:
         uint8_t brickMask[BRICK_MASK_SIZE] = {};
         bool cancelled = false; // Player moved away before the worker got to it
         bool regenerate = false;
+        uint32_t epoch = 0;
     };
 
     // A square of chunk columns around the player; radius -1 means empty
@@ -105,6 +111,7 @@ private:
     int m_RenderDistance = 18; // GPU upload radius
     Window m_GpuLoadWindow, m_GpuKeepWindow, m_CpuLoadWindow, m_CpuKeepWindow;
     std::unordered_set<uint64_t> m_InFlight; // Requested from the workers, result not processed yet
+    uint32_t m_Epoch = 0;                    // Bumped by Reset: older results are dropped
 
     SafeQueue<Request> m_Requests;
     SafeQueue<Result> m_Results;

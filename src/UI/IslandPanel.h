@@ -32,10 +32,11 @@ public:
     };
 
     bool Init(Rml::Context* context);
-    void Update(IslandId island, const IslandEconomyManager& economy, bool visible);
+    // trader: the name of the trader whose island it is, nullptr for none
+    void Update(IslandId island, const IslandEconomyManager& economy, bool visible, const char* trader);
 
 private:
-    void UpdateBar(IslandId island, const IslandEconomyManager& economy);
+    void UpdateBar(IslandId island, const IslandEconomyManager& economy, const char* trader);
     void UpdateDetails(IslandId island, const IslandEconomyManager& economy);
     void UpdateInventory(IslandId island, const IslandEconomyManager& economy);
 

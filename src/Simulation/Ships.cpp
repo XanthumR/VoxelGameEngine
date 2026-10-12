@@ -1,10 +1,12 @@
 #include "Simulation/Ships.h"
 
 #include "Economy/IslandEconomy.h"
+#include "Economy/Traders.h"
 #include "Economy/Treasury.h"
 #include "Simulation/BuildingLook.h"
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/OccupancyGrid.h"
+#include "Simulation/SaveGame.h"
 #include "World/Sessions.h"
 #include "World/TerrainGenerator.h"
 
@@ -300,6 +302,7 @@ int ShipSystem::Transfer(ShipId id, ItemType item, int amount, const GameObjectR
     if (!IsAlive(id) || amount == 0) return 0;
     Ship& ship = m_Ships[id & 0xFFFF];
     if (ship.state != ShipState::Docked || !objects.IsAlive(ship.harbor)) return 0;
+    if (int trader = m_Traders ? m_Traders->TraderAt(ship.harbor) : -1; trader >= 0) return Trade(id, trader, item, amount);
     IslandId island = objects.Building(ship.harbor).island;
     if (!economy.Find(island)) return 0;
 
@@ -325,6 +328,34 @@ int ShipSystem::Transfer(ShipId id, ItemType item, int amount, const GameObjectR
         int moved = economy.Add(island, item, std::min(-amount, s.amount));
         s.amount -= moved;
         return -moved;
+    }
+    return 0;
+}
+
+int ShipSystem::Trade(ShipId id, int trader, ItemType item, int amount) {
+    Ship& ship = m_Ships[id & 0xFFFF];
+    if (amount > 0) {
+        // Into the slot holding this good, else an empty one, as many as fit
+        CargoSlot* slot = nullptr;
+        for (CargoSlot& s : ship.cargo) {
+            if (s.amount > 0 && s.item == item) slot = &s;
+        }
+        for (CargoSlot& s : ship.cargo) {
+            if (!slot && s.amount == 0) slot = &s;
+        }
+        if (!slot) return 0;
+        int bought = m_Traders->Buy(trader, item, std::min(amount, SLOT_CAPACITY - (slot->item == item ? slot->amount : 0)), *m_Treasury);
+        if (bought > 0) {
+            slot->item = item;
+            slot->amount += bought;
+        }
+        return bought;
+    }
+    for (CargoSlot& s : ship.cargo) {
+        if (s.amount == 0 || s.item != item) continue;
+        int sold = m_Traders->Sell(trader, item, std::min(-amount, s.amount), *m_Treasury);
+        s.amount -= sold;
+        return -sold;
     }
     return 0;
 }
@@ -433,4 +464,23 @@ void ShipSystem::Update(const GameObjectRegistry& objects, const OccupancyGrid& 
             if (!docked) ship.harbor = INVALID_GAME_OBJECT;
         }
     }
+}
+
+void ShipSystem::Save(SaveWriter& out) const {
+    out.Write(m_Ships);
+    out.Write(m_Generations);
+    out.Write(m_Alive);
+    out.Write(m_Routes);
+    out.WriteVector(m_Paths);
+}
+
+void ShipSystem::Load(SaveReader& in) {
+    in.Read(m_Ships);
+    in.Read(m_Generations);
+    in.Read(m_Alive);
+    in.Read(m_Routes);
+    std::vector<glm::ivec2> paths;
+    in.ReadVector(paths, m_Paths.size());
+    if (paths.size() == m_Paths.size()) m_Paths.swap(paths);
+    else in.Fail();
 }

@@ -27,15 +27,15 @@
     <button id="leave" data-if="on_route" data-event-click="leave_route">Leave route</button>
     <div data-if="docked">
         <div class="separator"/>
-        <h3>Load and unload, 10 at a time</h3>
+        <h3>{{heading}}</h3>
         <div data-for="good : goods">
-            <div class="row good-row" data-if="good.island > 0 || good.ship > 0">
+            <div class="row good-row" data-if="good.shown">
                 <img class="icon small" data-attr-src="good.icon"/>
                 <span class="name">{{good.name}}</span>
-                <span class="amounts muted">island {{good.island}} | ship {{good.ship}}</span>
+                <span class="amounts muted">{{good.amounts}}</span>
                 <span class="spacer"/>
-                <button data-attrif-disabled="good.island == 0" data-event-click="load(good.item)">Load</button>
-                <button data-attrif-disabled="good.ship == 0" data-event-click="unload(good.item)">Unload</button>
+                <button data-attrif-disabled="!good.can_load" data-event-click="load(good.item)">{{good.load_label}}</button>
+                <button data-attrif-disabled="!good.can_unload" data-event-click="unload(good.item)">{{good.unload_label}}</button>
             </div>
         </div>
     </div>

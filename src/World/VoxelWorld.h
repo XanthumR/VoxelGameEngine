@@ -21,6 +21,7 @@ public:
     bool SetVoxel(int x, int y, int z, uint8_t id);
 
     void FreeChunkIfUnmodified(int cx, int cy, int cz);
+    void Clear() { m_Chunks.clear(); } // Every chunk, edited ones too (loading a game)
     size_t ChunkCount() const { return m_Chunks.size(); }
 
     template <typename Function>

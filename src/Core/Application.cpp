@@ -2,10 +2,12 @@
 
 #include "Core/Screenshot.h"
 #include "Economy/ProductionChains.h"
-#include "Simulation/BuildingTypes.h"
-#include "UI/WorldMarkers.h"
 #include "Gameplay/FigureModels.h"
+#include "Simulation/BuildingLook.h"
+#include "Simulation/BuildingTypes.h"
+#include "Simulation/SaveGame.h"
 #include "UI/Hud.h"
+#include "UI/WorldMarkers.h"
 #include "World/BlockTypes.h"
 #include "World/Sessions.h"
 
@@ -18,6 +20,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ctime>
+#include <filesystem>
 #include <cstdlib>
 #include <iostream>
 
@@ -25,6 +29,23 @@ namespace {
 
 const char* TREE_MODEL_PATH = "assets/tree.vox";
 const char* PALM_MODEL_PATH = "assets/palm.vox"; // tools/trees/generate.py
+const char* SAVE_DIRECTORY = "saves";
+
+// What a save holds besides the simulation: where the camera was
+struct SavedView {
+    glm::vec3 focus;
+    float yaw, distance;
+    std::array<glm::vec3, SESSION_COUNT> sessionFocus;
+};
+
+// A save's header, the simulation and the view, read in the order SaveGame writes them
+bool ReadSave(SaveReader& in, Simulation& simulation, SavedView& view) {
+    if (in.Read<uint32_t>() != SAVE_MAGIC || in.Read<uint32_t>() != SAVE_VERSION) return false;
+    in.Read<SaveSummary>(); // For the list of saves
+    if (!simulation.Load(in)) return false;
+    in.Read(view);
+    return in.Ok() && in.AtEnd();
+}
 const char* BUILDING_MODEL_DIRECTORY = "assets/buildings";
 const float SMOKE_DISTANCE = 1500.0f; // Voxels from the camera's focus within which chimneys smoke
 const float ANIMATION_DISTANCE = 700.0f; // ...and within which buildings' moving parts are drawn
@@ -183,6 +204,11 @@ bool Application::Init() {
         std::cout << "Failed to initialize the game UI (RmlUi)" << std::endl;
         return false;
     }
+    // Sound (runs taking screenshots are silent); every button of the game UI clicks
+    if (!m_Options.mute && m_Options.screenshotDelay < 0.0 && m_Audio.Init("assets/sounds")) {
+        m_Audio.SetVolume(m_VolumePercent / 100.0f);
+        m_Ui.Context()->AddEventListener("click", &m_ClickSound, true);
+    }
 
     // Dear ImGui
     IMGUI_CHECKVERSION();
@@ -248,6 +274,7 @@ void Application::PlaceShowcase() {
     int placed = 0;
     for (uint16_t type = 0; type < BUILDING_TYPES.size(); type++) {
         if (BUILDING_TYPES[type].role == BuildingRole::Module) continue; // With their farm below
+        if (BUILDING_TYPES[type].role == BuildingRole::Trader) continue; // The traders' own
         GameObjectId id = INVALID_GAME_OBJECT;
         for (int ring = 0; ring <= MAX_RING && id == INVALID_GAME_OBJECT; ring++) {
             for (int dz = -ring; dz <= ring && id == INVALID_GAME_OBJECT; dz++) {
@@ -284,9 +311,173 @@ void Application::PlaceShowcase() {
     std::cout << "Showcase: placed " << placed << " buildings" << std::endl;
 }
 
+// Each trader's trading post goes up on their island once all of it is loaded (the Old World's
+// trader at the start, the New World's when the camera first gets there): at the first spot round
+// the island, in a fixed order, where it may stand, so it is the same spot in every game
+void Application::PlaceTraders() {
+    if (++m_TraderFrames % 30 != 0) return;
+    TraderSystem& traders = m_Simulation.Traders();
+    for (int trader = 0; trader < TRADER_COUNT; trader++) {
+        if (traders.Post(trader) != INVALID_GAME_OBJECT) continue;
+        const Session& session = SESSIONS[TRADERS[trader].session];
+        glm::ivec2 low = session.originTile + session.traderTile - TRADER_ISLAND_RADIUS - 6;
+        glm::ivec2 high = session.originTile + session.traderTile + TRADER_ISLAND_RADIUS + 6;
+        bool loaded = true;
+        for (int cz = (low.y * TILE_SIZE) >> 5; cz <= (high.y * TILE_SIZE) >> 5 && loaded; cz++) {
+            for (int cx = (low.x * TILE_SIZE) >> 5; cx <= (high.x * TILE_SIZE) >> 5 && loaded; cx++) loaded = m_World.FindChunk(cx, 1, cz) != nullptr;
+        }
+        if (!loaded) continue;
+        PlacementContext context = m_Simulation.MakePlacementContext(m_World);
+        GameObjectId post = INVALID_GAME_OBJECT;
+        for (uint8_t rotation = 0; rotation < 4 && post == INVALID_GAME_OBJECT; rotation++) {
+            for (int z = low.y; z <= high.y && post == INVALID_GAME_OBJECT; z++) {
+                for (int x = low.x; x <= high.x && post == INVALID_GAME_OBJECT; x++) {
+                    if (ValidatePlacement(context, BUILDING_TRADING_POST, rotation, glm::ivec2(x, z)).error != PlacementError::None) continue;
+                    post = m_BuildTool.Place(BUILDING_TRADING_POST, rotation, glm::ivec2(x, z));
+                }
+            }
+        }
+        traders.SetPost(trader, post);
+    }
+}
+
+bool Application::SaveGame(const std::string& path) {
+    SaveWriter out;
+    out.Write(SAVE_MAGIC);
+    out.Write(SAVE_VERSION);
+    SaveSummary summary;
+    summary.savedAt = (int64_t)std::time(nullptr);
+    summary.playSeconds = m_Simulation.SimulationSeconds();
+    summary.coins = m_Simulation.Coins().Coins();
+    summary.islands = (int32_t)m_Simulation.Economy().SettledIslandCount();
+    for (size_t i = 0; i < m_Simulation.Economy().IslandSlotCount(); i++) {
+        for (int residents : m_Simulation.Economy().IslandAt(i).population) summary.residents += residents;
+    }
+    out.Write(summary);
+    m_Simulation.Save(out);
+    out.Write(SavedView{ m_StrategyCamera.FocusPoint(), m_StrategyCamera.Yaw(), m_StrategyCamera.Distance(), m_SessionFocus });
+    return out.WriteFile(path);
+}
+
+bool Application::LoadGame(const std::string& path) {
+    SaveReader in;
+    if (!in.ReadFile(path)) return false;
+    {
+        // A damaged or foreign file must not break the game under way
+        SaveReader check = in;
+        auto scratch = std::make_unique<Simulation>(m_Terrain);
+        SavedView unused;
+        if (!ReadSave(check, *scratch, unused)) return false;
+    }
+    SavedView view;
+    ReadSave(in, m_Simulation, view);
+
+    // The world of the game before goes, and what was under way in it
+    m_Streamer.Reset();
+    m_BuildTool.Restore(); // (stamps the looks below, once the ground is back)
+    m_RoadTool.Cancel();
+    m_ShipControl.Deselect();
+    m_Walkers.Clear();
+    m_Boats.Clear();
+    m_Smoke.Clear();
+
+    // The ground under every building and road, made again (felled trees left out), then the
+    // buildings and roads stamped into it; the rest streams in as usual
+    const GameObjectRegistry& objects = m_Simulation.Objects();
+    for (uint32_t slot = 0; slot < objects.SlotCount(); slot++) {
+        GameObjectId id = objects.IdAtSlot(slot);
+        if (id == INVALID_GAME_OBJECT) continue;
+        const VoxelAnchorComponent& anchor = objects.Anchor(id);
+        const BuildingType& type = BUILDING_TYPES[objects.Building(id).type];
+        glm::ivec3 low = anchor.origin - glm::ivec3(0, type.belowGround, 0);
+        GenerateChunksIn(low, low + glm::ivec3(anchor.footprint.x, BuildingVolumeHeight(type), anchor.footprint.y) - 1);
+    }
+    m_Simulation.Roads().ForEach([&](glm::ivec2 tile, const RoadTile&) {
+        glm::ivec3 low(tile.x * TILE_SIZE, BUILD_GROUND_Y - 1, tile.y * TILE_SIZE);
+        GenerateChunksIn(low, low + glm::ivec3(TILE_SIZE, ROAD_CLEARANCE + 1, TILE_SIZE) - 1);
+    });
+    m_BuildTool.Restore();
+    m_Simulation.Roads().ForEach([&](glm::ivec2 tile, const RoadTile&) { m_RoadTool.Restore(tile); });
+
+    // Back to where the camera was
+    m_SessionFocus = view.sessionFocus;
+    if (m_CameraMode != CameraMode::Strategy) SetCameraMode(CameraMode::Strategy);
+    m_StrategyCamera.SetTarget(view.focus);
+    m_StrategyCamera.SetYaw(view.yaw);
+    m_StrategyCamera.SetDistance(view.distance);
+    m_Streamer.SetPlayerChunk(glm::ivec3(glm::floor(view.focus * VOXELS_PER_UNIT / (float)CHUNK_SIZE)));
+    m_Streamer.UpdateWindows();
+    m_Grass.MarkDirty();
+    m_SoundCounts.roads = m_Simulation.Roads().Count();
+    m_SoundCounts.upgrades = m_Simulation.Population().Upgrades();
+    m_SoundCounts.notifications = m_Simulation.Notifications().LastSequence();
+    return true;
+}
+
+void Application::ShowSaves(PauseMenu::SavesMode mode) {
+    m_SaveFiles = ListSaves(SAVE_DIRECTORY);
+    std::vector<PauseMenu::SaveRow> rows;
+    for (const SaveFileInfo& file : m_SaveFiles) {
+        PauseMenu::SaveRow row;
+        row.name = file.name;
+        row.loadable = file.loadable || mode == PauseMenu::SAVING; // Any can be saved over
+        if (file.loadable) {
+            char when[64], info[160];
+            std::time_t savedAt = (std::time_t)file.summary.savedAt;
+            std::strftime(when, sizeof(when), "%d %b %Y, %H:%M", std::localtime(&savedAt));
+            int minutes = (int)(file.summary.playSeconds / 60.0);
+            std::snprintf(info, sizeof(info), "%s  |  %d h %02d min  |  %d residents  |  %lld coins", when, minutes / 60, minutes % 60,
+                file.summary.residents, (long long)file.summary.coins);
+            row.info = info;
+        } else {
+            row.info = "From another version of the game";
+        }
+        rows.push_back(row);
+    }
+    m_PauseMenu.ShowSaves(mode, std::move(rows));
+}
+
+// The ambience round the camera, and a one-shot for each thing that happened since last frame
+void Application::UpdateSound(float deltaTime) {
+    glm::vec3 focus = ActiveCamera().FocusPoint() * VOXELS_PER_UNIT;
+    float distance = m_CameraMode == CameraMode::Strategy ? m_StrategyCamera.Distance() : 320.0f;
+    m_Audio.SetAmbience(AmbienceLevels(m_Simulation.Objects(), glm::vec2(focus.x, focus.z), distance), deltaTime);
+
+    SoundCounts now;
+    now.placed = m_BuildTool.PlacedCount();
+    now.demolished = m_BuildTool.DemolishedCount();
+    now.refused = m_BuildTool.RefusedCount();
+    now.upgrades = m_Simulation.Population().Upgrades();
+    now.notifications = m_Simulation.Notifications().LastSequence();
+    now.roads = m_Simulation.Roads().Count();
+    if (now.placed > m_SoundCounts.placed) m_Audio.Play(Sfx::Place);
+    if (now.demolished > m_SoundCounts.demolished) m_Audio.Play(Sfx::Demolish);
+    if (now.refused > m_SoundCounts.refused) m_Audio.Play(Sfx::Error);
+    if (now.roads != m_SoundCounts.roads) m_Audio.Play(Sfx::Road);
+    if (now.upgrades > m_SoundCounts.upgrades) m_Audio.Play(Sfx::Upgrade);
+    if (now.notifications > m_SoundCounts.notifications) {
+        bool tier = false;
+        m_Simulation.Notifications().ForEachSince(m_SoundCounts.notifications, [&](const Notification& n) { tier |= n.kind == NotificationKind::TierReached; });
+        m_Audio.Play(tier ? Sfx::Upgrade : Sfx::Notify);
+    }
+    m_SoundCounts = now;
+}
+
+void Application::GenerateChunksIn(glm::ivec3 minVoxel, glm::ivec3 maxVoxel) {
+    for (int cy = std::max(0, minVoxel.y >> 5); cy <= std::min(CHUNK_LAYERS - 1, maxVoxel.y >> 5); cy++) {
+        for (int cz = minVoxel.z >> 5; cz <= maxVoxel.z >> 5; cz++) {
+            for (int cx = minVoxel.x >> 5; cx <= maxVoxel.x >> 5; cx++) {
+                if (m_World.FindChunk(cx, cy, cz)) continue;
+                m_Terrain.GenerateChunk(cx, cy, cz, m_World.GetOrCreateChunk(cx, cy, cz)->data);
+            }
+        }
+    }
+}
+
 int Application::Run() {
     if (!Init()) return -1;
     Spawn();
+    if (!m_Options.loadPath.empty() && !LoadGame(m_Options.loadPath)) std::cerr << "Could not load " << m_Options.loadPath << std::endl;
 
     double lastTime = glfwGetTime();
     double showcaseTime = m_Options.showcase ? lastTime + 1.5 : -1.0; // Once the island around the spawn has streamed in
@@ -544,7 +735,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     // A setting's step (the - and + buttons) or the value its slider was moved to
     int step = 0, value = 0;
     bool absolute = false;
-    switch (m_PauseMenu.TakeRequest(step, absolute, value)) {
+    PauseMenu::Request request = m_PauseMenu.TakeRequest(step, absolute, value);
+    switch (request) {
     case PauseMenu::RESUME: SetPauseMenu(false); break;
     case PauseMenu::QUIT: glfwSetWindowShouldClose(m_Window, true); break;
     case PauseMenu::RENDER_SCALE: {
@@ -553,6 +745,10 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         break;
     }
     case PauseMenu::VIEW_DISTANCE: m_Streamer.SetRenderDistance(absolute ? value : m_Streamer.RenderDistance() + step); break;
+    case PauseMenu::VOLUME:
+        m_VolumePercent = std::clamp(absolute ? value : m_VolumePercent + step * 5, 0, 100);
+        m_Audio.SetVolume(m_VolumePercent / 100.0f);
+        break;
     case PauseMenu::UI_SCALE:
         m_UiScalePercent = std::clamp(absolute ? value : m_UiScalePercent + step * 10, 70, 150);
         m_Ui.Context()->SetDensityIndependentPixelRatio(m_UiScalePercent / 100.0f);
@@ -560,6 +756,48 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     case PauseMenu::VSYNC:
         m_Options.vsync = !m_Options.vsync;
         glfwSwapInterval(m_Options.vsync ? 1 : 0);
+        break;
+    case PauseMenu::SAVE:
+    case PauseMenu::LOAD:
+        m_PauseMenu.SetStatus("");
+        ShowSaves(request == PauseMenu::SAVE ? PauseMenu::SAVING : PauseMenu::LOADING);
+        break;
+    case PauseMenu::NEW_SAVE: {
+        // Named after when it was made, so names sort and never clash
+        char name[64];
+        std::time_t now = std::time(nullptr);
+        std::strftime(name, sizeof(name), "%Y-%m-%d %H.%M.%S", std::localtime(&now));
+        bool saved = SaveGame(std::string(SAVE_DIRECTORY) + "/" + name + ".sav");
+        m_PauseMenu.SetStatus(saved ? Rml::String("Saved as ") + name : "Could not save the game");
+        ShowSaves(PauseMenu::SAVING);
+        break;
+    }
+    case PauseMenu::PICK_SAVE:
+        if (value < 0 || value >= (int)m_SaveFiles.size()) break;
+        if (m_PauseMenu.Saves() == PauseMenu::SAVING) {
+            bool saved = SaveGame(m_SaveFiles[value].path);
+            m_PauseMenu.SetStatus(saved ? Rml::String("Saved over ") + m_SaveFiles[value].name : "Could not save the game");
+            ShowSaves(PauseMenu::SAVING);
+        } else if (LoadGame(m_SaveFiles[value].path)) {
+            m_PauseMenu.SetStatus("");
+            m_PauseMenu.ShowSaves(PauseMenu::NO_SAVES, {});
+            SetPauseMenu(false);
+        } else {
+            m_PauseMenu.SetStatus("This save could not be loaded (damaged, or from another version)");
+        }
+        break;
+    case PauseMenu::DELETE_SAVE:
+        if (value < 0 || value >= (int)m_SaveFiles.size()) break;
+        {
+            std::error_code error;
+            std::filesystem::remove(m_SaveFiles[value].path, error);
+            m_PauseMenu.SetStatus(error ? Rml::String("Could not delete ") + m_SaveFiles[value].name : Rml::String("Deleted ") + m_SaveFiles[value].name);
+        }
+        ShowSaves(m_PauseMenu.Saves());
+        break;
+    case PauseMenu::BACK:
+        m_PauseMenu.SetStatus("");
+        m_PauseMenu.ShowSaves(PauseMenu::NO_SAVES, {});
         break;
     default: break;
     }
@@ -571,7 +809,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
         if (clicked.ship != INVALID_SHIP && m_Simulation.Ships().IsAlive(clicked.ship)) m_ShipControl.Select(clicked.ship);
         else if (m_Simulation.Objects().IsAlive(clicked.building)) m_BuildTool.Inspect(clicked.building);
     }
-    m_ShipPanel.ApplyRequests(m_Simulation, m_ShipControl);
+    if (m_ShipPanel.ApplyRequests(m_Simulation, m_ShipControl)) m_Audio.Play(Sfx::Coins);
     if (!m_TradeRoutes.ApplyRequests(m_Simulation, m_ShipControl.Selected())) m_RoutesOpen = false;
 
     // --- World streaming ---
@@ -581,6 +819,8 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (movedChunk) m_Streamer.UpdateWindows();
     if (movedChunk || m_Editor.ConsumeTerrainChanged()) m_Grass.MarkDirty();
     m_Grass.Update(glfwGetTime(), m_Streamer.PlayerChunk(), m_World);
+
+    PlaceTraders();
 
     // --- Input and gameplay ---
     HandleKeys(deltaTime);
@@ -619,11 +859,16 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     // Cursor positions are in window coordinates, the UI in framebuffer pixels
     glm::vec2 cursor((float)cursorX * m_WindowWidth / std::max(1, windowWidth), (float)cursorY * m_WindowHeight / std::max(1, windowHeight));
     m_BuildMenu.Update(m_BuildTool, m_Simulation, cursor, glm::ivec2(m_WindowWidth, m_WindowHeight));
-    m_IslandPanel.Update(m_PanelIsland, m_Simulation.Economy(), strategy);
+    const char* trader = nullptr; // A trader's island: theirs
+    for (int t = 0; t < TRADER_COUNT; t++) {
+        GameObjectId post = m_Simulation.Traders().Post(t);
+        if (m_Simulation.Objects().IsAlive(post) && m_Simulation.Objects().Building(post).island == m_PanelIsland) trader = TRADERS[t].name;
+    }
+    m_IslandPanel.Update(m_PanelIsland, m_Simulation.Economy(), strategy, trader);
     m_Statistics.Update(m_Simulation, m_PanelIsland, strategy);
     m_Minimap.SetVisible(strategy && !m_PauseMenu.IsOpen());
     m_Minimap.Update(m_Simulation, m_StrategyCamera, glfwGetTime(), m_BuildTool.TabUnlocked(BuildCategory::Artisans)); // The New World opens with the Artisans
-    m_PauseMenu.Update({ (int)std::lround(m_Settings.renderScale * 100.0f), m_Streamer.RenderDistance(), m_UiScalePercent, m_Options.vsync });
+    m_PauseMenu.Update({ (int)std::lround(m_Settings.renderScale * 100.0f), m_Streamer.RenderDistance(), m_UiScalePercent, m_VolumePercent, m_Options.vsync });
     m_NotificationFeed.SetVisible(strategy);
     m_NotificationFeed.Update(m_Simulation, glfwGetTime());
     {
@@ -672,6 +917,7 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     glm::vec3 focus = ActiveCamera().FocusPoint() * VOXELS_PER_UNIT;
     m_Smoke.Update(gameDelta, m_Simulation.Objects(), m_BuildingModels, glm::vec2(focus.x, focus.z), SMOKE_DISTANCE);
     m_Boats.Update(gameDelta, m_Simulation.Objects(), m_BuildingModels, m_Terrain);
+    UpdateSound(deltaTime);
     m_Figures.clear();
     m_Smoke.AppendFigures(m_Figures);
     m_VoxelObjects.clear();

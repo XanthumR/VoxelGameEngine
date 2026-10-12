@@ -294,6 +294,14 @@ void GpuChunkCache::Forget(uint64_t key) {
     m_KnownEmpty.erase(key);
 }
 
+void GpuChunkCache::ForgetAll() {
+    std::vector<uint64_t> keys;
+    keys.reserve(m_ChunkSlots.size());
+    for (const auto& entry : m_ChunkSlots) keys.push_back(entry.first);
+    for (uint64_t key : keys) Evict(key);
+    m_KnownEmpty.clear();
+}
+
 void GpuChunkCache::BindForSampling() const {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_ColumnTops);

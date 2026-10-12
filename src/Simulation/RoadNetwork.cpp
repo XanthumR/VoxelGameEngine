@@ -1,5 +1,7 @@
 #include "Simulation/RoadNetwork.h"
 
+#include "Simulation/SaveGame.h"
+
 #include <cstdlib>
 
 RoadNetwork::RoadNetwork() {
@@ -43,4 +45,17 @@ void MakeLPath(glm::ivec2 a, glm::ivec2 b, std::vector<glm::ivec2>& out) {
             out.push_back(tile);
         }
     }
+}
+
+void RoadNetwork::Save(SaveWriter& out) const {
+    out.Write((uint64_t)m_Tiles.size());
+    for (const auto& entry : m_Tiles) out.Write(entry.first);
+}
+
+void RoadNetwork::Load(SaveReader& in) {
+    m_Tiles.clear();
+    uint64_t count = in.Read<uint64_t>();
+    if (count > RESERVED_TILES * 4) in.Fail();
+    for (uint64_t i = 0; i < count && in.Ok(); i++) Add(KeyToTile(in.Read<uint64_t>()));
+    m_Revision++;
 }

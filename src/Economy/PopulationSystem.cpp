@@ -3,6 +3,7 @@
 #include "Economy/IslandEconomy.h"
 #include "Economy/Treasury.h"
 #include "Simulation/BuildingTypes.h"
+#include "Simulation/SaveGame.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -166,4 +167,16 @@ void PopulationSystem::UpdateHouse(GameObjectRegistry& objects, IslandEconomyMan
             m_Downgrades++;
         }
     }
+}
+
+void PopulationSystem::Save(SaveWriter& out) const {
+    out.Write(m_Upgrades);
+    out.Write(m_Downgrades);
+}
+
+void PopulationSystem::Load(SaveReader& in) {
+    in.Read(m_Upgrades);
+    in.Read(m_Downgrades);
+    m_UpgradeRequests.clear();
+    m_LookChanges.clear();
 }

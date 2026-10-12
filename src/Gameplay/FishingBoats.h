@@ -20,6 +20,9 @@ class TerrainGenerator;
 // ride the ocean's waves.
 class FishingBoats {
 public:
+    void Clear() {
+        m_Boats.clear();
+    } // A game was loaded
     static constexpr int MAX_BOATS = 64;
     static constexpr float TRIP_SECONDS = 30.0f;
     static constexpr float MOORED_SECONDS = 4.0f;

@@ -12,7 +12,10 @@
 
 class IslandEconomyManager;
 class OccupancyGrid;
+class SaveReader;
+class SaveWriter;
 class TerrainGenerator;
+class TraderSystem;
 class Treasury;
 
 // Handle to a ship: low 16 bits the slot, high 16 bits its generation (as GameObjectId)
@@ -91,6 +94,8 @@ public:
     static constexpr int CROSSING_TICKS = 600;  // From one session to another (a minute)
 
     explicit ShipSystem(TerrainGenerator& terrain);
+    // The traders and the coins that trading posts trade with (left out: trading posts trade nothing)
+    void SetTrade(TraderSystem* traders, Treasury* treasury) { m_Traders = traders; m_Treasury = treasury; }
 
     void Update(const GameObjectRegistry& objects, const OccupancyGrid& occupancy, IslandEconomyManager& economy);
 
@@ -103,7 +108,8 @@ public:
     bool SailTo(ShipId id, glm::ivec2 tile, const GameObjectRegistry& objects, const OccupancyGrid& occupancy,
         GameObjectId harbor = INVALID_GAME_OBJECT);
     // Moves cargo between a docked ship and its harbor's island: amount > 0 onto the ship, < 0 off it.
-    // Returns how much moved (with the same sign), limited by the slots and the storage.
+    // Returns how much moved (with the same sign), limited by the slots and the storage. At a
+    // trader's trading post the ship buys (amount > 0) and sells instead, for coins (SetTrade).
     int Transfer(ShipId id, ItemType item, int amount, const GameObjectRegistry& objects, IslandEconomyManager& economy);
 
     // What placing a building costs, checked and paid. Coins and the island's planks, except on an
@@ -135,6 +141,9 @@ public:
     // The ship nearest a position (tiles) within maxTiles; INVALID_SHIP when none
     ShipId Nearest(glm::vec2 position, float maxTiles) const;
 
+    void Save(SaveWriter& out) const;
+    void Load(SaveReader& in);
+
     // Open water a ship can sail on
     bool IsWater(glm::ivec2 tile, const OccupancyGrid& occupancy);
     // The tile where ships dock at a harbor: two tiles past the middle of its pier's end
@@ -146,9 +155,12 @@ public:
 private:
     bool LineIsWater(glm::ivec2 from, glm::ivec2 to, const OccupancyGrid& occupancy);
     bool SetPath(ShipId id, glm::ivec2 goal, const OccupancyGrid& occupancy); // Sailing there in this session
+    int Trade(ShipId id, int trader, ItemType item, int amount);             // Transfer at a trading post
     void FollowRoute(ShipId id, const GameObjectRegistry& objects, const OccupancyGrid& occupancy, IslandEconomyManager& economy);
 
     TerrainGenerator& m_Terrain;
+    TraderSystem* m_Traders = nullptr;
+    Treasury* m_Treasury = nullptr;
     std::array<Ship, MAX_SHIPS> m_Ships{};
     std::array<uint16_t, MAX_SHIPS> m_Generations{};
     std::array<bool, MAX_SHIPS> m_Alive{};

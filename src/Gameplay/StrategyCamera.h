@@ -28,6 +28,7 @@ public:
     void SetBounds(glm::vec2 min, glm::vec2 max);
     static constexpr float JUMP_DISTANCE = 6000.0f; // Voxels
     void SetYaw(float yaw);
+    void SetDistance(float voxels); // Clamped to MIN_DISTANCE..MAX_DISTANCE
 
     // mouseFree: the UI is not using the mouse, so edge pan, drag and zoom may react
     void Update(GLFWwindow* window, float deltaTime, bool mouseFree, bool keyboardFree);

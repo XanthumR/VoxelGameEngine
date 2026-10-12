@@ -18,6 +18,10 @@ class RoadNetwork;
 // removed. They are voxel objects (FigureModels), placed off the grid and turning smoothly.
 class WalkerSystem {
 public:
+    void Clear() {
+        m_Walkers.clear();
+        m_Objects.clear();
+    } // A game was loaded
     static constexpr int MAX_WALKERS = 512;
     static constexpr int RESIDENTS_PER_WALKER = 5;
     static constexpr float TILES_PER_SECOND = 5.0f / TILE_SIZE; // About 5 voxels per second

@@ -56,6 +56,7 @@ public:
     static constexpr int MAX_FIGURE_POINTS = 8192;
     void SetFigureTops(const std::vector<glm::ivec3>& highestVoxels);
     void Forget(uint64_t key); // Evict and drop the "known empty" mark (chunk left the GPU window)
+    void ForgetAll();          // Every chunk (loading a game); the pools stay allocated
 
     bool IsResident(uint64_t key) const { return m_ChunkSlots.count(key) != 0; }
     bool IsKnownEmpty(uint64_t key) const { return m_KnownEmpty.count(key) != 0; }

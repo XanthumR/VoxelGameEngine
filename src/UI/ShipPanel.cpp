@@ -19,11 +19,18 @@ bool ShipPanel::Init(Rml::Context* context) {
         row.RegisterMember("icon", &GoodRow::icon);
         row.RegisterMember("island", &GoodRow::island);
         row.RegisterMember("ship", &GoodRow::ship);
+        row.RegisterMember("shown", &GoodRow::shown);
+        row.RegisterMember("can_load", &GoodRow::canLoad);
+        row.RegisterMember("can_unload", &GoodRow::canUnload);
+        row.RegisterMember("amounts", &GoodRow::amounts);
+        row.RegisterMember("load_label", &GoodRow::loadLabel);
+        row.RegisterMember("unload_label", &GoodRow::unloadLabel);
     }
     model.RegisterArray<std::vector<GoodRow>>();
     model.Bind("goods", &m_Goods);
     model.Bind("on_route", &m_OnRoute);
     model.Bind("docked", &m_Docked);
+    model.Bind("heading", &m_Heading);
     auto argument = [](const Rml::VariantList& arguments) { return arguments.empty() ? -1 : arguments[0].Get<int>(); };
     model.BindEventCallback("load", [this, argument](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) { m_LoadRequest = argument(a); });
     model.BindEventCallback("unload", [this, argument](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) { m_UnloadRequest = argument(a); });
@@ -55,14 +62,19 @@ void ShipPanel::Update(ShipId id, const Simulation& simulation, bool orderFailed
     const GameObjectRegistry& objects = simulation.Objects();
     bool atHarbor = objects.IsAlive(ship.harbor);
     IslandId island = atHarbor ? objects.Building(ship.harbor).island : NO_ISLAND;
+    int trader = simulation.Traders().TraderAt(ship.harbor);
     m_Lines.Begin();
     switch (ship.state) {
     case ShipState::Idle: std::snprintf(text, sizeof(text), "Anchored at sea"); break;
     case ShipState::Sailing:
-        if (atHarbor) std::snprintf(text, sizeof(text), "Sailing to the harbor of island #%u", island);
+        if (trader >= 0) std::snprintf(text, sizeof(text), "Sailing to %s's trading post", TRADERS[trader].name);
+        else if (atHarbor) std::snprintf(text, sizeof(text), "Sailing to the harbor of island #%u", island);
         else std::snprintf(text, sizeof(text), "Sailing");
         break;
-    case ShipState::Docked: std::snprintf(text, sizeof(text), "Docked at the harbor of island #%u", island); break;
+    case ShipState::Docked:
+        if (trader >= 0) std::snprintf(text, sizeof(text), "Docked at %s's trading post", TRADERS[trader].name);
+        else std::snprintf(text, sizeof(text), "Docked at the harbor of island #%u", island);
+        break;
     case ShipState::Crossing: {
         int seconds = (ship.crossTicks + 9) / 10;
         std::snprintf(text, sizeof(text), "Crossing to the %s (%d:%02d)", SESSIONS[SessionAtTile(ship.crossGoal)].name, seconds / 60, seconds % 60);
@@ -99,26 +111,57 @@ void ShipPanel::Update(ShipId id, const Simulation& simulation, bool orderFailed
     };
     set(m_OnRoute, ship.route >= 0, "on_route");
     const IslandStorage* storage = simulation.Economy().Find(island);
-    set(m_Docked, ship.state == ShipState::Docked && storage, "docked");
+    set(m_Docked, ship.state == ShipState::Docked && (storage || trader >= 0), "docked");
     if (!m_Docked) return;
+    Rml::String heading = trader >= 0 ? Rml::String("Trade with ") + TRADERS[trader].name + ", 10 at a time" : "Load and unload, 10 at a time";
+    if (heading != m_Heading) {
+        m_Heading = heading;
+        m_Model.DirtyVariable("heading");
+    }
     bool changed = false;
+    const TraderSystem& traders = simulation.Traders();
     for (GoodRow& row : m_Goods) {
-        int onShip = ships.CargoAmount(id, (ItemType)row.item), onIsland = storage->Amount((ItemType)row.item);
-        changed |= row.ship != onShip || row.island != onIsland;
-        row.ship = onShip;
-        row.island = onIsland;
+        ItemType item = (ItemType)row.item;
+        GoodRow next = row;
+        next.ship = ships.CargoAmount(id, item);
+        if (trader >= 0) {
+            // A trader sells their wares and buys anything
+            bool sells = traders.Sells(trader, item);
+            next.island = sells ? traders.Stock(trader, item) : 0;
+            next.shown = sells || next.ship > 0;
+            next.canLoad = sells && next.island > 0 && simulation.Coins().Coins() >= BuyPrice(item);
+            next.canUnload = next.ship > 0;
+            next.amounts = (sells ? "stock " + Rml::ToString(next.island) + " | " : Rml::String()) + "ship " + Rml::ToString(next.ship);
+            next.loadLabel = sells ? "Buy " + Rml::ToString(BuyPrice(item)) : "-";
+            next.unloadLabel = "Sell " + Rml::ToString(SellPrice(item));
+        } else {
+            next.island = storage->Amount(item);
+            next.shown = next.island > 0 || next.ship > 0;
+            next.canLoad = next.island > 0;
+            next.canUnload = next.ship > 0;
+            next.amounts = "island " + Rml::ToString(next.island) + " | ship " + Rml::ToString(next.ship);
+            next.loadLabel = "Load";
+            next.unloadLabel = "Unload";
+        }
+        changed |= !(next == row);
+        row = next;
     }
     if (changed) m_Model.DirtyVariable("goods");
 }
 
-void ShipPanel::ApplyRequests(Simulation& simulation, ShipControl& control) {
+bool ShipPanel::ApplyRequests(Simulation& simulation, ShipControl& control) {
     ShipSystem& ships = simulation.Ships();
+    bool traded = false;
     if (ships.IsAlive(m_Ship)) {
-        if (m_LoadRequest >= 0) ships.Transfer(m_Ship, (ItemType)m_LoadRequest, 10, simulation.Objects(), simulation.Economy());
-        if (m_UnloadRequest >= 0) ships.Transfer(m_Ship, (ItemType)m_UnloadRequest, -10, simulation.Objects(), simulation.Economy());
+        bool atTrader = simulation.Traders().TraderAt(ships.Get(m_Ship).harbor) >= 0;
+        int moved = 0;
+        if (m_LoadRequest >= 0) moved += ships.Transfer(m_Ship, (ItemType)m_LoadRequest, 10, simulation.Objects(), simulation.Economy());
+        if (m_UnloadRequest >= 0) moved -= ships.Transfer(m_Ship, (ItemType)m_UnloadRequest, -10, simulation.Objects(), simulation.Economy());
+        traded = atTrader && moved > 0;
         if (m_LeaveRouteRequest) ships.AssignRoute(m_Ship, -1);
     }
     if (m_CloseRequest) control.Deselect();
     m_LoadRequest = m_UnloadRequest = -1;
     m_LeaveRouteRequest = m_CloseRequest = false;
+    return traded;
 }

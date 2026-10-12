@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+class SaveReader;
+class SaveWriter;
 class TerrainGenerator;
 
 using IslandId = uint32_t;
@@ -25,6 +27,7 @@ struct IslandInfo {
     glm::ivec2 minColumn = glm::ivec2(0); // Bounding box in world columns (x, z), inclusive
     glm::ivec2 maxColumn = glm::ivec2(0);
     bool truncated = false; // The flood fill hit MAX_ISLAND_CELLS; the rest of the land is a new island
+    glm::ivec2 seedColumn = glm::ivec2(0); // The column its flood fill started from
 };
 
 // Finds which island a world column belongs to. Works on a coarse grid of CELL_SIZE x CELL_SIZE
@@ -51,6 +54,11 @@ public:
     bool IsLandColumn(int wx, int wz);
 
     TerrainGenerator& Terrain() const { return m_Terrain; }
+
+    // The islands found so far, by where each was first found: loading finds them again in the same
+    // order, so every island gets its ID back
+    void Save(SaveWriter& out) const;
+    void Load(SaveReader& in);
 
 private:
     static uint64_t CellKey(glm::ivec2 cell);

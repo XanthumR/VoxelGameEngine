@@ -243,9 +243,29 @@ void WarehouseInfo(InfoLines& lines, GameObjectId id, const GameObjectRegistry& 
 
 void MoneyLines(InfoLines& lines, GameObjectId building, const GameObjectRegistry& objects);
 
+// A trader's wares with their stock and price, and what they pay
+void TraderLines(InfoLines& lines, int trader, const TraderSystem& traders) {
+    char text[64];
+    lines.Add(TRADERS[trader].name, Tone::Heading);
+    for (int w = 0; w < TRADERS[trader].wareCount; w++) {
+        ItemType item = TRADERS[trader].wares[w];
+        InfoLine& line = lines.Add(ItemName(item), traders.Stock(trader, item) > 0 ? Tone::Normal : Tone::Muted);
+        line.icon = ItemIcon(item);
+        std::snprintf(text, sizeof(text), "%d for %d coins", traders.Stock(trader, item), BuyPrice(item));
+        line.value = text;
+    }
+    lines.Add("Buys any good at its value; sail a ship here to trade", Tone::Muted);
+}
+
 // The building's details, for the tooltip
-void BuildingDetails(InfoLines& lines, GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy) {
+void BuildingDetails(InfoLines& lines, GameObjectId building, const GameObjectRegistry& objects, const IslandEconomyManager& economy,
+    const TraderSystem& traders) {
     const BuildingType& type = BUILDING_TYPES[objects.Building(building).type];
+    if (type.role == BuildingRole::Trader) {
+        int trader = traders.TraderAt(building);
+        if (trader >= 0) TraderLines(lines, trader, traders);
+        return;
+    }
     switch (type.role) {
     case BuildingRole::Residence: HouseInfo(lines, building, objects, economy); break;
     case BuildingRole::Service: ServiceInfo(lines, building, objects); break;
@@ -327,6 +347,7 @@ void BuildingInfo::FillMenu(GameObjectId id, const Simulation& simulation) {
     menu.title = type.name;
     menu.image = Rml::String("buildings/") + (type.modelName ? type.modelName : "road") + ".tga";
     menu.canPause = type.role == BuildingRole::Producer;
+    menu.owned = type.role != BuildingRole::Trader;
     m_SlotScratch.clear();
     m_HistoryScratch.clear();
     m_MenuLines.Begin();
@@ -464,8 +485,28 @@ void BuildingInfo::FillMenu(GameObjectId id, const Simulation& simulation) {
         menu.subtitleTone = owned ? (int)Tone::Good : (int)Tone::Bad;
         break;
     }
+    case BuildingRole::Trader: {
+        const TraderSystem& traders = simulation.Traders();
+        int trader = traders.TraderAt(id);
+        if (trader < 0) break;
+        menu.title = TRADERS[trader].name;
+        menu.subtitle = "Trading post: your ships buy and sell here";
+        menu.subtitleTone = (int)Tone::Muted;
+        menu.bigLabel = "Wares";
+        menu.bigValue = Rml::ToString(TRADERS[trader].wareCount);
+        menu.slotsTitle = "For sale";
+        for (int w = 0; w < TRADERS[trader].wareCount; w++) {
+            ItemType item = TRADERS[trader].wares[w];
+            int stock = traders.Stock(trader, item);
+            slot(ItemIcon(item), Rml::String(ItemName(item)) + ", " + Rml::ToString(BuyPrice(item)) + " coins", Rml::ToString(stock),
+                (float)stock / TraderSystem::MAX_STOCK, stock > 0 ? Tone::Normal : Tone::Warn);
+        }
+        m_MenuLines.Add("Buys any good at its value", Tone::Heading);
+        m_MenuLines.Add("Send a ship here, or make this a trade route stop: Load buys, Unload sells", Tone::Muted);
+        break;
     }
-    MoneyLines(m_MenuLines, id, objects);
+    }
+    if (menu.owned) MoneyLines(m_MenuLines, id, objects);
     m_MenuLines.End(m_MenuModel);
 
     // Only what changed is marked dirty
@@ -479,6 +520,7 @@ void BuildingInfo::FillMenu(GameObjectId id, const Simulation& simulation) {
     SetIfChanged(m_Menu.bigBar, menu.bigBar, m_MenuModel, "big_bar");
     SetIfChanged(m_Menu.slotsTitle, menu.slotsTitle, m_MenuModel, "slots_title");
     SetIfChanged(m_Menu.canPause, menu.canPause, m_MenuModel, "can_pause");
+    SetIfChanged(m_Menu.owned, menu.owned, m_MenuModel, "owned");
     SetIfChanged(m_Menu.paused, menu.paused, m_MenuModel, "paused");
     if (m_Slots != m_SlotScratch) {
         m_Slots = m_SlotScratch; // Within the reserved capacity
@@ -509,6 +551,7 @@ bool BuildingInfo::Init(Rml::Context* context) {
     panel.Bind("big_bar", &m_Menu.bigBar);
     panel.Bind("slots_title", &m_Menu.slotsTitle);
     panel.Bind("can_pause", &m_Menu.canPause);
+    panel.Bind("owned", &m_Menu.owned);
     panel.Bind("paused", &m_Menu.paused);
     m_MenuLines.Bind(panel, "lines");
     if (Rml::StructHandle<Slot> slot = panel.RegisterStruct<Slot>()) {
@@ -560,7 +603,7 @@ void BuildingInfo::Update(GameObjectId tooltip, GameObjectId panel, const Simula
     if (showTooltip) {
         SetIfChanged(m_TooltipTitle, Rml::String(BUILDING_TYPES[objects.Building(tooltip).type].name), m_TooltipModel, "title");
         m_TooltipLines.Begin();
-        BuildingDetails(m_TooltipLines, tooltip, objects, economy);
+        BuildingDetails(m_TooltipLines, tooltip, objects, economy, simulation.Traders());
         m_TooltipLines.End(m_TooltipModel);
         Rml::Vector2f box = m_Tooltip->GetBox().GetSize(Rml::BoxArea::Border);
         float x = std::min(cursor.x + 20.0f, size.x - box.x - 8.0f);

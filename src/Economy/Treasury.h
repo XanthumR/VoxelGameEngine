@@ -9,6 +9,8 @@
 #include <cstdint>
 
 class IslandEconomyManager;
+class SaveReader;
+class SaveWriter;
 
 // Construction materials, taken from the island's storage (in BuildingCost's order)
 constexpr int MATERIAL_COUNT = 4;
@@ -77,6 +79,7 @@ constexpr std::array<BuildingCost, BUILDING_TYPES.size()> BUILDING_COSTS = { {
     { 1600, 4, 90, 10, 4, 4 },    // Champagne Cellar
     { 1000, 4, 50, 6, 4 },        // Gold Mine
     { 2000, 4, 120, 10, 4, 4 },   // Goldsmiths
+    { 0, 0, 0 },                  // Trading Post (the trader's)
 } };
 
 // Coins per minute ten residents pay with every need met, per tier
@@ -109,6 +112,8 @@ public:
 
     int64_t Coins() const { return m_Coins; }
     void SetCoins(int64_t coins) { m_Coins = coins; }
+    void Save(SaveWriter& out) const;
+    void Load(SaveReader& in);
     int IncomePerMinute() const { return (int)(m_IncomeMilli / 1000); }
     int UpkeepPerMinute() const { return (int)(m_UpkeepMilli / 1000); }
 

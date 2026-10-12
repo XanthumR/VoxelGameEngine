@@ -1,5 +1,7 @@
 #include "Economy/IslandEconomy.h"
 
+#include "Simulation/SaveGame.h"
+
 #include <algorithm>
 
 IslandEconomyManager::IslandEconomyManager() {
@@ -97,4 +99,12 @@ int IslandEconomyManager::Remove(IslandId island, ItemType item, int amount) {
     int removed = std::min(stored, amount);
     stored -= removed;
     return removed;
+}
+
+void IslandEconomyManager::Save(SaveWriter& out) const {
+    out.WriteVector(m_Islands);
+}
+
+void IslandEconomyManager::Load(SaveReader& in) {
+    in.ReadVector(m_Islands, MAX_ISLANDS); // Within the reserve
 }

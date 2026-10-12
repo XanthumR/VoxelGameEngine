@@ -45,6 +45,11 @@ void StrategyCamera::SetBounds(glm::vec2 min, glm::vec2 max) {
     m_BoundsMax = max;
 }
 
+void StrategyCamera::SetDistance(float voxels) {
+    m_Distance = std::clamp(voxels, MIN_DISTANCE, MAX_DISTANCE);
+    UpdatePose();
+}
+
 void StrategyCamera::SetYaw(float yaw) {
     m_Yaw = yaw;
     UpdatePose();

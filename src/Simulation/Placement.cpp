@@ -6,6 +6,7 @@
 #include "Simulation/OccupancyGrid.h"
 #include "Simulation/RoadNetwork.h"
 #include "World/BlockTypes.h"
+#include "World/Sessions.h"
 #include "World/TerrainGenerator.h"
 #include "World/VoxelWorld.h"
 
@@ -30,6 +31,7 @@ const char* PlacementErrorText(PlacementError error) {
     case PlacementError::NeedsShip: return "needs a ship of yours within 4 tiles carrying the planks";
     case PlacementError::OtherIsland: return "a building can only move within its island";
     case PlacementError::NeedsFarm: return "must be near its farm (3 tiles), and the farm must have room";
+    case PlacementError::TraderIsland: return "this island belongs to a trader";
     }
     return "?";
 }
@@ -134,6 +136,15 @@ PlacementCheck ValidatePlacement(const PlacementContext& context, uint16_t type,
     if (!context.occupancy.IsFree(minTile, tiles)) {
         check.error = PlacementError::Occupied;
         return check;
+    }
+    // The trader's island is theirs: only their trading post stands there
+    for (int z = 0; z < tiles.y && building.role != BuildingRole::Trader; z++) {
+        for (int x = 0; x < tiles.x; x++) {
+            if (InTraderIsland(minTile + glm::ivec2(x, z))) {
+                check.error = PlacementError::TraderIsland;
+                return check;
+            }
+        }
     }
     for (int z = 0; z < tiles.y; z++) {
         for (int x = 0; x < tiles.x; x++) {

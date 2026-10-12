@@ -366,3 +366,4 @@ imgui.ini
 # CMake build trees
 build/
 out/
+saves/

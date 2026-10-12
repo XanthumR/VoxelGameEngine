@@ -36,6 +36,7 @@ enum class PlacementError {
     NeedsShip,        // ...and that needs a ship nearby carrying its planks (ShipSystem::CheckBuildCost)
     OtherIsland,      // A moved building must stay on its island
     NeedsFarm,        // A farm module must be near a farm of its kind that has room for it
+    TraderIsland,     // The trader's island is theirs
 };
 
 const char* PlacementErrorText(PlacementError error);

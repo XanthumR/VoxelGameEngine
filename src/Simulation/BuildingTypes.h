@@ -17,6 +17,7 @@ enum class BuildingRole : uint8_t {
     Service,   // Public building (marketplace, school, ...): meets a need of the houses in its road reach
     Producer,  // Makes goods (ProductionChains): workforce, inputs, a cart to the warehouse
     Module,    // A farm's pen or field (sheepfold, wheat field): placed near its farm, it makes the farm work (no road needed)
+    Trader,    // An NPC trader's trading post (Economy/Traders.h): not the player's, ships buy and sell there
 };
 
 // Build menu tab: one per population tier (what that tier unlocks), then Infrastructure
@@ -60,7 +61,7 @@ struct BuildingType {
 };
 
 // Index = BuildingComponent::type
-constexpr std::array<BuildingType, 49> BUILDING_TYPES = { {
+constexpr std::array<BuildingType, 50> BUILDING_TYPES = { {
     { "Warehouse", 4, 4, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "warehouse", BuildCategory::Infrastructure, -1 },
     { "Farmer House", 3, 3, 14, 30, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true, "farmer_house", BuildCategory::Farmers, -1 },
     { "Marketplace", 4, 3, 10, 24, Block::PLANK, Block::AWNING, BuildingRole::Service, 0, LookStyle::Stall, true, "marketplace", BuildCategory::Farmers, -1, 0, 0, -1, ServiceType::Marketplace },
@@ -115,6 +116,8 @@ constexpr std::array<BuildingType, 49> BUILDING_TYPES = { {
     { "Champagne Cellar", 3, 3, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "champagne_cellar", BuildCategory::Investors, 29 },
     { "Gold Mine", 3, 3, 14, 44, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "gold_mine", BuildCategory::Investors, 30 },
     { "Goldsmiths", 3, 3, 22, 46, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "goldsmiths", BuildCategory::Investors, 31 },
+    // NPC traders (8.3): placed by the game on the trader's island, never by the player
+    { "Trading Post", 4, 5, 16, 34, Block::STONE_WALL, Block::ROOF, BuildingRole::Trader, 0, LookStyle::Gable, false, "harbor", BuildCategory::Infrastructure, -1, 2, 6 },
 } };
 constexpr uint16_t BUILDING_WAREHOUSE = 0;
 constexpr uint16_t BUILDING_FARMER_HOUSE = 1;
@@ -153,6 +156,8 @@ constexpr uint16_t BUILDING_INVESTOR_HOUSE = 42;
 constexpr uint16_t BUILDING_BANK = 43;
 constexpr uint16_t BUILDING_VINEYARD = 44;
 constexpr uint16_t BUILDING_VINE_ROWS = 45;
+constexpr uint16_t BUILDING_TRADING_POST = 49;
+static_assert(BUILDING_TYPES[BUILDING_TRADING_POST].role == BuildingRole::Trader);
 static_assert(BUILDING_TYPES[BUILDING_VINE_ROWS].moduleOf == BUILDING_VINEYARD && BUILDING_TYPES[BUILDING_BANK].service == ServiceType::Bank &&
               BUILDING_TYPES[BUILDING_UNIVERSITY].service == ServiceType::University);
 static_assert(BUILDING_TYPES[BUILDING_RENDERING_WORKS].chain == 10 && BUILDING_TYPES[BUILDING_SEWING_MACHINE_FACTORY].chain == 20);

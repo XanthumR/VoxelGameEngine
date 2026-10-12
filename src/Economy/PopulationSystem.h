@@ -6,6 +6,8 @@
 #include <vector>
 
 class IslandEconomyManager;
+class SaveReader;
+class SaveWriter;
 
 // Residents and their needs, one step per simulation tick (see PopulationNeeds.h for the numbers):
 //  - once per second, per island and tier in order (Farmers first): served residents consume their
@@ -46,6 +48,9 @@ public:
 
     uint32_t Upgrades() const { return m_Upgrades; }
     uint32_t Downgrades() const { return m_Downgrades; }
+
+    void Save(SaveWriter& out) const;
+    void Load(SaveReader& in);
 
 private:
     void Consume(const GameObjectRegistry& objects, IslandEconomyManager& economy);

@@ -10,6 +10,8 @@
 
 class OccupancyGrid;
 class RoadNetwork;
+class SaveReader;
+class SaveWriter;
 class TerrainGenerator;
 
 // A tree cut down or grown back, for the frame loop to update the voxels
@@ -48,6 +50,8 @@ public:
     // Shared with the chunk workers so newly generated chunks leave felled trees out
     FelledTrees& Felled() { return m_FelledSet; }
     size_t FelledCount() const { return m_Felled.size(); }
+    void Save(SaveWriter& out) const;
+    void Load(SaveReader& in); // Replaces the felled trees (the world's chunks must be made again)
 
 private:
     // Tree roots of one 32 x 32 chunk column, found once and cached

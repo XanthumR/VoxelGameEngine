@@ -14,6 +14,7 @@ struct Session {
     const char* name;
     glm::ivec2 originTile; // The map's first tile (its lowest x and z)
     bool tropical;         // Palms instead of broadleaf trees, beaches more than cliffs
+    glm::ivec2 traderTile; // The middle of the trader's island (tiles from the map's first tile)
 };
 
 constexpr int SESSION_TILES = 384;      // A map's side in build tiles (4608 voxel columns)
@@ -22,8 +23,8 @@ constexpr int EDGE_FADE_TILES = 24;     // ...and islands thin out over this man
 constexpr int SESSION_OLD_WORLD = 0;
 constexpr int SESSION_NEW_WORLD = 1;
 constexpr std::array<Session, 2> SESSIONS = { {
-    { "Old World", glm::ivec2(-276, -132), false },
-    { "New World", glm::ivec2(1340, -160), true }, // 16 000 columns east: beyond any view distance
+    { "Old World", glm::ivec2(-276, -132), false, glm::ivec2(277, 172) },
+    { "New World", glm::ivec2(1340, -160), true, glm::ivec2(200, 158) }, // 16 000 columns east: beyond any view distance
 } };
 constexpr int SESSION_COUNT = (int)SESSIONS.size();
 
@@ -47,6 +48,17 @@ constexpr int TilesToEdge(glm::ivec2 tile) {
     int b = SESSION_TILES - 1 - (local.x > local.y ? local.x : local.y);
     return a < b ? a : b;
 }
+// The trader's island: a fixed oval of land in the open sea, the same in every game (the islands
+// round it come from noise). TRADER_ISLAND_RADIUS is its half size in tiles along x and z.
+constexpr glm::ivec2 TRADER_ISLAND_RADIUS(7, 5);
+constexpr bool InTraderIsland(glm::ivec2 tile) {
+    int session = SessionAtTile(tile);
+    if (session < 0) return false;
+    glm::ivec2 d = tile - SESSIONS[session].originTile - SESSIONS[session].traderTile;
+    return d.x * d.x * TRADER_ISLAND_RADIUS.y * TRADER_ISLAND_RADIUS.y + d.y * d.y * TRADER_ISLAND_RADIUS.x * TRADER_ISLAND_RADIUS.x <=
+           TRADER_ISLAND_RADIUS.x * TRADER_ISLAND_RADIUS.x * TRADER_ISLAND_RADIUS.y * TRADER_ISLAND_RADIUS.y;
+}
+
 // The middle of a session's map, in world columns
 constexpr glm::ivec2 SessionCenterColumn(int session) {
     return (SESSIONS[session].originTile + SESSION_TILES / 2) * TILE_SIZE;

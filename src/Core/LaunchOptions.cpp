@@ -27,6 +27,10 @@ LaunchOptions LaunchOptions::Parse(int argc, char** argv) {
             options.cameraYaw = (float)std::atof(argv[i + 4]);
             options.cameraPitch = (float)std::atof(argv[i + 5]);
             i += 5;
+        } else if (arg == "--mute") {
+            options.mute = true;
+        } else if (arg == "--load" && remaining >= 1) {
+            options.loadPath = argv[++i];
         } else if (arg == "--screenshot" && remaining >= 2) {
             options.screenshotPath = argv[++i];
             options.screenshotDelay = std::atof(argv[++i]);

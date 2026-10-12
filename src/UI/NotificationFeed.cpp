@@ -53,7 +53,8 @@ void Describe(const Notification& n, char* text, size_t size, const char*& icon,
         tone = Tone::Bad;
         break;
     case NotificationKind::ShipDocked:
-        std::snprintf(text, size, "A ship docked at the harbor of %s", island);
+        if (BUILDING_TYPES[n.buildingType].role == BuildingRole::Trader) std::snprintf(text, size, "A ship docked at the trader's trading post");
+        else std::snprintf(text, size, "A ship docked at the harbor of %s", island);
         icon = "icons/ship.tga";
         tone = Tone::Normal;
         break;

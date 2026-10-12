@@ -44,7 +44,11 @@ set(RMLUI_SAMPLES OFF CACHE BOOL "" FORCE)
 set(RMLUI_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(rmlui GIT_REPOSITORY https://github.com/mikke89/RmlUi.git GIT_TAG 6.3 GIT_SHALLOW TRUE)
 
-FetchContent_MakeAvailable(glfw glm imgui)
+# --- miniaudio (sound; one header) ---
+FetchContent_Declare(miniaudio GIT_REPOSITORY https://github.com/mackron/miniaudio.git GIT_TAG 0.11.21 GIT_SHALLOW TRUE
+    SOURCE_SUBDIR do-not-build)
+
+FetchContent_MakeAvailable(glfw glm imgui miniaudio)
 
 find_package(Freetype QUIET)
 if(NOT TARGET Freetype::Freetype)
@@ -80,12 +84,14 @@ set(LOGIC_SOURCES
     src/Economy/PopulationNeeds.cpp
     src/Economy/PopulationSystem.cpp
     src/Economy/Production.cpp
+    src/Economy/Traders.cpp
     src/Economy/Treasury.cpp
     src/Gameplay/BuildingAnimations.cpp
     src/Gameplay/Carts.cpp
     src/Gameplay/FigureModels.cpp
     src/Gameplay/FishingBoats.cpp
     src/Gameplay/Smoke.cpp
+    src/Gameplay/SoundScape.cpp
     src/Gameplay/Walkers.cpp
     src/Simulation/BuildingLook.cpp
     src/Simulation/BuildingModels.cpp
@@ -98,6 +104,7 @@ set(LOGIC_SOURCES
     src/Simulation/Placement.cpp
     src/Simulation/ProducerLocation.cpp
     src/Simulation/RoadNetwork.cpp
+    src/Simulation/SaveGame.cpp
     src/Simulation/Ships.cpp
     src/Simulation/Simulation.cpp
     src/Simulation/TreeRegistry.cpp
@@ -108,6 +115,8 @@ set(LOGIC_SOURCES
 
 set(GAME_SOURCES
     src/main.cpp
+    src/Audio/AudioSystem.cpp
+    src/Audio/Miniaudio.cpp
     src/Core/Application.cpp
     src/Core/LaunchOptions.cpp
     src/Core/Screenshot.cpp
@@ -152,8 +161,14 @@ set(GAME_SOURCES
 
 # --- The game ---
 add_executable(VoxelGameEngine ${GAME_SOURCES} ${LOGIC_SOURCES})
-target_include_directories(VoxelGameEngine PRIVATE src src/ThirdParty ${glm_SOURCE_DIR} ${rmlui_SOURCE_DIR}/Backends)
+target_include_directories(VoxelGameEngine PRIVATE src src/ThirdParty ${glm_SOURCE_DIR} ${rmlui_SOURCE_DIR}/Backends ${miniaudio_SOURCE_DIR})
 target_link_libraries(VoxelGameEngine PRIVATE glfw imgui RmlUi::RmlUi OpenGL::GL Threads::Threads ${CMAKE_DL_LIBS})
+if(UNIX)
+    target_link_libraries(VoxelGameEngine PRIVATE m) # miniaudio
+endif()
+if(MSVC)
+    set_source_files_properties(src/Audio/Miniaudio.cpp PROPERTIES COMPILE_OPTIONS /W0) # Third-party code
+endif()
 if(MSVC)
     target_compile_options(VoxelGameEngine PRIVATE /W3 /MP)
     target_compile_definitions(VoxelGameEngine PRIVATE _CRT_SECURE_NO_WARNINGS) # fopen and friends

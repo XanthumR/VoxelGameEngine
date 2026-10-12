@@ -46,6 +46,7 @@ bool SmokeSystem::InUse(const GameObjectRegistry& objects, GameObjectId id) {
     switch (BUILDING_TYPES[objects.Building(id).type].role) {
     case BuildingRole::Residence: return objects.Residence(id).residents > 0;
     case BuildingRole::Producer: return objects.Production(id).status == ProducerStatus::Working;
+    case BuildingRole::Trader: return true; // Always busy
     default: return false;
     }
 }

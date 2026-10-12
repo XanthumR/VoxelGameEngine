@@ -25,6 +25,11 @@
 #include "Rendering/FigureRenderer.h"
 #include "Simulation/BuildingModels.h"
 #include "Simulation/GameClock.h"
+#include "Audio/AudioSystem.h"
+#include <RmlUi/Core/Element.h>
+#include <RmlUi/Core/Event.h>
+#include <RmlUi/Core/EventListener.h>
+#include "Simulation/SaveGame.h"
 #include "Simulation/Simulation.h"
 #include "UI/DebugOverlay.h"
 #include "UI/BuildMenu.h"
@@ -61,6 +66,13 @@ private:
     bool Init();
     void Spawn();
     void PlaceShowcase();
+    void PlaceTraders();
+    // The game to and from a file (Simulation/SaveGame.h): the simulation and the view. Loading
+    // checks the file on a scratch copy first, then rebuilds the world round the loaded game.
+    bool SaveGame(const std::string& path);
+    bool LoadGame(const std::string& path);
+    void GenerateChunksIn(glm::ivec3 minVoxel, glm::ivec3 maxVoxel); // Those not loaded, on this thread
+    void ShowSaves(PauseMenu::SavesMode mode); // The pause menu's list of saves, read from SAVE_DIRECTORY
     void RunFrame(double frameStartTime, double frameSeconds, float deltaTime);
     void HandleKeys(float deltaTime);
     void UpdatePicking();
@@ -144,7 +156,30 @@ private:
     NotificationFeed m_NotificationFeed;
     Statistics m_Statistics;
     Minimap m_Minimap;
-    std::array<glm::vec3, SESSION_COUNT> m_SessionFocus{}; // Where the camera last looked in each session (zero: not yet)
+    std::array<glm::vec3, SESSION_COUNT> m_SessionFocus{};
+    int m_TraderFrames = 0; // PlaceTraders tries now and then
+    std::vector<SaveFileInfo> m_SaveFiles; // As the pause menu lists them
+
+    // Sound: the ambience and the one-shots, played when these counts go up
+    AudioSystem m_Audio;
+    struct ClickSound : Rml::EventListener {
+        explicit ClickSound(AudioSystem* sounds) : audio(sounds) {}
+        AudioSystem* audio;
+        void ProcessEvent(Rml::Event& event) override {
+            for (Rml::Element* element = event.GetTargetElement(); element; element = element->GetParentNode()) {
+                if (element->GetTagName() == "button") {
+                    if (!element->HasAttribute("disabled")) audio->Play(Sfx::Click);
+                    return;
+                }
+            }
+        }
+    } m_ClickSound{ &m_Audio };
+    int m_VolumePercent = 80;
+    struct SoundCounts {
+        uint32_t placed = 0, demolished = 0, refused = 0, upgrades = 0, notifications = 0;
+        size_t roads = 0;
+    } m_SoundCounts;
+    void UpdateSound(float deltaTime); // Where the camera last looked in each session (zero: not yet)
     PauseMenu m_PauseMenu;
     int m_SpeedBeforeMenu = 1; // The game speed the pause menu goes back to
     int m_UiScalePercent = 100;

@@ -4,6 +4,7 @@
 #include "Economy/ProductionChains.h"
 #include "Economy/Treasury.h"
 #include "Simulation/BuildingTypes.h"
+#include "Simulation/SaveGame.h"
 
 namespace {
 
@@ -161,5 +162,24 @@ void NotificationSystem::Update(const GameObjectRegistry& objects, const IslandE
         notification.column = glm::ivec2(ships.Get(id).position * (float)TILE_SIZE);
         notification.located = true;
         Push(notification, tick);
+    }
+}
+
+void NotificationSystem::Save(SaveWriter& out) const {
+    out.WriteVector(m_TierReached);
+}
+
+void NotificationSystem::Load(SaveReader& in, const ShipSystem& ships) {
+    std::vector<int8_t> reached;
+    in.ReadVector(reached, IslandEconomyManager::MAX_ISLANDS);
+    if (reached.size() == m_TierReached.size()) m_TierReached.swap(reached);
+    else in.Fail();
+    std::fill(m_ProblemKind.begin(), m_ProblemKind.end(), (uint8_t)0);
+    std::fill(m_ProblemSeconds.begin(), m_ProblemSeconds.end(), (uint16_t)0);
+    std::fill(m_LastTold.begin(), m_LastTold.end(), LONG_AGO);
+    // Ships already docked do not count as just docked
+    for (int slot = 0; slot < ShipSystem::MAX_SHIPS; slot++) {
+        ShipId id = ships.IdAtSlot(slot);
+        m_ShipStates[slot] = id == INVALID_SHIP ? ShipState::Idle : ships.Get(id).state;
     }
 }

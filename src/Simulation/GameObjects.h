@@ -9,6 +9,9 @@
 #include <cstdint>
 #include <vector>
 
+class SaveReader;
+class SaveWriter;
+
 // Stable handle to a game object: low 16 bits are the slot, high 16 bits the slot's generation.
 // Destroying an object bumps its slot's generation, so an old ID never refers to the object that
 // later reuses the slot. 0 is never a valid ID.
@@ -129,6 +132,9 @@ public:
     // Iteration: slots below SlotCount() may hold an object; IdAtSlot is INVALID for empty ones
     uint32_t SlotCount() const { return m_UsedSlots; }
     GameObjectId IdAtSlot(uint32_t slot) const;
+
+    void Save(SaveWriter& out) const;
+    void Load(SaveReader& in); // Replaces every object
 
 private:
     static uint32_t SlotOf(GameObjectId id) { return id & 0xFFFF; }

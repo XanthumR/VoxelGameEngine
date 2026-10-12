@@ -16,6 +16,9 @@ class BuildingModelLibrary;
 // disappears; it is drawn as a Figure::PUFF.
 class SmokeSystem {
 public:
+    void Clear() {
+        m_Puffs.clear();
+    } // A game was loaded
     static constexpr int MAX_PUFFS = 1536;
     static constexpr int MAX_EMITTERS_PER_BUILDING = 4;
     static constexpr float PUFF_INTERVAL = 0.7f; // Seconds between puffs of one chimney

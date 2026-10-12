@@ -20,6 +20,10 @@ public:
         std::unique_lock lock(m_Mutex);
         m_Roots.erase(Key(root));
     }
+    void Clear() {
+        std::unique_lock lock(m_Mutex);
+        m_Roots.clear();
+    }
     bool Contains(glm::ivec2 root) const {
         std::shared_lock lock(m_Mutex);
         return m_Roots.count(Key(root)) != 0;

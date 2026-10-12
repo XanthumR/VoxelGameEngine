@@ -3,6 +3,7 @@
 #include "Economy/IslandEconomy.h"
 #include "Economy/PopulationSystem.h"
 #include "Economy/Production.h"
+#include "Economy/Traders.h"
 #include "Economy/Treasury.h"
 #include "Simulation/GameObjects.h"
 #include "Simulation/IslandRegistry.h"
@@ -16,6 +17,8 @@
 
 #include <cstdint>
 
+class SaveReader;
+class SaveWriter;
 class TerrainGenerator;
 class VoxelWorld;
 
@@ -46,6 +49,8 @@ public:
     ProductionSystem& Production() { return m_Production; }
     Treasury& Coins() { return m_Treasury; }
     ShipSystem& Ships() { return m_Ships; }
+    TraderSystem& Traders() { return m_Traders; }
+    const TraderSystem& Traders() const { return m_Traders; }
     const ShipSystem& Ships() const { return m_Ships; }
     const Treasury& Coins() const { return m_Treasury; }
     const ProductionSystem& Production() const { return m_Production; }
@@ -60,6 +65,13 @@ public:
     // goods and state; a producer's cart out on the road is back home at once.
     void LiftBuilding(GameObjectId id);
     void PlaceLiftedBuilding(GameObjectId id, glm::ivec2 minTile, uint8_t rotation);
+
+    // The whole game state, as plain data (Simulation/SaveGame.h). Load replaces it; what is derived
+    // from it (the occupancy grid, roads' reach, connections) is rebuilt. False when the data is
+    // damaged or from another world: the state is then broken, so load into a scratch Simulation
+    // first to check. What follows the simulation in the data is the caller's.
+    void Save(SaveWriter& out) const;
+    bool Load(SaveReader& in);
 
     // Bumped whenever a building is placed or demolished, so derived data knows to rebuild
     uint32_t BuildingsRevision() const { return m_BuildingsRevision; }
@@ -76,6 +88,7 @@ private:
     TreeRegistry m_Trees;
     ProductionSystem m_Production;
     Treasury m_Treasury;
+    TraderSystem m_Traders;
     ShipSystem m_Ships;
     NotificationSystem m_Notifications;
 

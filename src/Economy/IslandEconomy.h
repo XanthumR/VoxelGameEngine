@@ -8,6 +8,9 @@
 #include <cstdint>
 #include <vector>
 
+class SaveReader;
+class SaveWriter;
+
 constexpr int WAREHOUSE_CAPACITY = 50; // Storage per good added by each warehouse on the island
 constexpr int TREND_INTERVAL_TICKS = 100; // The stock is sampled every 10 s...
 constexpr int TREND_SAMPLES = 7;          // ...and the trend is the change over the last minute (6 intervals)
@@ -80,6 +83,8 @@ public:
     const IslandStorage& IslandAt(size_t index) const { return m_Islands[index]; }
 
     size_t SettledIslandCount() const { return m_Islands.size(); }
+    void Save(SaveWriter& out) const;
+    void Load(SaveReader& in);
 
 private:
     std::vector<IslandStorage> m_Islands; // Few islands: a linear search is fine

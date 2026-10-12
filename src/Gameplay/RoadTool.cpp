@@ -111,6 +111,11 @@ bool RoadTool::Build(glm::ivec2 tile) {
     return true;
 }
 
+void RoadTool::Restore(glm::ivec2 tile) {
+    m_Editor.FillBox(glm::ivec3(tile.x * TILE_SIZE, BUILD_GROUND_Y, tile.y * TILE_SIZE), glm::ivec3(TILE_SIZE, ROAD_CLEARANCE, TILE_SIZE), Block::AIR);
+    PaintTile(tile);
+}
+
 void RoadTool::PaintTile(glm::ivec2 tile) {
     const RoadNetwork& roads = m_Simulation.Roads();
     if (!roads.IsRoad(tile)) return;

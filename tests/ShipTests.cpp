@@ -1,4 +1,5 @@
 #include "Economy/IslandEconomy.h"
+#include "Economy/Traders.h"
 #include "Economy/Treasury.h"
 #include "Simulation/BuildingLook.h"
 #include "Simulation/BuildingTypes.h"
@@ -379,4 +380,102 @@ TEST(ShipTest, StaysOnTheMap) {
     glm::ivec2 origin = SESSIONS[SESSION_OLD_WORLD].originTile;
     EXPECT_TRUE(f.ships.IsWater(origin, f.occupancy));
     EXPECT_FALSE(f.ships.IsWater(origin - glm::ivec2(1, 0), f.occupancy));
+}
+
+// The second harbor as a trader's trading post
+struct AtTrader : TwoHarbors {
+    TraderSystem traders;
+
+    AtTrader() {
+        objects.Building(second).type = BUILDING_TRADING_POST; // Same footprint and dock as a harbor
+        traders.SetPost(0, second);
+        ships.SetTrade(&traders, &treasury);
+    }
+};
+
+TEST(TraderTest, ShipBuysAndSellsAtTheTradingPost) {
+    AtTrader f;
+    ASSERT_NE(f.ship, INVALID_SHIP);
+    ASSERT_TRUE(f.ships.SailTo(f.ship, glm::ivec2(0), f.objects, f.occupancy, f.second));
+    f.RunUntil(f.ship, ShipState::Docked);
+    ASSERT_EQ(f.ships.Get(f.ship).state, ShipState::Docked);
+
+    // Buying: the trader's stock goes down, the coins by the price
+    int64_t coins = f.treasury.Coins();
+    EXPECT_EQ(f.ships.Transfer(f.ship, ItemType::Planks, 10, f.objects, f.economy), 10);
+    EXPECT_EQ(f.ships.CargoAmount(f.ship, ItemType::Planks), 10);
+    EXPECT_EQ(f.traders.Stock(0, ItemType::Planks), TraderSystem::MAX_STOCK - 10);
+    EXPECT_EQ(f.treasury.Coins(), coins - 10 * BuyPrice(ItemType::Planks));
+    EXPECT_EQ(f.ships.Transfer(f.ship, ItemType::Gold, 10, f.objects, f.economy), 0); // Not one of their wares
+
+    // Selling: anything, for its value
+    coins = f.treasury.Coins();
+    EXPECT_EQ(f.ships.Transfer(f.ship, ItemType::Planks, -4, f.objects, f.economy), -4);
+    EXPECT_EQ(f.treasury.Coins(), coins + 4 * SellPrice(ItemType::Planks));
+    EXPECT_EQ(f.Storage(f.first).Amount(ItemType::Planks), 40); // No island storage involved
+}
+
+TEST(TraderTest, BuyingStopsAtTheCoinsAndTheStock) {
+    TraderSystem traders;
+    Treasury treasury;
+    treasury.SetCoins(BuyPrice(ItemType::Bricks) * 3 + 1);
+    EXPECT_EQ(traders.Buy(0, ItemType::Bricks, 10, treasury), 3);
+    EXPECT_EQ(treasury.Coins(), 1);
+    treasury.SetCoins(1000000);
+    EXPECT_EQ(traders.Buy(0, ItemType::Bricks, 1000, treasury), TraderSystem::MAX_STOCK - 3);
+    EXPECT_EQ(traders.Stock(0, ItemType::Bricks), 0);
+    // It comes back, one each RESTOCK_TICKS, up to MAX_STOCK
+    for (uint64_t tick = 1; tick <= (uint64_t)TraderSystem::RESTOCK_TICKS * 5; tick++) traders.Update(tick);
+    EXPECT_EQ(traders.Stock(0, ItemType::Bricks), 5);
+}
+
+TEST(TraderTest, PricesAndIslands) {
+    for (int i = 0; i < ITEM_COUNT; i++) {
+        EXPECT_GT(SellPrice((ItemType)i), 0);
+        EXPECT_GT(BuyPrice((ItemType)i), SellPrice((ItemType)i)) << ItemName((ItemType)i);
+    }
+    // Each trader's island is land, in the open sea, on their session's map
+    TestWorld& test = TestWorld::Get();
+    for (const TraderType& trader : TRADERS) {
+        const Session& session = SESSIONS[trader.session];
+        glm::ivec2 middle = session.originTile + session.traderTile;
+        EXPECT_TRUE(InTraderIsland(middle));
+        EXPECT_EQ(test.terrain.TileKindAt(middle.x, middle.y), TileKind::Land);
+        glm::ivec2 out = middle + glm::ivec2(TRADER_ISLAND_RADIUS.x + 4, 0);
+        EXPECT_EQ(test.terrain.TileKindAt(out.x, out.y), TileKind::Sea);
+    }
+}
+
+TEST(TraderTest, TradeRouteBuysThereAndSellsTheCargoAtHome) {
+    AtTrader f;
+    ASSERT_NE(f.ship, INVALID_SHIP);
+    f.Storage(f.first).amounts[(size_t)ItemType::Bricks] = 0;
+    f.Storage(f.first).amounts[(size_t)ItemType::Wool] = 30;
+
+    int route = f.ships.CreateRoute();
+    TradeRoute& r = f.ships.Route(route);
+    r.stopCount = 2;
+    r.stops[0].harbor = f.first; // Home: the bricks off, wool on
+    r.stops[0].actions[(size_t)ItemType::Bricks] = StopAction::Unload;
+    r.stops[0].actions[(size_t)ItemType::Wool] = StopAction::Load;
+    r.stops[1].harbor = f.second; // The trader: wool sold, bricks bought
+    r.stops[1].actions[(size_t)ItemType::Wool] = StopAction::Unload;
+    r.stops[1].actions[(size_t)ItemType::Bricks] = StopAction::Load;
+    f.ships.AssignRoute(f.ship, route);
+
+    int64_t coins = f.treasury.Coins();
+    for (int i = 0; i < 40000 && f.Storage(f.first).Amount(ItemType::Bricks) == 0; i++) f.Run(1);
+    EXPECT_EQ(f.Storage(f.first).Amount(ItemType::Wool), 0);
+    EXPECT_EQ(f.Storage(f.first).Amount(ItemType::Bricks), TraderSystem::MAX_STOCK); // All the trader had, held in one slot
+    EXPECT_EQ(f.treasury.Coins(), coins + 30 * SellPrice(ItemType::Wool) - TraderSystem::MAX_STOCK * BuyPrice(ItemType::Bricks));
+}
+
+TEST(TraderTest, ThePlayerCannotBuildOnTheTradersIsland) {
+    HarborFixture f;
+    TestWorld& test = TestWorld::Get();
+    PlacementContext context{ test.world, f.islands, f.occupancy, f.roads };
+    const Session& session = SESSIONS[SESSION_OLD_WORLD];
+    glm::ivec2 middle = session.originTile + session.traderTile;
+    EXPECT_EQ(ValidatePlacement(context, BUILDING_FARMER_HOUSE, 0, middle).error, PlacementError::TraderIsland);
+    EXPECT_EQ(ValidatePlacement(context, BUILDING_WAREHOUSE, 0, middle - glm::ivec2(1)).error, PlacementError::TraderIsland);
 }

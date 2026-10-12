@@ -49,10 +49,10 @@
                   data-class-muted="subtitle_tone == 4">{{subtitle}}</span>
         </div>
         <span class="spacer"/>
-        <button data-event-click="tool(1)"><img class="icon small" src="icons/move.tga"/><span>Move</span></button>
-        <button data-event-click="tool(2)"><img class="icon small" src="icons/copy.tga"/><span>Copy</span></button>
+        <button data-if="owned" data-event-click="tool(1)"><img class="icon small" src="icons/move.tga"/><span>Move</span></button>
+        <button data-if="owned" data-event-click="tool(2)"><img class="icon small" src="icons/copy.tga"/><span>Copy</span></button>
         <button data-if="can_pause" data-class-selected="paused" data-event-click="tool(3)"><span>{{paused ? 'Resume' : 'Pause'}}</span></button>
-        <button data-event-click="tool(4)"><img class="icon small" src="icons/demolish.tga"/><span>Demolish</span></button>
+        <button data-if="owned" data-event-click="tool(4)"><img class="icon small" src="icons/demolish.tga"/><span>Demolish</span></button>
         <button class="close" data-event-click="close"><span>X</span></button>
     </div>
     <div id="content">

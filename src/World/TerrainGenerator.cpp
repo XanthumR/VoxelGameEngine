@@ -68,8 +68,8 @@ bool TerrainGenerator::RawLand(int tx, int tz) {
         float middle = TILE_SIZE * 0.5f;
         // Only within a session's map, thinning out toward its edges
         int edge = TilesToEdge(glm::ivec2(tx, tz)) - EDGE_SEA_TILES;
-        bool land = false;
-        if (edge >= 0) {
+        bool land = InTraderIsland(glm::ivec2(tx, tz));
+        if (!land && edge >= 0) {
             float n = m_IslandNoise.GetNoise((float)tx * TILE_SIZE + middle, (float)tz * TILE_SIZE + middle);
             land = n >= LAND_NOISE + (float)std::max(0, EDGE_FADE_TILES - edge) * EDGE_FADE_NOISE;
         }

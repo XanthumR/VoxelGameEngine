@@ -9,6 +9,9 @@
 #include <unordered_map>
 #include <vector>
 
+class SaveReader;
+class SaveWriter;
+
 // One road tile. The reach fields are filled in by the logistics pass (Simulation)
 struct RoadTile {
     static constexpr uint16_t UNREACHED = 0xFFFF;
@@ -36,6 +39,8 @@ public:
 
     bool Add(glm::ivec2 tile);    // False if already road
     bool Remove(glm::ivec2 tile); // False if not road
+    void Save(SaveWriter& out) const;
+    void Load(SaveReader& in); // Replaces every tile
     bool IsRoad(glm::ivec2 tile) const { return m_Tiles.count(TileKey(tile)) != 0; }
     RoadTile* Find(glm::ivec2 tile);
     const RoadTile* Find(glm::ivec2 tile) const;

@@ -58,6 +58,7 @@ private:
         int subtitleTone = 0;
         float bigBar = -1.0f;
         bool canPause = false, paused = false;
+        bool owned = true; // The player's: it can be moved, copied and demolished
     };
     void FillMenu(GameObjectId id, const Simulation& simulation);
 

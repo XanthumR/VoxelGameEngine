@@ -1,6 +1,7 @@
 #include "Economy/Treasury.h"
 
 #include "Economy/IslandEconomy.h"
+#include "Simulation/SaveGame.h"
 
 #include <algorithm>
 
@@ -65,4 +66,18 @@ void Treasury::Refund(uint16_t type, IslandId island, IslandEconomyManager& econ
     m_Coins += cost.coins / 2;
     std::array<int, MATERIAL_COUNT> materials = cost.Materials();
     for (int i = 0; i < MATERIAL_COUNT; i++) economy.Add(island, MATERIALS[i], materials[i] / 2);
+}
+
+void Treasury::Save(SaveWriter& out) const {
+    out.Write(m_Coins);
+    out.Write(m_Fraction);
+    out.Write(m_IncomeMilli);
+    out.Write(m_UpkeepMilli);
+}
+
+void Treasury::Load(SaveReader& in) {
+    in.Read(m_Coins);
+    in.Read(m_Fraction);
+    in.Read(m_IncomeMilli);
+    in.Read(m_UpkeepMilli);
 }

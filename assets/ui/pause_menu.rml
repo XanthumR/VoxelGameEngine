@@ -15,12 +15,41 @@
         .setting button { padding: 2dp 10dp; }
         .setting input.range { flex: 1; }
         .hint { display: block; margin-top: 8dp; text-align: center; }
+        .saves button { flex: 1; margin-right: 6dp; }
+        .saves button:last-child { margin-right: 0; }
+        #save-list { max-height: 340dp; overflow-y: auto; margin-bottom: 8dp; }
+        .save { margin-bottom: 4dp; }
+        .save button.pick { flex: 1; display: block; text-align: left; padding: 5dp 10dp; }
+        .save button.pick .info { display: block; font-size: 11dp; }
+        .save button.remove { margin-left: 6dp; padding: 5dp 9dp; }
+        .empty { display: block; text-align: center; margin: 10dp 0; }
     </style>
 </head>
 <body data-model="pause_menu">
     <div id="menu" class="panel">
-        <div class="title">Paused</div>
+        <div class="title">{{saves_mode == 1 ? 'Save game' : saves_mode == 2 ? 'Load game' : 'Paused'}}</div>
+        <!-- The list of saves (Save game, Load game) -->
+        <div data-if="saves_mode != 0">
+            <button class="big primary" data-if="saves_mode == 1" data-event-click="request(9)"><span>New save</span></button>
+            <span class="hint muted" data-if="saves_mode == 1 &amp;&amp; saves.size > 0">or overwrite one:</span>
+            <span class="empty muted" data-if="saves.size == 0">No saved games yet</span>
+            <div id="save-list">
+                <div class="row save" data-for="save, i : saves">
+                    <button class="pick" data-attrif-disabled="!save.loadable" data-event-click="pick(i)">
+                        <span>{{save.name}}</span><span class="info muted">{{save.info}}</span></button>
+                    <button class="remove" data-event-click="remove(i)"><span>X</span></button>
+                </div>
+            </div>
+            <span class="hint muted" data-if="status != ''">{{status}}</span>
+            <button class="big" data-event-click="request(12)"><span>Back</span></button>
+        </div>
+        <div data-if="saves_mode == 0">
         <button class="big primary" data-event-click="request(1)"><span>Resume</span></button>
+        <div class="row saves">
+            <button class="big" data-event-click="request(7)"><span>Save game</span></button>
+            <button class="big" data-event-click="request(8)"><span>Load game</span></button>
+        </div>
+        <span class="hint muted" data-if="status != ''">{{status}}</span>
         <h3>Settings</h3>
         <!-- Each: a slider for a quick change, - and + for exact steps -->
         <div class="row setting"><span class="label">Render scale</span>
@@ -35,11 +64,16 @@
             <button data-event-click="request(5, -1)"><span>-</span></button>
             <input type="range" min="70" max="150" step="1" data-attr-value="ui_scale" data-event-change="set(5, ev.value)"/>
             <button data-event-click="request(5, 1)"><span>+</span></button><span class="value">{{ui_scale}}%</span></div>
+        <div class="row setting"><span class="label">Sound</span>
+            <button data-event-click="request(13, -1)"><span>-</span></button>
+            <input type="range" min="0" max="100" step="1" data-attr-value="volume" data-event-change="set(13, ev.value)"/>
+            <button data-event-click="request(13, 1)"><span>+</span></button><span class="value">{{volume}}%</span></div>
         <div class="row setting"><span class="label">Vertical sync</span>
             <button data-class-selected="vsync" data-event-click="request(6)"><span>{{vsync ? 'On' : 'Off'}}</span></button></div>
         <div class="separator"/>
         <button class="big" data-event-click="request(2)"><span>Quit the game</span></button>
         <span class="hint muted">Esc resumes</span>
+        </div>
     </div>
 </body>
 </rml>

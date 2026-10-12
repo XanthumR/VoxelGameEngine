@@ -8,7 +8,28 @@ bool PauseMenu::Init(Rml::Context* context) {
     model.Bind("render_scale", &m_Shown.renderScalePercent);
     model.Bind("view_distance", &m_Shown.viewDistance);
     model.Bind("ui_scale", &m_Shown.uiScalePercent);
+    model.Bind("volume", &m_Shown.volumePercent);
     model.Bind("vsync", &m_Shown.vsync);
+    model.Bind("status", &m_Status);
+    model.Bind("saves_mode", &m_SavesMode);
+    if (Rml::StructHandle<SaveRow> row = model.RegisterStruct<SaveRow>()) {
+        row.RegisterMember("name", &SaveRow::name);
+        row.RegisterMember("info", &SaveRow::info);
+        row.RegisterMember("loadable", &SaveRow::loadable);
+    }
+    model.RegisterArray<std::vector<SaveRow>>();
+    model.Bind("saves", &m_SaveRows);
+    // pick(row) / remove(row): a save in the list
+    auto row = [this](Request request) {
+        return [this, request](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& arguments) {
+            if (arguments.empty()) return;
+            m_Request = request;
+            m_Value = arguments[0].Get<int>();
+            m_Absolute = false;
+        };
+    };
+    model.BindEventCallback("pick", row(PICK_SAVE));
+    model.BindEventCallback("remove", row(DELETE_SAVE));
     // request(kind, step): kind is a Request
     model.BindEventCallback("request", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& arguments) {
         if (arguments.empty()) return;
@@ -49,7 +70,25 @@ void PauseMenu::Update(const Settings& settings) {
     set(m_Shown.renderScalePercent, settings.renderScalePercent, "render_scale");
     set(m_Shown.viewDistance, settings.viewDistance, "view_distance");
     set(m_Shown.uiScalePercent, settings.uiScalePercent, "ui_scale");
+    set(m_Shown.volumePercent, settings.volumePercent, "volume");
     set(m_Shown.vsync, settings.vsync, "vsync");
+}
+
+void PauseMenu::ShowSaves(SavesMode mode, std::vector<SaveRow> rows) {
+    if (mode != m_SavesMode) {
+        m_SavesMode = mode;
+        m_Model.DirtyVariable("saves_mode");
+    }
+    if (rows != m_SaveRows) {
+        m_SaveRows = std::move(rows);
+        m_Model.DirtyVariable("saves");
+    }
+}
+
+void PauseMenu::SetStatus(const Rml::String& status) {
+    if (status == m_Status) return;
+    m_Status = status;
+    m_Model.DirtyVariable("status");
 }
 
 PauseMenu::Request PauseMenu::TakeRequest(int& step, bool& absolute, int& value) {

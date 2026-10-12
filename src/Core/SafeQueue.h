@@ -31,6 +31,11 @@ public:
         m_Queue.pop();
     }
 
+    void Clear() {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        m_Queue = std::queue<T>();
+    }
+
     size_t Size() {
         std::lock_guard<std::mutex> lock(m_Mutex);
         return m_Queue.size();

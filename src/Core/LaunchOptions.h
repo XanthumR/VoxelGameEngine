@@ -12,6 +12,8 @@
 //   --screenshot FILE SECONDS  save the window as a PPM after SECONDS, then quit
 //   --no-vsync                 draw as fast as possible (for measuring: with vsync the GPU idles,
 //                              clocks down and its per-pass times in F3 stretch)
+//   --mute                     no sound (runs with --screenshot are always silent)
+//   --load FILE                start from a saved game (the pause menu saves to saves/quicksave.sav)
 //   --showcase                 place every building type round the spawn (farms with their modules),
 //                              to look at the models without building them by hand, and start
 //                              with 100000 coins
@@ -28,6 +30,8 @@ struct LaunchOptions {
     double screenshotDelay = -1.0; // < 0: no screenshot
     bool vsync = true;
     bool showcase = false;
+    std::string loadPath; // Empty: a new game
+    bool mute = false;
 
     static LaunchOptions Parse(int argc, char** argv);
 };

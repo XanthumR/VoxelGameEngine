@@ -33,6 +33,8 @@ public:
     // tile is not valid (see ValidateRoadTile) / not road.
     bool Build(glm::ivec2 tile);
     bool Demolish(glm::ivec2 tile);
+    // A tile already in the road network painted into the world (loading a game)
+    void Restore(glm::ivec2 tile);
 
     // Preview: the dragged path (or the hovered tile), and per tile whether it can be built
     const std::vector<glm::ivec2>& PathTiles() const { return m_Path; }
