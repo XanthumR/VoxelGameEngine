@@ -17,7 +17,7 @@ struct VoxModel;
 // chunk and neighbouring chunks always agree. Each worker thread owns its own instance.
 //
 // Islands are made of whole build tiles (TILE_SIZE x TILE_SIZE columns), like the blocky islands
-// of Anno: every tile is
+// of Anno, laid out per session by size class (World/Islands.h): every tile is
 //  - Land:  flat grass at island height, all of it buildable
 //  - Beach: a sea tile next to land, sand sloping from just under the grass into the water
 //  - Cliff: a sea tile next to land where the grass ends in a rock edge over deep water
@@ -73,15 +73,8 @@ private:
     int LandRing(int tx, int tz);
     int LandDistance(int wx, int wz, int radius);
     bool IsSandy(int wx, int wz);
-    bool RawLand(int tx, int tz);     // The island noise at the tile's middle, before smoothing
     bool FacesCliff(int wx, int wz);  // A land column on the edge toward a cliff tile
 
-    // Island noise per tile, cached (direct-mapped): a column's height needs the tiles around it
-    struct TileSample {
-        int32_t tx = 0, tz = 0;
-        bool valid = false;
-        bool land = false;
-    };
     // What each tile is, and how far it is from land (filled in when first asked)
     struct TileInfo {
         int32_t tx = 0, tz = 0;
@@ -91,7 +84,6 @@ private:
     };
     TileInfo& Info(int tx, int tz);
     static constexpr size_t TILE_CACHE_SIZE = 4096;
-    std::array<TileSample, TILE_CACHE_SIZE> m_TileCache;
     std::array<TileInfo, TILE_CACHE_SIZE> m_InfoCache;
 
     void StampTrees(int startX, int startY, int startZ, std::vector<uint8_t>& data);
@@ -103,7 +95,6 @@ private:
     FastNoiseLite m_Noise;       // Ground height, tree placement
     FastNoiseLite m_BiomeNoise;
     FastNoiseLite m_CaveNoise;
-    FastNoiseLite m_IslandNoise; // Land vs ocean
     FastNoiseLite m_CoastNoise;  // Beach vs cliff along the coast
     static constexpr float HEIGHT_NOISE_SCALE = 0.5f;
 };

@@ -1,6 +1,6 @@
-# Voxel Anno
+# Voxtaria
 
-A city-builder and trade game in the style of Anno 1800, built on a custom C++ voxel engine. Islands, buildings, people, carts and ships are all made of voxels and ray-marched on the GPU; the economy underneath runs on a fixed 10 Hz simulation.
+Voxtaria (voxel + Victoria) is a Victorian-era city-builder and trade game in the style of Anno 1800, built on a custom C++ voxel engine. Islands, buildings, people, carts and ships are all made of voxels and ray-marched on the GPU; the economy underneath runs on a fixed 10 Hz simulation.
 
 ![An island of the Old World at sunset](docs/screenshots/old-world-sunset.jpg)
 
@@ -17,7 +17,7 @@ A city-builder and trade game in the style of Anno 1800, built on a custom C++ v
 ## Features
 
 - **Voxel renderer:** no meshing; compute shaders ray-march chunked voxel data with sun and moon shadows, a day-night cycle, an FFT ocean, animated grass and chimney smoke. Moving things (walkers, carts, boats, ships) are voxel objects with their own models that float on the waves.
-- **Islands:** procedurally generated islands built from 12 x 12-voxel build tiles, with beaches, cliffs, caves and trees.
+- **Islands:** islands in four sizes as in Anno 1800 (Small, Medium, Large and Extra large, from about 1500 to 9000 build tiles), each built from 12 x 12-voxel tiles with beaches, cliffs, caves and trees.
 - **Building:** place, rotate, move (hold left click and drag) and demolish buildings on the tile grid. A green or red preview shows whether a spot is valid. Buildings are MagicaVoxel `.vox` models.
 - **Roads and logistics:** drag L-shaped roads. Buildings need a road to a warehouse; producers' carts carry goods along the roads.
 - **Population:** Farmers, Workers, Artisans, Engineers and Investors live in houses that grow, upgrade and shrink depending on how well their needs are met (goods, and services such as the marketplace, school, theatre, university and bank).
@@ -71,11 +71,11 @@ Build, then run from the project root so the game finds `shaders/` and `assets/`
 ```sh
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
-./build/bin/VoxelGameEngine                  # Linux
-.\build\bin\Release\VoxelGameEngine.exe      # Windows
+./build/bin/Voxtaria                  # Linux
+.\build\bin\Release\Voxtaria.exe      # Windows
 ```
 
-The simulation tests are `VoxelAnnoTests`, next to the game (or `ctest --test-dir build -C Release`). Visual Studio can also open the folder directly.
+The simulation tests are `VoxtariaTests`, next to the game (or `ctest --test-dir build -C Release`). Visual Studio can also open the folder directly.
 
 Launch options: `--render-distance N`, `--render-scale F`, `--load FILE`, `--mute`, `--showcase` (every building placed, to look at them), `--no-vsync`, and for reproducible screenshots `--fixed-time T`, `--camera X Y Z YAW PITCH`, `--screenshot FILE SECONDS`.
 

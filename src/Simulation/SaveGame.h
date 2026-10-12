@@ -10,8 +10,8 @@
 // and reads it back in the same order (Simulation::Save / Load). Values are copied byte for byte,
 // so a save only loads in the build that wrote it or one with the same layouts: SAVE_VERSION goes
 // up whenever a saved struct or the order changes.
-constexpr uint32_t SAVE_MAGIC = 0x4F4E4E41; // "ANNO"
-constexpr uint32_t SAVE_VERSION = 2;
+constexpr uint32_t SAVE_MAGIC = 0x54584F56; // "VOXT"
+constexpr uint32_t SAVE_VERSION = 3; // 3: the islands laid out by size class
 
 // What the list of saves shows of each, written right after the magic word and the version, so
 // listing reads only the start of each file

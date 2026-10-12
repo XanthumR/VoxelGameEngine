@@ -17,14 +17,13 @@ struct Session {
     glm::ivec2 traderTile; // The middle of the trader's island (tiles from the map's first tile)
 };
 
-constexpr int SESSION_TILES = 384;      // A map's side in build tiles (4608 voxel columns)
+constexpr int SESSION_TILES = 512;      // A map's side in build tiles (6144 voxel columns)
 constexpr int EDGE_SEA_TILES = 16;      // Open sea along every edge
-constexpr int EDGE_FADE_TILES = 24;     // ...and islands thin out over this many tiles inside that
 constexpr int SESSION_OLD_WORLD = 0;
 constexpr int SESSION_NEW_WORLD = 1;
 constexpr std::array<Session, 2> SESSIONS = { {
-    { "Old World", glm::ivec2(-276, -132), false, glm::ivec2(277, 172) },
-    { "New World", glm::ivec2(1340, -160), true, glm::ivec2(200, 158) }, // 16 000 columns east: beyond any view distance
+    { "Old World", glm::ivec2(-276, -132), false, glm::ivec2(290, 236) },
+    { "New World", glm::ivec2(1340, -160), true, glm::ivec2(250, 250) }, // 16 000 columns east: beyond any view distance
 } };
 constexpr int SESSION_COUNT = (int)SESSIONS.size();
 

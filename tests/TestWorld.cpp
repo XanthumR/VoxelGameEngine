@@ -1,6 +1,7 @@
 #include "TestWorld.h"
 
 #include "World/Chunk.h"
+#include "World/Islands.h"
 
 TestWorld& TestWorld::Get() {
     static TestWorld instance;
@@ -8,7 +9,7 @@ TestWorld& TestWorld::Get() {
 }
 
 TestWorld::TestWorld() {
-    spawnColumn = terrain.FindSpawnColumn(glm::ivec2(640, 640)); // Same search start as the game
+    spawnColumn = terrain.FindSpawnColumn(SpawnSearchColumn()); // Same search start as the game
     LoadAround(spawnColumn, RADIUS_CHUNKS);
 }
 

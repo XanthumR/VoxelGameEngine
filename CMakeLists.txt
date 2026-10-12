@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
-project(VoxelAnno LANGUAGES C CXX)
+project(Voxtaria LANGUAGES C CXX)
 
-# Voxel Anno: the game (VoxelGameEngine) and its simulation tests (VoxelAnnoTests).
+# Voxtaria: the game and its simulation tests (VoxtariaTests).
 # Every library is downloaded and built here (FetchContent); on Linux FreeType comes from the
 # system when it is installed. Build from the project root:
 #   cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -17,7 +17,7 @@ endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE) # Everything static: no DLLs to copy
 
-option(VOXEL_ANNO_TESTS "Build the simulation tests" ON)
+option(VOXTARIA_TESTS "Build the simulation tests" ON)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
@@ -111,6 +111,7 @@ set(LOGIC_SOURCES
     src/Simulation/TreeRegistry.cpp
     src/World/BuildingModel.cpp
     src/World/TerrainGenerator.cpp
+    src/World/Islands.cpp
     src/World/VoxModel.cpp
     src/World/VoxelWorld.cpp)
 
@@ -161,24 +162,24 @@ set(GAME_SOURCES
     src/ThirdParty/glad.c)
 
 # --- The game ---
-add_executable(VoxelGameEngine ${GAME_SOURCES} ${LOGIC_SOURCES})
-target_include_directories(VoxelGameEngine PRIVATE src src/ThirdParty ${glm_SOURCE_DIR} ${rmlui_SOURCE_DIR}/Backends ${miniaudio_SOURCE_DIR})
-target_link_libraries(VoxelGameEngine PRIVATE glfw imgui RmlUi::RmlUi OpenGL::GL Threads::Threads ${CMAKE_DL_LIBS})
+add_executable(Voxtaria ${GAME_SOURCES} ${LOGIC_SOURCES})
+target_include_directories(Voxtaria PRIVATE src src/ThirdParty ${glm_SOURCE_DIR} ${rmlui_SOURCE_DIR}/Backends ${miniaudio_SOURCE_DIR})
+target_link_libraries(Voxtaria PRIVATE glfw imgui RmlUi::RmlUi OpenGL::GL Threads::Threads ${CMAKE_DL_LIBS})
 if(UNIX)
-    target_link_libraries(VoxelGameEngine PRIVATE m) # miniaudio
+    target_link_libraries(Voxtaria PRIVATE m) # miniaudio
 endif()
 if(MSVC)
     set_source_files_properties(src/Audio/Miniaudio.cpp PROPERTIES COMPILE_OPTIONS /W0) # Third-party code
 endif()
 if(MSVC)
-    target_compile_options(VoxelGameEngine PRIVATE /W3 /MP)
-    target_compile_definitions(VoxelGameEngine PRIVATE _CRT_SECURE_NO_WARNINGS) # fopen and friends
+    target_compile_options(Voxtaria PRIVATE /W3 /MP)
+    target_compile_definitions(Voxtaria PRIVATE _CRT_SECURE_NO_WARNINGS) # fopen and friends
 else()
-    target_compile_options(VoxelGameEngine PRIVATE -Wall)
+    target_compile_options(Voxtaria PRIVATE -Wall)
 endif()
 # Visual Studio starts it in the project root, where shaders/ and assets/ are
-set_target_properties(VoxelGameEngine PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT VoxelGameEngine)
+set_target_properties(Voxtaria PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Voxtaria)
 
 # --- The tests ---
 # The economy's numbers as Markdown, for balancing: build/bin/<config>/BalanceReport > docs/BALANCE.md
@@ -186,23 +187,23 @@ add_executable(BalanceReport tools/balance/BalanceReport.cpp ${LOGIC_SOURCES})
 target_include_directories(BalanceReport PRIVATE src ${glm_SOURCE_DIR})
 target_link_libraries(BalanceReport PRIVATE Threads::Threads)
 
-if(VOXEL_ANNO_TESTS)
+if(VOXTARIA_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(googletest GIT_REPOSITORY https://github.com/google/googletest.git GIT_TAG v1.15.2 GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(googletest)
 
     file(GLOB TEST_SOURCES CONFIGURE_DEPENDS tests/*.cpp)
-    add_executable(VoxelAnnoTests ${TEST_SOURCES} ${LOGIC_SOURCES})
-    target_include_directories(VoxelAnnoTests PRIVATE src tests ${glm_SOURCE_DIR})
-    target_compile_definitions(VoxelAnnoTests PRIVATE ASSET_DIRECTORY="${CMAKE_SOURCE_DIR}/assets")
-    target_link_libraries(VoxelAnnoTests PRIVATE GTest::gtest Threads::Threads)
+    add_executable(VoxtariaTests ${TEST_SOURCES} ${LOGIC_SOURCES})
+    target_include_directories(VoxtariaTests PRIVATE src tests ${glm_SOURCE_DIR})
+    target_compile_definitions(VoxtariaTests PRIVATE ASSET_DIRECTORY="${CMAKE_SOURCE_DIR}/assets")
+    target_link_libraries(VoxtariaTests PRIVATE GTest::gtest Threads::Threads)
     if(MSVC)
-        target_compile_options(VoxelAnnoTests PRIVATE /W4 /WX /external:anglebrackets /external:W0 /MP)
+        target_compile_options(VoxtariaTests PRIVATE /W4 /WX /external:anglebrackets /external:W0 /MP)
     else()
-        target_compile_options(VoxelAnnoTests PRIVATE -Wall -Wextra)
+        target_compile_options(VoxtariaTests PRIVATE -Wall -Wextra)
     endif()
-    set_target_properties(VoxelAnnoTests PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    set_target_properties(VoxtariaTests PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     enable_testing()
-    add_test(NAME VoxelAnnoTests COMMAND VoxelAnnoTests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    add_test(NAME VoxtariaTests COMMAND VoxtariaTests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()

@@ -9,6 +9,7 @@
 #include "UI/Hud.h"
 #include "UI/WorldMarkers.h"
 #include "World/BlockTypes.h"
+#include "World/Islands.h"
 #include "World/Sessions.h"
 
 #include <glad/glad.h>
@@ -49,7 +50,6 @@ bool ReadSave(SaveReader& in, Simulation& simulation, SavedView& view) {
 const char* BUILDING_MODEL_DIRECTORY = "assets/buildings";
 const float SMOKE_DISTANCE = 1500.0f; // Voxels from the camera's focus within which chimneys smoke
 const float ANIMATION_DISTANCE = 700.0f; // ...and within which buildings' moving parts are drawn
-const glm::ivec2 SPAWN_SEARCH_START(640, 640); // Spawn is the nearest decent island to here
 
 } // namespace
 
@@ -134,7 +134,7 @@ bool Application::Init() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 
-    m_Window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "OpenGL Compute DDA Voxel", NULL, NULL);
+    m_Window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Voxtaria", NULL, NULL);
     if (!m_Window) {
         std::cout << "Failed to create GLFW window" << std::endl;
         return false;
@@ -246,7 +246,7 @@ bool Application::Init() {
 
 // Streams the world around the spawn island, waiting only for the spawn column itself
 void Application::Spawn() {
-    glm::ivec2 spawnColumn = m_Terrain.FindSpawnColumn(SPAWN_SEARCH_START);
+    glm::ivec2 spawnColumn = m_Terrain.FindSpawnColumn(SpawnSearchColumn());
     glm::ivec3 spawnChunk(spawnColumn.x >> 5, 0, spawnColumn.y >> 5);
     m_Streamer.SetPlayerChunk(spawnChunk);
     m_Streamer.UpdateWindows(); // Requests are nearest-first, so the spawn column arrives first
@@ -268,7 +268,7 @@ void Application::Spawn() {
 // around the spawn (the warehouse first, so the island is settled), each farm with all its
 // modules. Placed like the player places them, but free; then 100000 coins to try things with.
 void Application::PlaceShowcase() {
-    glm::ivec2 spawn = m_Terrain.FindSpawnColumn(SPAWN_SEARCH_START);
+    glm::ivec2 spawn = m_Terrain.FindSpawnColumn(SpawnSearchColumn());
     glm::ivec2 center(ColumnToTile(spawn.x), ColumnToTile(spawn.y));
     constexpr int SPACING = 5, MAX_RING = 16; // Grid tiles
     int placed = 0;

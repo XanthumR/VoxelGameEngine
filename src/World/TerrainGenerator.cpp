@@ -3,6 +3,7 @@
 #include "World/BlockTypes.h"
 #include "World/Chunk.h"
 #include "World/FelledTrees.h"
+#include "World/Islands.h"
 #include "World/Sessions.h"
 #include "World/VoxModel.h"
 
@@ -12,14 +13,6 @@
 
 TerrainGenerator::TerrainGenerator(const VoxModel& trees, const VoxModel* palms) : m_Trees(trees), m_Palms(palms ? *palms : trees) {
     m_Noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-
-    // Low-frequency mask deciding land vs ocean: islands about a thousand voxels across, with
-    // enough octaves to keep the coastline ragged at that size
-    m_IslandNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    m_IslandNoise.SetFrequency(0.0005f);
-    m_IslandNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
-    m_IslandNoise.SetFractalOctaves(5);
-    m_IslandNoise.SetSeed(7);
 
     // Stretches of cliff a few dozen tiles long between beaches
     m_CoastNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -45,10 +38,8 @@ float TerrainGenerator::BiomeNoise(int wx, int wz) {
 
 namespace {
 
-constexpr float LAND_NOISE = 0.27f;   // Island noise at a tile's middle from which it is land
 constexpr float CLIFF_NOISE = 0.25f;  // Coast noise above which a coast tile is a cliff
 constexpr float TROPICAL_CLIFF_NOISE = 0.55f; // Fewer cliffs in the tropics: mostly beaches
-constexpr float EDGE_FADE_NOISE = 0.02f;      // Island noise needed more per tile into the fade at a map edge
 constexpr int BEACH_TOP = SEA_LEVEL + 3;    // First air over the sand next to the grass (one below it)
 constexpr int BEACH_BOTTOM = SEA_LEVEL - 2; // ...and at the far side of the beach tile, under water
 constexpr int CLIFF_DEPTH = 6;        // The sea at the foot of a cliff (and one tile out) is at least this deep
@@ -62,27 +53,9 @@ uint32_t TileHash(int tx, int tz) {
 
 } // namespace
 
-bool TerrainGenerator::RawLand(int tx, int tz) {
-    TileSample& sample = m_TileCache[TileHash(tx, tz) & (TILE_CACHE_SIZE - 1)];
-    if (!sample.valid || sample.tx != tx || sample.tz != tz) {
-        float middle = TILE_SIZE * 0.5f;
-        // Only within a session's map, thinning out toward its edges
-        int edge = TilesToEdge(glm::ivec2(tx, tz)) - EDGE_SEA_TILES;
-        bool land = InTraderIsland(glm::ivec2(tx, tz));
-        if (!land && edge >= 0) {
-            float n = m_IslandNoise.GetNoise((float)tx * TILE_SIZE + middle, (float)tz * TILE_SIZE + middle);
-            land = n >= LAND_NOISE + (float)std::max(0, EDGE_FADE_TILES - edge) * EDGE_FADE_NOISE;
-        }
-        sample = { tx, tz, true, land };
-    }
-    return sample.land;
-}
-
-// The noise decides, smoothed by the four neighbours: a tile with fewer than two land neighbours
-// is sea (no lone tiles or one-tile spikes), a sea tile with three or four is land (no notches)
+// The islands are laid out per session (World/Islands.h)
 bool TerrainGenerator::IsLandTile(int tx, int tz) {
-    int neighbours = (RawLand(tx + 1, tz) ? 1 : 0) + (RawLand(tx - 1, tz) ? 1 : 0) + (RawLand(tx, tz + 1) ? 1 : 0) + (RawLand(tx, tz - 1) ? 1 : 0);
-    return RawLand(tx, tz) ? neighbours >= 2 : neighbours >= 3;
+    return IsIslandTile(glm::ivec2(tx, tz));
 }
 
 TerrainGenerator::TileInfo& TerrainGenerator::Info(int tx, int tz) {

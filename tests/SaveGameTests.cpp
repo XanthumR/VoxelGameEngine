@@ -113,7 +113,7 @@ TEST(SaveGameTest, DamagedDataFailsToLoad) {
 }
 
 TEST(SaveGameTest, ListsTheSavesNewestFirst) {
-    std::filesystem::path directory = std::filesystem::temp_directory_path() / "voxel_anno_save_test";
+    std::filesystem::path directory = std::filesystem::temp_directory_path() / "voxtaria_save_test";
     std::filesystem::remove_all(directory);
     for (int i = 0; i < 2; i++) {
         SaveWriter out;
@@ -136,6 +136,7 @@ TEST(SaveGameTest, ListsTheSavesNewestFirst) {
     EXPECT_EQ(saves[0].summary.residents, 10);
     EXPECT_TRUE(saves[0].loadable);
     EXPECT_EQ(saves[1].name, "game0");
+    EXPECT_TRUE(saves[1].loadable);
     EXPECT_EQ(saves[2].name, "old");
     EXPECT_FALSE(saves[2].loadable);
     std::filesystem::remove_all(directory);

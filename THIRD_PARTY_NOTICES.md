@@ -1,6 +1,6 @@
 # Third-party notices
 
-Voxel Anno is licensed under the GNU General Public License v3.0 (`LICENSE.txt`). It is built with the software and assets below, each under its own license; their notices and license texts follow, as their licenses require when the game is shared in source or binary form. The libraries are downloaded at build time (`CMakeLists.txt`), except those in `src/ThirdParty/`.
+Voxtaria is licensed under the GNU General Public License v3.0 (`LICENSE.txt`). It is built with the software and assets below, each under its own license; their notices and license texts follow, as their licenses require when the game is shared in source or binary form. The libraries are downloaded at build time (`CMakeLists.txt`), except those in `src/ThirdParty/`.
 
 ## Contents
 
@@ -302,11 +302,11 @@ https://freetype.org – font rendering for the game UI (through RmlUi).
 
 Portions of this software are copyright © The FreeType Project (www.freetype.org). All rights reserved.
 
-FreeType is dual-licensed under the FreeType License and the GNU General Public License version 2 or (at your option) any later version. Voxel Anno uses it under the GNU General Public License version 3, the license of the game (`LICENSE.txt`).
+FreeType is dual-licensed under the FreeType License and the GNU General Public License version 2 or (at your option) any later version. Voxtaria uses it under the GNU General Public License version 3, the license of the game (`LICENSE.txt`).
 
 ## GoogleTest 1.15.2
 
-https://github.com/google/googletest – the unit tests (`VoxelAnnoTests`). It is not part of the game and is not included in a build of it.
+https://github.com/google/googletest – the unit tests (`VoxtariaTests`). It is not part of the game and is not included in a build of it.
 
 License: BSD 3-Clause.
 

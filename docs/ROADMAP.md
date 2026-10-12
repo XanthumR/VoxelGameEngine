@@ -1,4 +1,4 @@
-# Voxel Anno roadmap
+# Voxtaria roadmap
 
 The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 (8.1-8.3), the UI milestone and the sessions (fixed-size maps, the Old and the New World) are done; Milestone 9 is done (9.1-9.3).
 
@@ -83,13 +83,13 @@ Follows `CLAUDE.md`: flat, pre-reserved component arrays and stable `uint32_t` I
 - **Overlay:** adds the camera mode, hovered column, island ID, building count and tick counter.
 
 ### 9. Tests (first version of the `CLAUDE.md` test setup)
-- **New project `VoxelAnnoTests.vcxproj`** using Google Test from the NuGet package `Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn`. It compiles the pure-logic sources directly, which need no OpenGL: `GameClock`, `IslandRegistry`, `GameObjectRegistry`, `OccupancyGrid`, `TerrainGenerator`.
+- **New project `VoxtariaTests.vcxproj`** using Google Test from the NuGet package `Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn`. It compiles the pure-logic sources directly, which need no OpenGL: `GameClock`, `IslandRegistry`, `GameObjectRegistry`, `OccupancyGrid`, `TerrainGenerator`.
 - **Tests:**
   - tick accumulation and the cap;
   - island IDs are stable across queries, and two islands separated by water get different IDs;
   - create/destroy reuses IDs;
   - placement validation rejects water, other buildings and footprints spanning two islands.
-- **Docs:** `CLAUDE.md` test commands updated to the real paths (`x64\Debug\VoxelAnnoTests.exe`).
+- **Docs:** `CLAUDE.md` test commands updated to the real paths (`x64\Debug\VoxtariaTests.exe`).
 
 ### Order of work
 1, then 2+3 (you can look around and point at things), then 4, then 5+6, then 7, then 8, then 9. Build and play-test after each step. Commit per step.
@@ -806,6 +806,13 @@ A trader's island with its own harbor that the player's ships can sail to: it se
 - **Tuning:** every good's consumption halved; the pig chain lighter (pig farm 5 workers, a 40 s cycle, upkeep 12; slaughterhouse, bakery and soap factory 10 workers; rendering works 5 workers, upkeep 15); iron mine 10 workers. Trader prices now follow the economy: a good is worth 1.1 x its chain's upkeep per good (a trader pays that and asks 1.5 x), so selling a surplus earns a little and buying costs more than making.
 - **Now** (per 100 residents): Farmers +50 coins a minute, Workers +85, Artisans +238, Engineers +439, Investors +714; jobs of their own tier 21, 36, 19, 24 and 15. Tests keep it so (`tests/BalanceTests.cpp`): every tier keeps more than a fifth of its taxes and needs fewer than half its number in jobs of its own tier, and trader prices sit just above what making a good costs.
 - **Later:** tuning from play: how fast houses fill and upgrade, construction costs, the starting coins and goods.
+
+### 9.4 Island sizes (done)
+
+- **Size classes**, as in Anno 1800, by buildable (land) tiles: Small 1200-2500 (outposts for one raw good), Medium 3000-4500 (secondary production, satellite towns), Large 5500-7500 (main islands: long chains, big cities), Extra large 8000-9500 (rare). `ISLAND_SIZES` in `src/World/Islands.h`.
+- **Layout** (`src/World/Islands`): each session has a fixed mix (Old World: 5 Small, 4 Medium, 3 Large, 1 Extra large; New World: 4 Small, 3 Medium, 2 Large). Each island is an oval at a random angle, up to 1.5 times as long as wide, its coast pushed in and out by noise; it is scaled until its land, one connected piece with its lakes filled, comes within 1% of a target inside its class. The biggest are placed first, each at the best of 16 random spots that fit (the one farthest from the islands so far), with 10 sea tiles to any other island and the trader's. Worked out once from fixed seeds, the same in every game; the terrain reads land from it in place of the old island noise.
+- **Maps** grew from 384 to 512 tiles a side to fit them; the player starts on a Large island of the Old World (`SpawnSearchColumn`). Saves from before (version 2) no longer load: the land under them moved.
+- **Tests** (`tests/IslandTests.cpp`): every planned island placed and within its class, the islands apart, the spawn on the start island.
 
 ## UI milestone: the Anno 1800 interface, in detail
 
