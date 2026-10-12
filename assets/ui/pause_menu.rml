@@ -1,0 +1,45 @@
+<rml>
+<head>
+    <title>Pause menu</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        /* The whole screen dimmed, the menu in the middle */
+        body { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: #00000080; z-index: 200; }
+        #menu { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 460dp; }
+        .title { text-align: center; font-size: 20dp; }
+        .big { display: block; width: 100%; margin-bottom: 8dp; padding: 8dp 0; font-size: 15dp; }
+        h3 { margin-top: 10dp; }
+        .setting { margin-bottom: 6dp; }
+        .setting .label { width: 110dp; }
+        .setting .value { width: 84dp; text-align: right; }
+        .setting button { padding: 2dp 10dp; }
+        .setting input.range { flex: 1; }
+        .hint { display: block; margin-top: 8dp; text-align: center; }
+    </style>
+</head>
+<body data-model="pause_menu">
+    <div id="menu" class="panel">
+        <div class="title">Paused</div>
+        <button class="big primary" data-event-click="request(1)"><span>Resume</span></button>
+        <h3>Settings</h3>
+        <!-- Each: a slider for a quick change, - and + for exact steps -->
+        <div class="row setting"><span class="label">Render scale</span>
+            <button data-event-click="request(3, -1)"><span>-</span></button>
+            <input type="range" min="50" max="100" step="1" data-attr-value="render_scale" data-event-change="set(3, ev.value)"/>
+            <button data-event-click="request(3, 1)"><span>+</span></button><span class="value">{{render_scale}}%</span></div>
+        <div class="row setting"><span class="label">View distance</span>
+            <button data-event-click="request(4, -1)"><span>-</span></button>
+            <input type="range" min="4" max="64" step="1" data-attr-value="view_distance" data-event-change="set(4, ev.value)"/>
+            <button data-event-click="request(4, 1)"><span>+</span></button><span class="value">{{view_distance}} chunks</span></div>
+        <div class="row setting"><span class="label">UI scale</span>
+            <button data-event-click="request(5, -1)"><span>-</span></button>
+            <input type="range" min="70" max="150" step="1" data-attr-value="ui_scale" data-event-change="set(5, ev.value)"/>
+            <button data-event-click="request(5, 1)"><span>+</span></button><span class="value">{{ui_scale}}%</span></div>
+        <div class="row setting"><span class="label">Vertical sync</span>
+            <button data-class-selected="vsync" data-event-click="request(6)"><span>{{vsync ? 'On' : 'Off'}}</span></button></div>
+        <div class="separator"/>
+        <button class="big" data-event-click="request(2)"><span>Quit the game</span></button>
+        <span class="hint muted">Esc resumes</span>
+    </div>
+</body>
+</rml>

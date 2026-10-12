@@ -36,6 +36,7 @@ public:
 
     float Yaw() const { return m_Yaw; }
     float Pitch() const { return m_Pitch; }
+    float Distance() const { return m_Distance; } // Voxels from the target
 
 private:
     void UpdatePose();

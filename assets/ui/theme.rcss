@@ -149,3 +149,12 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     box-shadow: #00000099 0 4dp 12dp;
 }
 .tooltip .muted { color: #9c9584; }
+
+/* --- Sliders (input type="range"): a dark track filled in gold, a gold knob --- */
+input.range { display: inline-block; height: 18dp; margin: 0 6dp; }
+input.range slidertrack { margin-top: 6dp; height: 6dp; background-color: #0b0e12; border: 1dp #5d4b2a; border-radius: 3dp; }
+input.range sliderprogress { margin-top: 7dp; height: 4dp; decorator: linear-gradient(to right, #8a6f3c, #e2c275); border-radius: 2dp; }
+input.range sliderbar { width: 12dp; height: 18dp; margin-left: -6dp; margin-right: -6dp; border: 1dp #f0d89a; border-radius: 3dp;
+    decorator: linear-gradient(to bottom, #e9c97c, #b38b3e); }
+input.range sliderbar:hover, input.range sliderbar:active { decorator: linear-gradient(to bottom, #f3d68e, #c39a48); }
+input.range sliderarrowdec, input.range sliderarrowinc { width: 0; height: 0; }

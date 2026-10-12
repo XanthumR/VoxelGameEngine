@@ -1,0 +1,20 @@
+<rml>
+<head>
+    <title>Minimap</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        /* At the bottom right. The map itself is drawn under this document (Minimap, with ImGui),
+           so its window stays see-through: only the frame and the bars have a background. */
+        body { position: absolute; right: 12dp; bottom: 12dp; width: 236dp; }
+        .bar { display: flex; flex-direction: row; align-items: center; padding: 4dp 8dp;
+               decorator: linear-gradient(to bottom, #151a20, #0f1317); border: 1dp #a8874a; border-bottom-width: 0; }
+        .bar .name { font-family: Cinzel; font-weight: bold; font-size: 13dp; color: #e2c275; }
+        .bar button { padding: 1dp 7dp; font-size: 12dp; }
+        #map { display: block; width: 236dp; height: 236dp; border: 1dp #a8874a; box-sizing: border-box; cursor: pointer; }
+    </style>
+</head>
+<body data-model="minimap">
+    <div class="bar"><span class="name">Map</span><span class="spacer"/><button data-event-click="compass"><span>N</span></button></div>
+    <div id="map"></div>
+</body>
+</rml>

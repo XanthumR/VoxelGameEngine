@@ -31,6 +31,8 @@
 #include "UI/BuildingInfo.h"
 #include "UI/IslandPanel.h"
 #include "UI/NotificationFeed.h"
+#include "UI/Minimap.h"
+#include "UI/PauseMenu.h"
 #include "UI/Statistics.h"
 #include "UI/ShipPanel.h"
 #include "UI/TradeRoutes.h"
@@ -140,6 +142,11 @@ private:
     IslandPanel m_IslandPanel;
     NotificationFeed m_NotificationFeed;
     Statistics m_Statistics;
+    Minimap m_Minimap;
+    PauseMenu m_PauseMenu;
+    int m_SpeedBeforeMenu = 1; // The game speed the pause menu goes back to
+    int m_UiScalePercent = 100;
+    void SetPauseMenu(bool open);
     BuildingInfo m_BuildingInfo;
     ShipPanel m_ShipPanel;
     TradeRoutes m_TradeRoutes;

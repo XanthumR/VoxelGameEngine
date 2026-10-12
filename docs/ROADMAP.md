@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way (8.1 done); the UI milestone comes next, before 8.2.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way (8.1 done) and the UI milestone is done; 8.2 is next.
 
 ## Roadmap
 
@@ -14,7 +14,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 6 (done) | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
 | 7 (done) | Game UI (RmlUi) | The player-facing UI moves from Dear ImGui to RmlUi: styled Anno-like panels from markup and style sheets, data-bound to the simulation; ImGui stays for the debug tools |
 | 8 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
-| UI (next) | Anno 1800 interface | The game plays like Anno 1800 through its interface: tool modes, a construction menu with rich tooltips, a docked object menu, island bar and inventory, notifications, statistics, a minimap |
+| UI (done) | Anno 1800 interface | The game plays like Anno 1800 through its interface: tool modes, a construction menu with rich tooltips, a docked object menu, island bar and inventory, notifications, statistics, a minimap |
 | 9 | Persistence & polish | Save/load (edited chunks + game objects), notifications, sound, balancing |
 
 ## Milestone 1, in detail (done)
@@ -822,6 +822,7 @@ Milestone 7 moved the UI to RmlUi and the last restyle gave it Anno 1800's look 
 **U7. Minimap and pause menu**
 - Minimap at the bottom right: islands from `IslandRegistry` (land cells), the player's buildings as dots, ships, the camera's view as a box; click to move the camera there; a compass button resets the rotation.
 - Esc menu: Resume, Settings (render scale, render distance, UI scale, vsync), Quit. Esc otherwise leaves the current tool or closes the open window first, as in Anno.
+- Done: `src/UI/Minimap.h` (384 x 384 build tiles round the spawn, buildings refreshed every second; the RmlUi document leaves the map window see-through and ImGui's background list draws the map under it) and `src/UI/PauseMenu.h` (the game pauses while it is open and goes back to its speed). The UI milestone is complete.
 
 ### Keys after this milestone
 

@@ -9,6 +9,7 @@
 #include "World/BlockTypes.h"
 
 #include <glad/glad.h>
+#include <RmlUi/Core/Context.h>
 #include <GLFW/glfw3.h>
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -174,7 +175,7 @@ bool Application::Init() {
     }
 
     // The game UI (RmlUi); Dear ImGui stays for the debug windows
-    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context()) || !m_IslandPanel.Init(m_Ui.Context()) || !m_NotificationFeed.Init(m_Ui.Context()) || !m_Statistics.Init(m_Ui.Context()) ||
+    if (!m_Ui.Init(m_Window) || !m_TopBar.Init(m_Ui.Context()) || !m_BuildMenu.Init(m_Ui.Context()) || !m_IslandPanel.Init(m_Ui.Context()) || !m_NotificationFeed.Init(m_Ui.Context()) || !m_Statistics.Init(m_Ui.Context()) || !m_Minimap.Init(m_Ui.Context()) || !m_PauseMenu.Init(m_Ui.Context()) ||
         !m_BuildingInfo.Init(m_Ui.Context()) || !m_ShipPanel.Init(m_Ui.Context()) || !m_TradeRoutes.Init(m_Ui.Context())) {
         std::cout << "Failed to initialize the game UI (RmlUi)" << std::endl;
         return false;
@@ -227,6 +228,7 @@ void Application::Spawn() {
     while (spawnY > 0 && !IsSolidBlock(m_World.GetVoxel(spawnColumn.x, spawnY, spawnColumn.y))) spawnY--;
     m_FreeFlyCamera.SetPosition(glm::vec3((float)spawnColumn.x, (float)(spawnY + 3), (float)spawnColumn.y) / VOXELS_PER_UNIT);
     m_StrategyCamera.SetTarget(glm::vec3((float)spawnColumn.x, (float)(SEA_LEVEL + ISLAND_HEIGHT), (float)spawnColumn.y) / VOXELS_PER_UNIT);
+    m_Minimap.SetCenter(m_Terrain, glm::ivec2(ColumnToTile(spawnColumn.x), ColumnToTile(spawnColumn.y)));
 
     // A locked camera (regression screenshots) uses the free-fly camera
     SetCameraMode(m_Options.lockCamera ? CameraMode::FreeFly : CameraMode::Strategy);
@@ -300,6 +302,18 @@ int Application::Run() {
     return 0;
 }
 
+// The pause menu stops the game while it is open and goes back to the speed it had
+void Application::SetPauseMenu(bool open) {
+    if (open == m_PauseMenu.IsOpen()) return;
+    if (open) {
+        m_SpeedBeforeMenu = m_GameSpeed;
+        m_GameSpeed = 0;
+    } else {
+        m_GameSpeed = m_SpeedBeforeMenu;
+    }
+    m_PauseMenu.SetOpen(open);
+}
+
 bool Application::KeyPressed(int key, bool& wasPressed) {
     bool pressed = glfwGetKey(m_Window, key) == GLFW_PRESS;
     bool edge = pressed && !wasPressed;
@@ -308,10 +322,12 @@ bool Application::KeyPressed(int key, bool& wasPressed) {
 }
 
 void Application::HandleKeys(float deltaTime) {
-    // Escape puts a moved building back or drops the build selection or tool first; with nothing
-    // selected it quits
+    // Escape closes the pause menu, puts a moved building back, drops the build selection or tool,
+    // closes a window; with nothing of that it opens the pause menu
     if (KeyPressed(GLFW_KEY_ESCAPE, m_EscapeWasPressed)) {
-        if (m_CameraMode == CameraMode::Strategy && m_BuildTool.Cancel()) {
+        if (m_PauseMenu.IsOpen()) {
+            SetPauseMenu(false);
+        } else if (m_CameraMode == CameraMode::Strategy && m_BuildTool.Cancel()) {
         } else if (m_CameraMode == CameraMode::Strategy && m_Statistics.IsOpen()) {
             m_Statistics.Close();
         } else if (m_CameraMode == CameraMode::Strategy && m_ShipControl.Selected() != INVALID_SHIP) {
@@ -319,7 +335,7 @@ void Application::HandleKeys(float deltaTime) {
         } else if (m_CameraMode == CameraMode::Strategy && m_BuildTool.InspectedBuilding() != INVALID_GAME_OBJECT) {
             m_BuildTool.ClearInspection();
         } else {
-            glfwSetWindowShouldClose(m_Window, true);
+            SetPauseMenu(true);
         }
     }
 
@@ -497,6 +513,34 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     if (int speed = m_TopBar.TakeSpeedRequest(); speed >= 0) m_GameSpeed = speed;
     if (m_TopBar.TakeRoutesToggle()) m_RoutesOpen = !m_RoutesOpen;
     if (m_TopBar.TakeStatisticsToggle()) m_Statistics.Toggle();
+    // The minimap: a click glides the camera there, the compass turns it north
+    if (glm::vec2 column; m_Minimap.TakeClick(column)) {
+        m_StrategyCamera.PanTo(glm::vec3(column.x, (float)(SEA_LEVEL + ISLAND_HEIGHT), column.y) / VOXELS_PER_UNIT);
+    }
+    if (m_Minimap.TakeCompass()) m_StrategyCamera.SetYaw(-90.0f);
+    // The pause menu's buttons
+    // A setting's step (the - and + buttons) or the value its slider was moved to
+    int step = 0, value = 0;
+    bool absolute = false;
+    switch (m_PauseMenu.TakeRequest(step, absolute, value)) {
+    case PauseMenu::RESUME: SetPauseMenu(false); break;
+    case PauseMenu::QUIT: glfwSetWindowShouldClose(m_Window, true); break;
+    case PauseMenu::RENDER_SCALE: {
+        int percent = absolute ? value : (int)std::lround(m_Settings.renderScale * 100.0f) + step * 5;
+        m_Settings.renderScale = std::clamp(percent / 100.0f, RenderSettings::MIN_RENDER_SCALE, 1.0f);
+        break;
+    }
+    case PauseMenu::VIEW_DISTANCE: m_Streamer.SetRenderDistance(absolute ? value : m_Streamer.RenderDistance() + step); break;
+    case PauseMenu::UI_SCALE:
+        m_UiScalePercent = std::clamp(absolute ? value : m_UiScalePercent + step * 10, 70, 150);
+        m_Ui.Context()->SetDensityIndependentPixelRatio(m_UiScalePercent / 100.0f);
+        break;
+    case PauseMenu::VSYNC:
+        m_Options.vsync = !m_Options.vsync;
+        glfwSwapInterval(m_Options.vsync ? 1 : 0);
+        break;
+    default: break;
+    }
     m_BuildMenu.ApplyRequests(m_BuildTool);
     m_BuildingInfo.ApplyRequests(m_Simulation, m_BuildTool);
     // A notification clicked: the camera goes there, its building opens or its ship is selected
@@ -555,6 +599,9 @@ void Application::RunFrame(double frameStartTime, double frameSeconds, float del
     m_BuildMenu.Update(m_BuildTool, m_Simulation, cursor, glm::ivec2(m_WindowWidth, m_WindowHeight));
     m_IslandPanel.Update(m_PanelIsland, m_Simulation.Economy(), strategy);
     m_Statistics.Update(m_Simulation, m_PanelIsland, strategy);
+    m_Minimap.SetVisible(strategy && !m_PauseMenu.IsOpen());
+    m_Minimap.Update(m_Simulation, m_StrategyCamera, glfwGetTime());
+    m_PauseMenu.Update({ (int)std::lround(m_Settings.renderScale * 100.0f), m_Streamer.RenderDistance(), m_UiScalePercent, m_Options.vsync });
     m_NotificationFeed.SetVisible(strategy);
     m_NotificationFeed.Update(m_Simulation, glfwGetTime());
     {
