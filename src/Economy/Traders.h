@@ -10,14 +10,12 @@ class SaveReader;
 class SaveWriter;
 class Treasury;
 
-// What a good is worth in coins: a trader pays this for it, and asks half as much again for it.
-constexpr std::array<int16_t, ITEM_COUNT> GOOD_VALUES = {
-    2, 4, 3, 3, 8, 6, 8, 4, 2, 4,     // Wood, Planks, Fish, Wool, Work Clothes, Bricks, Sausages, Pigs, Grain, Flour
-    8, 4, 9, 2, 5, 5, 4, 10, 18, 16,  // Bread, Tallow, Soap, Clay, Beef, Iron, Coal, Steel, Steel Beams, Canned Food
-    22, 3, 8, 20, 6, 26, 10, 30, 6,   // Sewing Machines, Quartz Sand, Glass, Windows, Copper, Glasses, Filaments, Light Bulbs, Grapes
-    40, 20, 50 };                     // Champagne, Gold, Jewelry
-constexpr int BuyPrice(ItemType item) { return (GOOD_VALUES[(size_t)item] * 3 + 1) / 2; } // The player pays, per good
-constexpr int SellPrice(ItemType item) { return GOOD_VALUES[(size_t)item]; }             // The player gets, per good
+// What a good is worth in coins: a little more than its making costs (the upkeep of its whole
+// chain per good, Economy/Balance.h), so prices follow the economy when it is tuned. A trader pays
+// the value for it, so selling a surplus earns a little; they ask half as much again for it.
+int GoodValue(ItemType item);
+inline int SellPrice(ItemType item) { return GoodValue(item); }                     // The player gets, per good
+inline int BuyPrice(ItemType item) { return (GoodValue(item) * 3 + 1) / 2; }        // The player pays, per good
 
 // A trader of the sea, as in Anno 1800: one per session, with a trading post on an island of their
 // own (World/Sessions.h). They sell a few wares from a stock that fills up again over time, and buy

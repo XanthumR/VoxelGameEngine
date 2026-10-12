@@ -1,9 +1,20 @@
 #include "Economy/Traders.h"
 
+#include "Economy/Balance.h"
 #include "Economy/Treasury.h"
 #include "Simulation/SaveGame.h"
 
 #include <algorithm>
+#include <cmath>
+
+int GoodValue(ItemType item) {
+    static const std::array<int, ITEM_COUNT> values = [] {
+        std::array<int, ITEM_COUNT> table{};
+        for (int i = 0; i < ITEM_COUNT; i++) table[i] = std::max(1, (int)std::lround(ChainUpkeepPerGood((ItemType)i) * 1.1));
+        return table;
+    }();
+    return values[(size_t)item];
+}
 
 TraderSystem::TraderSystem() {
     m_Posts.fill(INVALID_GAME_OBJECT);

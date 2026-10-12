@@ -120,7 +120,7 @@ TEST(PopulationTest, ConsumesAtTheConfiguredRate) {
     f.Stock(ItemType::Planks, 0);
     f.Stock(ItemType::Fish, 400);
     f.Stock(ItemType::WorkClothes, 400);
-    // Ten full farmer houses on both sides of the road: 100 residents eat 0.05 fish each per minute
+    // Ten full farmer houses on both sides of the road: 100 residents eat the table's fish each per minute
     for (int i = 0; i < 5; i++) {
         for (int z : { 2, -2 }) f.objects.Residence(f.AddBuilding(BUILDING_FARMER_HOUSE, { 12 + i * 3, z })).residents = 10;
     }
@@ -129,7 +129,9 @@ TEST(PopulationTest, ConsumesAtTheConfiguredRate) {
     int before = f.Amount(ItemType::Fish);
     f.Run(10 * TICKS_PER_MINUTE);
     int eaten = before - f.Amount(ItemType::Fish);
-    EXPECT_NEAR(eaten, 100 * 50 * 10 / 1000, 1); // 50 fish in 10 minutes
+    int perMille = 0;
+    for (const Need& need : POPULATION_TIERS[TIER_FARMERS].needs) perMille += need.kind == NeedKind::Good && need.item == ItemType::Fish ? need.consumption : 0;
+    EXPECT_NEAR(eaten, 100 * perMille * 10 / 1000, 1); // In 10 minutes
     EXPECT_EQ(f.Storage().population[TIER_FARMERS], 100);
 }
 

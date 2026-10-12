@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 (8.1-8.3), the UI milestone and the sessions (fixed-size maps, the Old and the New World) are done; Milestone 9 is under way (9.1 and 9.2 done).
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 (8.1-8.3), the UI milestone and the sessions (fixed-size maps, the Old and the New World) are done; Milestone 9 is done (9.1-9.3).
 
 ## Roadmap
 
@@ -16,7 +16,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 8 (done) | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
 | Sessions (done) | Fixed maps, two worlds | Fixed-size maps as in Anno 1800, an Old World and a New World; switch between them; ships cross from one to the other |
 | UI (done) | Anno 1800 interface | The game plays like Anno 1800 through its interface: tool modes, a construction menu with rich tooltips, a docked object menu, island bar and inventory, notifications, statistics, a minimap |
-| 9 | Persistence & polish | Save/load, sound, balancing (notifications came with the UI milestone) |
+| 9 (done) | Persistence & polish | Save/load, sound, balancing (notifications came with the UI milestone) |
 
 ## Milestone 1, in detail (done)
 
@@ -799,9 +799,13 @@ A trader's island with its own harbor that the player's ships can sail to: it se
 - **Playback** (`src/Audio/AudioSystem`): miniaudio (one header, fetched like the other libraries); the loops always play, their volumes eased toward the levels; four voices per one-shot. Without an audio device the game runs silent. The pause menu has a Sound volume slider; `--mute` silences a run, and runs taking screenshots are always silent.
 - **Later:** music; sounds placed in stereo by where they are on screen; more variants of each sound.
 
-### 9.3 Balancing (planned)
+### 9.3 Balancing (done: the numbers; play-testing goes on)
 
-Play the tiers through and tune the numbers: production cycles, consumption, costs and upkeep, taxes, trader prices; the Statistics window gives the figures.
+- **The report:** `Economy/Balance` works out from the tables what keeps 100 residents of each tier fully supplied: the producers (in fractions, followed down to their raw goods), the jobs by tier, the service buildings (by the houses one serves on average), taxes against upkeep, and each good's chain upkeep per good. `tools/balance/BalanceReport.cpp` (target `BalanceReport`) writes it to `docs/BALANCE.md`; run it after changing a number.
+- **What it showed:** Farmers barely broke even, Workers lost 151 coins a minute per 100 and needed 139 Worker jobs per 100 Workers (a Worker town could never staff itself), Artisans lost money too; and buying from a trader was far cheaper than making a good (steel beams: 64 coins of upkeep per beam made, 27 at a trader), while selling anything lost money.
+- **Tuning:** every good's consumption halved; the pig chain lighter (pig farm 5 workers, a 40 s cycle, upkeep 12; slaughterhouse, bakery and soap factory 10 workers; rendering works 5 workers, upkeep 15); iron mine 10 workers. Trader prices now follow the economy: a good is worth 1.1 x its chain's upkeep per good (a trader pays that and asks 1.5 x), so selling a surplus earns a little and buying costs more than making.
+- **Now** (per 100 residents): Farmers +50 coins a minute, Workers +85, Artisans +238, Engineers +439, Investors +714; jobs of their own tier 21, 36, 19, 24 and 15. Tests keep it so (`tests/BalanceTests.cpp`): every tier keeps more than a fifth of its taxes and needs fewer than half its number in jobs of its own tier, and trader prices sit just above what making a good costs.
+- **Later:** tuning from play: how fast houses fill and upgrade, construction costs, the starting coins and goods.
 
 ## UI milestone: the Anno 1800 interface, in detail
 

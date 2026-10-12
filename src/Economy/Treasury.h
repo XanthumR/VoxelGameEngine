@@ -39,7 +39,7 @@ constexpr std::array<BuildingCost, BUILDING_TYPES.size()> BUILDING_COSTS = { {
     { 150, 4, 10 },         // Sawmill
     { 150, 3, 10 },         // Sheep Farm
     { 250, 6, 25 },         // Framework Knitter
-    { 250, 6, 20 },         // Pig Farm
+    { 250, 6, 12 },         // Pig Farm
     { 300, 8, 30 },         // Slaughterhouse
     { 400, 6, 10 },         // Harbor
     { 30, 0, 0 },           // Sheepfold
@@ -49,7 +49,7 @@ constexpr std::array<BuildingCost, BUILDING_TYPES.size()> BUILDING_COSTS = { {
     { 20, 0, 0 },           // Wheat Field
     { 250, 6, 15 },         // Flour Mill
     { 300, 6, 20 },         // Bakery
-    { 300, 6, 20 },         // Rendering Works
+    { 300, 6, 15 },         // Rendering Works
     { 400, 4, 25, 4 },      // Soap Factory
     { 200, 4, 15 },         // Clay Pit
     { 300, 6, 20 },         // Brick Factory

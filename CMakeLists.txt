@@ -80,6 +80,7 @@ target_link_libraries(imgui PUBLIC glfw)
 # --- Sources ---
 # The deterministic game logic, shared by the game and the tests (no OpenGL, no window)
 set(LOGIC_SOURCES
+    src/Economy/Balance.cpp
     src/Economy/IslandEconomy.cpp
     src/Economy/PopulationNeeds.cpp
     src/Economy/PopulationSystem.cpp
@@ -180,6 +181,11 @@ set_target_properties(VoxelGameEngine PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY $
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT VoxelGameEngine)
 
 # --- The tests ---
+# The economy's numbers as Markdown, for balancing: build/bin/<config>/BalanceReport > docs/BALANCE.md
+add_executable(BalanceReport tools/balance/BalanceReport.cpp ${LOGIC_SOURCES})
+target_include_directories(BalanceReport PRIVATE src ${glm_SOURCE_DIR})
+target_link_libraries(BalanceReport PRIVATE Threads::Threads)
+
 if(VOXEL_ANNO_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
