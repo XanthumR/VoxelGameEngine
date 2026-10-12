@@ -27,7 +27,8 @@ class TerrainGenerator {
 public:
     enum class TileKind : uint8_t { Sea, Land, Beach, Cliff };
 
-    explicit TerrainGenerator(const VoxModel& trees);
+    // palms: the tropical sessions' tree (the broadleaf tree there too when null)
+    explicit TerrainGenerator(const VoxModel& trees, const VoxModel* palms = nullptr);
 
     TileKind TileKindAt(int tx, int tz);
     bool IsLandTile(int tx, int tz);
@@ -59,7 +60,7 @@ public:
         }
     }
     void SetFelledTrees(const FelledTrees* felled) { m_Felled = felled; }
-    const VoxModel& TreeModel() const { return m_Trees; }
+    const VoxModel& TreeModelAt(int wx, int wz) const; // The tree that grows at this column
 
     static constexpr int TREE_SPACING = 2; // A root is the highest tree noise within this many columns
 
@@ -97,6 +98,7 @@ private:
     void StampGrass(int startX, int startY, int startZ, std::vector<uint8_t>& data);
 
     const VoxModel& m_Trees;
+    const VoxModel& m_Palms;
     const FelledTrees* m_Felled = nullptr;
     FastNoiseLite m_Noise;       // Ground height, tree placement
     FastNoiseLite m_BiomeNoise;

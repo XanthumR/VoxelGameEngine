@@ -23,6 +23,7 @@ enum class ShipState : uint8_t {
     Idle,    // Anchored at sea
     Sailing, // Following its path
     Docked,  // At a harbor's berth: cargo can move to and from that island
+    Crossing, // Between two sessions, off the edge of the map: not on either
 };
 
 struct CargoSlot {
@@ -56,6 +57,12 @@ struct Ship {
     int route = -1;                            // Trade route it sails, -1 = none
     int stop = 0;                              // The route stop it is at or heading for
     int waitTicks = 0;                         // Time at the current stop
+    // An order in another session: the ship sails off the nearest edge of its map (crossNext),
+    // crosses (crossTicks left), comes in at the edge of the other map nearest its goal and sails on
+    bool crossNext = false;
+    int crossTicks = 0;
+    glm::ivec2 crossGoal{ 0 };
+    GameObjectId crossHarbor = INVALID_GAME_OBJECT;
 };
 
 // The player's ships. They sail the open sea on the build-tile grid: Sea and Cliff tiles
@@ -67,7 +74,9 @@ struct Ship {
 // moment, unloads the goods marked Unload (waiting while the storage is full), loads the goods
 // marked Load until its holds are full or the storage is empty, and sails on; a stop whose harbor
 // is gone is skipped. Ships also settle new islands: there the first storage building needs one of
-// them stopped nearby, and its planks come from that ship's holds. Advanced once per simulation tick.
+// them stopped nearby, and its planks come from that ship's holds. Ships stay on the maps of the
+// sessions (World/Sessions.h); an order or route stop in another session takes the ship off the
+// edge of its map and CROSSING_TICKS later onto the other. Advanced once per simulation tick.
 class ShipSystem {
 public:
     static constexpr int MAX_SHIPS = 32;
@@ -79,6 +88,7 @@ public:
     static constexpr int MAX_ROUTES = 16;
     static constexpr int STOP_TICKS = 30; // Time at a route stop before the cargo moves (3 s)
     static constexpr float SETTLE_TILES = 4.0f; // How close a ship must be to settle an island
+    static constexpr int CROSSING_TICKS = 600;  // From one session to another (a minute)
 
     explicit ShipSystem(TerrainGenerator& terrain);
 
@@ -88,7 +98,8 @@ public:
     // when the harbor is not one or the cost cannot be paid
     ShipId Build(GameObjectId harbor, const GameObjectRegistry& objects, IslandEconomyManager& economy, Treasury& treasury);
     // Sends a ship to a sea tile, or to a harbor's berth when harbor is given; false when no way by
-    // sea leads there (the ship keeps what it was doing)
+    // sea leads there (the ship keeps what it was doing). In another session it crosses over first;
+    // a ship crossing just takes the new goal.
     bool SailTo(ShipId id, glm::ivec2 tile, const GameObjectRegistry& objects, const OccupancyGrid& occupancy,
         GameObjectId harbor = INVALID_GAME_OBJECT);
     // Moves cargo between a docked ship and its harbor's island: amount > 0 onto the ship, < 0 off it.
@@ -134,6 +145,7 @@ public:
 
 private:
     bool LineIsWater(glm::ivec2 from, glm::ivec2 to, const OccupancyGrid& occupancy);
+    bool SetPath(ShipId id, glm::ivec2 goal, const OccupancyGrid& occupancy); // Sailing there in this session
     void FollowRoute(ShipId id, const GameObjectRegistry& objects, const OccupancyGrid& occupancy, IslandEconomyManager& economy);
 
     TerrainGenerator& m_Terrain;

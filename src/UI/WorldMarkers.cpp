@@ -16,6 +16,7 @@ const float BADGE_RADIUS = 11.0f;       // Pixels
 
 // The screen point above the ship, placed between ticks like the ship itself
 bool AboveShip(const Ship& ship, float alpha, const ICamera& camera, glm::ivec2 windowSize, glm::vec2& screen) {
+    if (ship.state == ShipState::Crossing) return false; // Off the map
     glm::vec2 column = glm::mix(ship.previous, ship.position, glm::clamp(alpha, 0.0f, 1.0f)) * (float)TILE_SIZE;
     return WorldToScreen(camera, glm::vec3(column.x, SEA_LEVEL + 30.0f, column.y) / VOXELS_PER_UNIT, windowSize, screen);
 }

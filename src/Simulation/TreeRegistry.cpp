@@ -56,7 +56,7 @@ bool TreeRegistry::FellNearest(glm::ivec2 center, glm::ivec2 minColumn, glm::ive
 
 // A building or road on any tile the grown tree would cover
 bool TreeRegistry::SpotCovered(glm::ivec2 root, const OccupancyGrid& occupancy, const RoadNetwork& roads) const {
-    const VoxModel& model = m_Terrain.TreeModel();
+    const VoxModel& model = m_Terrain.TreeModelAt(root.x, root.y);
     glm::ivec2 minTile(ColumnToTile(root.x + model.min.x), ColumnToTile(root.y + model.min.z));
     glm::ivec2 maxTile(ColumnToTile(root.x + model.max.x), ColumnToTile(root.y + model.max.z));
     for (int tz = minTile.y; tz <= maxTile.y; tz++) {

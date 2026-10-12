@@ -16,9 +16,10 @@ bool PauseMenu::Init(Rml::Context* context) {
         m_Step = arguments.size() > 1 ? arguments[1].Get<int>() : 0;
         m_Absolute = false;
     });
-    // set(kind, value): a slider moved to value
+    // set(kind, value): a slider moved to value. A slider also reports a change when the data
+    // binding sets its value (at load, from the default Settings): only the open menu's count.
     model.BindEventCallback("set", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& arguments) {
-        if (arguments.size() < 2) return;
+        if (!m_Open || arguments.size() < 2) return;
         m_Request = (Request)arguments[0].Get<int>();
         m_Value = (int)arguments[1].Get<float>();
         m_Absolute = true;

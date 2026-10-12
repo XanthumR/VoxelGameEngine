@@ -9,12 +9,14 @@
         .bar { display: flex; flex-direction: row; align-items: center; padding: 4dp 8dp;
                decorator: linear-gradient(to bottom, #151a20, #0f1317); border: 1dp #a8874a; border-bottom-width: 0; }
         .bar .name { font-family: Cinzel; font-weight: bold; font-size: 13dp; color: #e2c275; }
-        .bar button { padding: 1dp 7dp; font-size: 12dp; }
+        .bar button { padding: 1dp 7dp; font-size: 12dp; margin-left: 4dp; }
         #map { display: block; width: 236dp; height: 236dp; border: 1dp #a8874a; box-sizing: border-box; cursor: pointer; }
     </style>
 </head>
 <body data-model="minimap">
-    <div class="bar"><span class="name">Map</span><span class="spacer"/><button data-event-click="compass"><span>N</span></button></div>
+    <div class="bar"><span class="name">{{session}}</span><span class="spacer"/>
+        <button data-if="other_open" data-event-click="switch"><span>{{other}}</span></button>
+        <button data-event-click="compass"><span>N</span></button></div>
     <div id="map"></div>
 </body>
 </rml>

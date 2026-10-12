@@ -133,6 +133,7 @@ void ShipControl::AppendObjects(const ShipSystem& ships, float alpha, float delt
         ShipId id = ships.IdAtSlot(slot);
         if (id == INVALID_SHIP) continue;
         const Ship& ship = ships.Get(id);
+        if (ship.state == ShipState::Crossing) continue; // Off the map
         glm::vec2 velocity = ship.position - ship.previous;
 
         // Turn toward the way it sails (a new ship starts facing it)

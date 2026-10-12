@@ -9,6 +9,7 @@
 #include "Simulation/RoadNetwork.h"
 #include "Simulation/Ships.h"
 #include "TestWorld.h"
+#include "World/Sessions.h"
 
 #include <gtest/gtest.h>
 
@@ -341,4 +342,41 @@ TEST(ShipTest, DockedShipCastsOffWhenItsHarborMoves) {
     f.objects.Anchor(f.harbor).origin += glm::ivec3(TILE_SIZE * 3, 0, 0); // Moved along the coast
     f.Run(1);
     EXPECT_EQ(f.ships.Get(ship).state, ShipState::Idle);
+}
+
+TEST(ShipTest, CrossesToTheNewWorldAndBack) {
+    HarborFixture f;
+    ASSERT_NE(f.harbor, INVALID_GAME_OBJECT);
+    f.treasury.SetCoins(ShipSystem::SHIP_COINS);
+    f.Storage().amounts[(size_t)ItemType::Planks] = ShipSystem::SHIP_PLANKS;
+    ShipId ship = f.ships.Build(f.harbor, f.objects, f.economy, f.treasury);
+    ASSERT_NE(ship, INVALID_SHIP);
+    glm::ivec2 berth = ShipSystem::BerthTile(f.objects, f.harbor);
+    ASSERT_EQ(SessionAtTile(berth), SESSION_OLD_WORLD);
+
+    // The open sea along the New World's edge: off the Old World's map, a crossing, and in
+    glm::ivec2 goal = SESSIONS[SESSION_NEW_WORLD].originTile + glm::ivec2(4, SESSION_TILES / 2);
+    ASSERT_TRUE(f.ships.SailTo(ship, goal, f.objects, f.occupancy));
+    f.RunUntil(ship, ShipState::Crossing);
+    ASSERT_EQ(f.ships.Get(ship).state, ShipState::Crossing);
+    EXPECT_EQ(TilesToEdge(glm::ivec2(glm::floor(f.ships.Get(ship).position))), 0); // Left from the edge
+    EXPECT_EQ(f.ships.Nearest(f.ships.Get(ship).position, 5.0f), INVALID_SHIP);   // Not on the map
+    f.Run(ShipSystem::CROSSING_TICKS - 1);
+    EXPECT_EQ(f.ships.Get(ship).state, ShipState::Crossing);
+    f.RunUntil(ship, ShipState::Idle);
+    ASSERT_EQ(f.ships.Get(ship).state, ShipState::Idle);
+    EXPECT_LT(glm::length(f.ships.Get(ship).position - (glm::vec2(goal) + 0.5f)), 0.01f);
+
+    // Back home to its harbor
+    ASSERT_TRUE(f.ships.SailTo(ship, glm::ivec2(0), f.objects, f.occupancy, f.harbor));
+    f.RunUntil(ship, ShipState::Docked);
+    EXPECT_EQ(f.ships.Get(ship).state, ShipState::Docked);
+    EXPECT_EQ(f.ships.Get(ship).harbor, f.harbor);
+}
+
+TEST(ShipTest, StaysOnTheMap) {
+    HarborFixture f;
+    glm::ivec2 origin = SESSIONS[SESSION_OLD_WORLD].originTile;
+    EXPECT_TRUE(f.ships.IsWater(origin, f.occupancy));
+    EXPECT_FALSE(f.ships.IsWater(origin - glm::ivec2(1, 0), f.occupancy));
 }

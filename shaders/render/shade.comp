@@ -393,8 +393,11 @@ vec3 getAlbedo(int voxelID, ivec3 mapPos) {
 // Shadow for a hit face: reuses a half-resolution sample from this pixel's own quad or the
 // 3 neighbouring quads when one was computed for the same face plane (same normal, same
 // plane offset, within 2 voxels). Shadows are constant per voxel face, so this only moves
-// shadow edges by at most a render pixel. Falls back to tracing its own rays otherwise.
-float lookupShadow(ivec2 pixel, ivec3 mapPos, int normalIndex, vec3 normal) {
+// shadow edges by at most a render pixel. The sea's surface (water within seaLevel +- MAX_WAVE)
+// counts as one plane whatever the face, since the steps of the waves would otherwise send their
+// edges to tracing their own rays, which at a low sun are long. Falls back to tracing its own
+// rays otherwise.
+float lookupShadow(ivec2 pixel, ivec3 mapPos, int normalIndex, vec3 normal, bool water) {
     if (dot(normal, lightDir) <= 0.0) return 0.3; // Back face, same shortcut as softShadow
     if (halfResShadows == 0) return softShadow(mapPos, normal);
 
@@ -408,9 +411,11 @@ float lookupShadow(ivec2 pixel, ivec3 mapPos, int normalIndex, vec3 normal) {
         ivec2 q = candidates[i];
         if (q.x < 0 || q.y < 0 || q.x >= quadDims.x || q.y >= quadDims.y) continue;
         ivec4 key = imageLoad(shadowKey, q);
-        if (key.w != normalIndex) continue;
-        if (key[axis] != mapPos[axis]) continue; // Different plane (e.g. a step up)
+        if (key.w == NO_HIT) continue;
         ivec3 d = abs(key.xyz - mapPos);
+        bool sea = water && abs(mapPos.y - seaLevel) <= MAX_WAVE && abs(key.y - seaLevel) <= MAX_WAVE;
+        if (sea) d.y = 0;
+        else if (key.w != normalIndex || key[axis] != mapPos[axis]) continue; // Different face or plane (e.g. a step up)
         if (max(d.x, max(d.y, d.z)) > 2) continue;
         return imageLoad(shadowValue, q).r;
     }
@@ -457,7 +462,7 @@ void main() {
 
         // Diffuse Lighting
         float diff = max(dot(normal, lightDir), 0.0);
-        float shadow = lookupShadow(pixel_coords, mapPos, normalIndex, normal);
+        float shadow = lookupShadow(pixel_coords, mapPos, normalIndex, normal, voxelID == WATER_ID);
         if (diff > 0.0 && numObjects > 0) shadow = min(shadow, objectShadow(vec3(mapPos) + 0.5 + normal * 0.6)); // Boats, carts, people
 
         // Specular (Blinn-Phong)

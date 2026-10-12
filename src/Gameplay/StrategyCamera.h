@@ -21,8 +21,12 @@ public:
 
     // Looks at this point (world units); keeps the current yaw, pitch and zoom
     void SetTarget(glm::vec3 target);
-    // Glides there instead (ease in and out, longer for longer ways); panning by hand stops it
+    // Glides there instead (ease in and out, longer for longer ways); panning by hand stops it.
+    // Further than JUMP_DISTANCE (another session) it jumps there at once.
     void PanTo(glm::vec3 target);
+    // The target stays within min..max (world units, x and z) from the next Update
+    void SetBounds(glm::vec2 min, glm::vec2 max);
+    static constexpr float JUMP_DISTANCE = 6000.0f; // Voxels
     void SetYaw(float yaw);
 
     // mouseFree: the UI is not using the mouse, so edge pan, drag and zoom may react
@@ -50,6 +54,7 @@ private:
     // PanTo: from, to, how far along (0..1, >= 1 when not panning) and how long it takes
     glm::vec3 m_PanFrom{ 0.0f }, m_PanTo{ 0.0f };
     float m_PanProgress = 1.0f, m_PanSeconds = 1.0f;
+    glm::vec2 m_BoundsMin{ -1e9f }, m_BoundsMax{ 1e9f };
 
     bool m_Dragging = false;
     double m_DragX = 0.0, m_DragY = 0.0;

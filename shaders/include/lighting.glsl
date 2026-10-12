@@ -47,11 +47,12 @@ float getShadow(vec3 worldStart, vec3 lightDir) {
             continue;
         }
 
-        // Empty 8^3 brick inside a non-empty chunk: same idea at a finer level
+        // An 8^3 brick with nothing casting a shadow (empty, or only water) inside a non-empty
+        // chunk: same idea at a finer level
         ivec3 brickCoord = mapPos >> 3;
         if (any(notEqual(brickCoord, cachedBrick))) {
             cachedBrick = brickCoord;
-            cachedBrickEmpty = isBrickEmpty(cachedSlot, mapPos);
+            cachedBrickEmpty = isBrickClearOfShadow(cachedSlot, mapPos);
         }
         if (cachedBrickEmpty) {
             skipCell(8, stepDir, deltaDist, mapPos, sideDist, unusedNormal);

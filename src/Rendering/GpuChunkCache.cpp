@@ -1,5 +1,6 @@
 #include "Rendering/GpuChunkCache.h"
 
+#include "World/BlockTypes.h"
 #include "World/Chunk.h"
 
 #include <algorithm>
@@ -78,10 +79,11 @@ bool GpuChunkCache::ComputeBrickMask(const std::vector<uint8_t>& data, uint8_t* 
     for (int z = 0; z < CHUNK_SIZE; z++) {
         for (int y = 0; y < CHUNK_SIZE; y++) {
             for (int x = 0; x < CHUNK_SIZE; x++) {
-                if (data[LocalIndex(x, y, z)] > 0) {
-                    brickMask[((z / BRICK_SIZE) * BRICKS_PER_AXIS + (y / BRICK_SIZE)) * BRICKS_PER_AXIS + (x / BRICK_SIZE)] = 255;
-                    hasBlocks = true;
-                }
+                uint8_t block = data[LocalIndex(x, y, z)];
+                if (block == 0) continue;
+                uint8_t& brick = brickMask[((z / BRICK_SIZE) * BRICKS_PER_AXIS + (y / BRICK_SIZE)) * BRICKS_PER_AXIS + (x / BRICK_SIZE)];
+                brick = block == Block::WATER ? std::max(brick, BRICK_WATER_ONLY) : BRICK_SOLID;
+                hasBlocks = true;
             }
         }
     }

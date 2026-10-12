@@ -27,12 +27,22 @@ void StrategyCamera::SetTarget(glm::vec3 target) {
 }
 
 void StrategyCamera::PanTo(glm::vec3 target) {
+    if (glm::length(target - m_Target) * VOXELS_PER_UNIT > JUMP_DISTANCE) {
+        m_PanProgress = 1.0f;
+        SetTarget(target);
+        return;
+    }
     m_PanFrom = m_Target;
     m_PanTo = target;
     m_PanProgress = 0.0f;
     // Half a second for a short way, at most two for a long one (in camera distances)
     float distances = glm::length(target - m_Target) / std::max(m_Distance / VOXELS_PER_UNIT, 1e-4f);
     m_PanSeconds = std::clamp(0.4f + distances * 0.25f, 0.5f, 2.0f);
+}
+
+void StrategyCamera::SetBounds(glm::vec2 min, glm::vec2 max) {
+    m_BoundsMin = min;
+    m_BoundsMax = max;
 }
 
 void StrategyCamera::SetYaw(float yaw) {
@@ -107,6 +117,8 @@ void StrategyCamera::Update(GLFWwindow* window, float deltaTime, bool mouseFree,
         m_Target -= right * (float)(cursorX - m_DragX) * pixelsToWorld;
         m_Target += forward * (float)(cursorY - m_DragY) * pixelsToWorld;
     }
+    m_Target.x = std::clamp(m_Target.x, m_BoundsMin.x, m_BoundsMax.x);
+    m_Target.z = std::clamp(m_Target.z, m_BoundsMin.y, m_BoundsMax.y);
     m_Dragging = middle;
     m_DragX = cursorX;
     m_DragY = cursorY;

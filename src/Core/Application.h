@@ -92,6 +92,7 @@ private:
 
     // World (declaration order matters: later members reference earlier ones)
     VoxModel m_Trees;
+    VoxModel m_Palms;
     VoxelWorld m_World;
     GpuChunkCache m_Cache;
     ChunkStreamer m_Streamer;
@@ -143,6 +144,7 @@ private:
     NotificationFeed m_NotificationFeed;
     Statistics m_Statistics;
     Minimap m_Minimap;
+    std::array<glm::vec3, SESSION_COUNT> m_SessionFocus{}; // Where the camera last looked in each session (zero: not yet)
     PauseMenu m_PauseMenu;
     int m_SpeedBeforeMenu = 1; // The game speed the pause menu goes back to
     int m_UiScalePercent = 100;

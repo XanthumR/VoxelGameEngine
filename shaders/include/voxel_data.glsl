@@ -76,16 +76,24 @@ float getVoxelVal(ivec3 ipos) {
 }
 
 // True if the 8^3 brick containing ipos (inside the chunk in slotIndex) has no solid voxel
-bool isBrickEmpty(int slotIndex, ivec3 ipos) {
+// The brick's flag: 0 empty, about 0.5 only water, 1 solid (BRICK_* in GpuChunkCache.h)
+float brickFlag(int slotIndex, ivec3 ipos) {
     ivec3 slotPos;
     int pool = locateSlot(slotIndex, slotPos);
     ivec3 coord = slotPos * 4 + ((ipos & 31) >> 3);
-    float mask;
-    if (pool == 0) mask = texelFetch(brickMask0, coord, 0).r;
-    else if (pool == 1) mask = texelFetch(brickMask1, coord, 0).r;
-    else if (pool == 2) mask = texelFetch(brickMask2, coord, 0).r;
-    else mask = texelFetch(brickMask3, coord, 0).r;
-    return mask == 0.0;
+    if (pool == 0) return texelFetch(brickMask0, coord, 0).r;
+    else if (pool == 1) return texelFetch(brickMask1, coord, 0).r;
+    else if (pool == 2) return texelFetch(brickMask2, coord, 0).r;
+    return texelFetch(brickMask3, coord, 0).r;
+}
+
+bool isBrickEmpty(int slotIndex, ivec3 ipos) {
+    return brickFlag(slotIndex, ipos) == 0.0;
+}
+
+// Nothing in the brick casts a shadow (empty, or only water)
+bool isBrickClearOfShadow(int slotIndex, ivec3 ipos) {
+    return brickFlag(slotIndex, ipos) < 0.75;
 }
 
 // The highest voxel y that may be solid in a chunk column, -1 for none

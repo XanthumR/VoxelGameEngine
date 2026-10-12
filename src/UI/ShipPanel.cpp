@@ -1,6 +1,7 @@
 #include "UI/ShipPanel.h"
 
 #include "Simulation/Simulation.h"
+#include "World/Sessions.h"
 
 #include "Gameplay/ShipControl.h"
 
@@ -62,6 +63,11 @@ void ShipPanel::Update(ShipId id, const Simulation& simulation, bool orderFailed
         else std::snprintf(text, sizeof(text), "Sailing");
         break;
     case ShipState::Docked: std::snprintf(text, sizeof(text), "Docked at the harbor of island #%u", island); break;
+    case ShipState::Crossing: {
+        int seconds = (ship.crossTicks + 9) / 10;
+        std::snprintf(text, sizeof(text), "Crossing to the %s (%d:%02d)", SESSIONS[SessionAtTile(ship.crossGoal)].name, seconds / 60, seconds % 60);
+        break;
+    }
     }
     m_Lines.Add(text).icon = "icons/ship.tga";
     if (orderFailed) m_Lines.Add("No way by sea to there", Tone::Warn).icon = "icons/warning.tga";

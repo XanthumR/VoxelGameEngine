@@ -3,13 +3,14 @@
 #include "World/BlockTypes.h"
 #include "World/Chunk.h"
 #include "World/FelledTrees.h"
+#include "World/Sessions.h"
 #include "World/VoxModel.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 
-TerrainGenerator::TerrainGenerator(const VoxModel& trees) : m_Trees(trees) {
+TerrainGenerator::TerrainGenerator(const VoxModel& trees, const VoxModel* palms) : m_Trees(trees), m_Palms(palms ? *palms : trees) {
     m_Noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
 
     // Low-frequency mask deciding land vs ocean: islands about a thousand voxels across, with
@@ -46,9 +47,12 @@ namespace {
 
 constexpr float LAND_NOISE = 0.27f;   // Island noise at a tile's middle from which it is land
 constexpr float CLIFF_NOISE = 0.25f;  // Coast noise above which a coast tile is a cliff
+constexpr float TROPICAL_CLIFF_NOISE = 0.55f; // Fewer cliffs in the tropics: mostly beaches
+constexpr float EDGE_FADE_NOISE = 0.02f;      // Island noise needed more per tile into the fade at a map edge
 constexpr int BEACH_TOP = SEA_LEVEL + 3;    // First air over the sand next to the grass (one below it)
 constexpr int BEACH_BOTTOM = SEA_LEVEL - 2; // ...and at the far side of the beach tile, under water
 constexpr int CLIFF_DEPTH = 6;        // The sea at the foot of a cliff (and one tile out) is at least this deep
+constexpr int GROUND_TOP = SEA_LEVEL + ISLAND_HEIGHT; // First air over the highest ground (island grass; water is lower)
 constexpr int SHELF_TILES = 5;        // How far out the sea floor still slopes down from the coast
 constexpr float SHELF_SLOPE = 0.35f;  // Voxels down per column beyond the beach
 
@@ -62,8 +66,14 @@ bool TerrainGenerator::RawLand(int tx, int tz) {
     TileSample& sample = m_TileCache[TileHash(tx, tz) & (TILE_CACHE_SIZE - 1)];
     if (!sample.valid || sample.tx != tx || sample.tz != tz) {
         float middle = TILE_SIZE * 0.5f;
-        float n = m_IslandNoise.GetNoise((float)tx * TILE_SIZE + middle, (float)tz * TILE_SIZE + middle);
-        sample = { tx, tz, true, n >= LAND_NOISE };
+        // Only within a session's map, thinning out toward its edges
+        int edge = TilesToEdge(glm::ivec2(tx, tz)) - EDGE_SEA_TILES;
+        bool land = false;
+        if (edge >= 0) {
+            float n = m_IslandNoise.GetNoise((float)tx * TILE_SIZE + middle, (float)tz * TILE_SIZE + middle);
+            land = n >= LAND_NOISE + (float)std::max(0, EDGE_FADE_TILES - edge) * EDGE_FADE_NOISE;
+        }
+        sample = { tx, tz, true, land };
     }
     return sample.land;
 }
@@ -90,7 +100,9 @@ TerrainGenerator::TileInfo& TerrainGenerator::Info(int tx, int tz) {
         if (coast) {
             float middle = TILE_SIZE * 0.5f;
             float noise = m_CoastNoise.GetNoise((float)tx * TILE_SIZE + middle, (float)tz * TILE_SIZE + middle);
-            kind = noise > CLIFF_NOISE ? TileKind::Cliff : TileKind::Beach;
+            int session = SessionAtTile(glm::ivec2(tx, tz));
+            float cliff = session >= 0 && SESSIONS[session].tropical ? TROPICAL_CLIFF_NOISE : CLIFF_NOISE;
+            kind = noise > cliff ? TileKind::Cliff : TileKind::Beach;
         }
     }
     info = { tx, tz, true, kind, -1 };
@@ -196,7 +208,8 @@ void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t
     int startY = cy * CHUNK_SIZE;
     int startZ = cz * CHUNK_SIZE;
 
-    for (int z = 0; z < CHUNK_SIZE; z++) {
+    // Chunks wholly above the ground and the sea skip the columns: only tree tops reach there
+    for (int z = 0; z < CHUNK_SIZE && startY < GROUND_TOP; z++) {
         int wz = startZ + z;
         for (int x = 0; x < CHUNK_SIZE; x++) {
             int wx = startX + x;
@@ -250,7 +263,7 @@ void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t
     }
 
     // Trees on grass, rooted in this chunk or overhanging from a neighbour
-    if (!m_Trees.IsEmpty()) StampTrees(startX, startY, startZ, data);
+    if (!m_Trees.IsEmpty() && startY < GROUND_TOP + std::max(m_Trees.max.y, m_Palms.max.y)) StampTrees(startX, startY, startZ, data);
 
     // Grass tufts in their rest pose, after trees so they only fill air
     if (GRASS_TUFTS_ENABLED) StampGrass(startX, startY, startZ, data);
@@ -276,10 +289,15 @@ bool TerrainGenerator::IsTreeRoot(int wx, int wz) {
     return !IsSandy(wx, wz); // No trees on beaches or underwater
 }
 
+const VoxModel& TerrainGenerator::TreeModelAt(int wx, int wz) const {
+    int session = SessionAtColumn(wx, wz);
+    return session >= 0 && SESSIONS[session].tropical ? m_Palms : m_Trees;
+}
+
 // Roots are scanned in a margin around the chunk so trees rooted in a neighbour stamp their
 // overhanging part here too, keeping trees whole across chunk borders
 void TerrainGenerator::StampTrees(int startX, int startY, int startZ, std::vector<uint8_t>& data) {
-    const glm::ivec3 treeMin = m_Trees.min, treeMax = m_Trees.max;
+    const glm::ivec3 treeMin = glm::min(m_Trees.min, m_Palms.min), treeMax = glm::max(m_Trees.max, m_Palms.max);
     for (int rz = -treeMax.z; rz < CHUNK_SIZE - treeMin.z; rz++) {
         int wz = startZ + rz;
         for (int rx = -treeMax.x; rx < CHUNK_SIZE - treeMin.x; rx++) {
@@ -292,7 +310,9 @@ void TerrainGenerator::StampTrees(int startX, int startY, int startZ, std::vecto
             int localY = rootY - startY;
             if (localY + treeMax.y < 0 || localY + treeMin.y >= CHUNK_SIZE) continue;
 
-            for (const VoxelOffset& offset : m_Trees.voxels) {
+            const VoxModel& model = TreeModelAt(wx, wz);
+            if (localY + model.max.y < 0 || localY + model.min.y >= CHUNK_SIZE) continue;
+            for (const VoxelOffset& offset : model.voxels) {
                 int tx = rx + offset.x;
                 int ty = localY + offset.y;
                 int tz = rz + offset.z;

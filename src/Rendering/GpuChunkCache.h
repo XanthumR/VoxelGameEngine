@@ -14,6 +14,8 @@
 constexpr int BRICK_SIZE = 8;
 constexpr int BRICKS_PER_AXIS = CHUNK_SIZE / BRICK_SIZE;                         // 4
 constexpr int BRICK_MASK_SIZE = BRICKS_PER_AXIS * BRICKS_PER_AXIS * BRICKS_PER_AXIS; // 64
+// A brick's flag: empty, only water (shadow rays pass through it: water casts no shadow), or solid
+constexpr uint8_t BRICK_EMPTY = 0, BRICK_WATER_ONLY = 128, BRICK_SOLID = 255;
 
 // The voxel data the GPU ray marcher reads, as a virtual texture:
 //  - Pool textures: up to MAX_POOLS 3D textures, each a 64 x 64 x (32 * layers) grid of 32^3
@@ -37,8 +39,8 @@ public:
     // Creates the page table and the first pool. Returns false if no pool could be allocated.
     bool Init();
 
-    // Fills a chunk's BRICK_MASK_SIZE occupancy flags (255 = has a solid voxel) and returns
-    // whether any voxel is solid. Layout: x fastest, then y, then z (matches the upload).
+    // Fills a chunk's BRICK_MASK_SIZE occupancy flags (BRICK_SOLID, BRICK_WATER_ONLY or BRICK_EMPTY)
+    // and returns whether any voxel is not air. Layout: x fastest, then y, then z (matches the upload).
     static bool ComputeBrickMask(const std::vector<uint8_t>& data, uint8_t* brickMask);
 
     // Uploads chunk data, allocating a slot if it has none yet. brickMask may be null, in which

@@ -5,6 +5,7 @@
 #include "Simulation/BuildingLook.h"
 #include "Simulation/BuildingTypes.h"
 #include "Simulation/OccupancyGrid.h"
+#include "World/Sessions.h"
 #include "World/TerrainGenerator.h"
 
 #include <algorithm>
@@ -24,6 +25,18 @@ uint32_t Octile(glm::ivec2 a, glm::ivec2 b) {
 
 glm::vec2 Middle(glm::ivec2 tile) {
     return glm::vec2(tile) + 0.5f;
+}
+
+// The tile on the edge of a session's map nearest a tile (where ships leave and come in)
+glm::ivec2 EdgeTileNear(int session, glm::ivec2 tile) {
+    glm::ivec2 local = glm::clamp(tile - SESSIONS[session].originTile, glm::ivec2(0), glm::ivec2(SESSION_TILES - 1));
+    int toLeft = local.x, toRight = SESSION_TILES - 1 - local.x, toTop = local.y, toBottom = SESSION_TILES - 1 - local.y;
+    int nearest = std::min({ toLeft, toRight, toTop, toBottom });
+    if (nearest == toLeft) local.x = 0;
+    else if (nearest == toRight) local.x = SESSION_TILES - 1;
+    else if (nearest == toTop) local.y = 0;
+    else local.y = SESSION_TILES - 1;
+    return SESSIONS[session].originTile + local;
 }
 
 } // namespace
@@ -55,7 +68,7 @@ ShipId ShipSystem::Nearest(glm::vec2 position, float maxTiles) const {
     ShipId best = INVALID_SHIP;
     float bestDistance = maxTiles;
     for (int slot = 0; slot < MAX_SHIPS; slot++) {
-        if (!m_Alive[slot]) continue;
+        if (!m_Alive[slot] || m_Ships[slot].state == ShipState::Crossing) continue;
         float distance = glm::length(m_Ships[slot].position - position);
         if (distance <= bestDistance) {
             bestDistance = distance;
@@ -75,7 +88,8 @@ int ShipSystem::CargoAmount(ShipId id, ItemType item) const {
 ShipId ShipSystem::SettlerNear(glm::ivec2 minTile, glm::ivec2 tiles, int planks) const {
     for (int slot = 0; slot < MAX_SHIPS; slot++) {
         ShipId id = IdAtSlot(slot);
-        if (id == INVALID_SHIP || m_Ships[slot].state == ShipState::Sailing || CargoAmount(id, ItemType::Planks) < planks) continue;
+        if (id == INVALID_SHIP || m_Ships[slot].state == ShipState::Sailing || m_Ships[slot].state == ShipState::Crossing ||
+            CargoAmount(id, ItemType::Planks) < planks) continue;
         // Distance from the ship to the footprint's rectangle
         glm::vec2 p = m_Ships[slot].position;
         glm::vec2 outside = glm::max(glm::max(glm::vec2(minTile) - p, p - glm::vec2(minTile + tiles)), glm::vec2(0.0f));
@@ -113,6 +127,7 @@ void ShipSystem::PayBuildCost(uint16_t type, IslandId island, glm::ivec2 minTile
 }
 
 bool ShipSystem::IsWater(glm::ivec2 tile, const OccupancyGrid& occupancy) {
+    if (SessionAtTile(tile) < 0) return false; // Off the maps
     TerrainGenerator::TileKind kind = m_Terrain.TileKindAt(tile.x, tile.y);
     return (kind == TerrainGenerator::TileKind::Sea || kind == TerrainGenerator::TileKind::Cliff) && occupancy.At(tile) == INVALID_GAME_OBJECT;
 }
@@ -249,15 +264,35 @@ bool ShipSystem::SailTo(ShipId id, glm::ivec2 tile, const GameObjectRegistry& ob
         return false; // Only open water, or a harbor's berth
     }
     Ship& ship = m_Ships[id & 0xFFFF];
+    if (ship.state == ShipState::Crossing) {
+        ship.crossGoal = tile;
+        ship.crossHarbor = harbor;
+        return true;
+    }
     glm::ivec2 from = glm::ivec2(glm::floor(ship.position));
-    if (!FindPath(from, tile, occupancy, m_Found)) return false;
-    const std::vector<glm::ivec2>& found = m_Found;
-    int slot = (int)(id & 0xFFFF);
-    std::copy(found.begin(), found.end(), m_Paths.begin() + (size_t)slot * MAX_PATH);
-    ship.pathLength = (int)found.size();
+    int session = SessionAtTile(from), goalSession = SessionAtTile(tile);
+    if (session < 0 || goalSession < 0) return false;
+    if (goalSession == session) {
+        if (!SetPath(id, tile, occupancy)) return false;
+        ship.harbor = harbor;
+        ship.crossNext = false;
+        return true;
+    }
+    if (!SetPath(id, EdgeTileNear(session, from), occupancy)) return false;
+    ship.harbor = INVALID_GAME_OBJECT;
+    ship.crossNext = true;
+    ship.crossGoal = tile;
+    ship.crossHarbor = harbor;
+    return true;
+}
+
+bool ShipSystem::SetPath(ShipId id, glm::ivec2 goal, const OccupancyGrid& occupancy) {
+    Ship& ship = m_Ships[id & 0xFFFF];
+    if (!FindPath(glm::ivec2(glm::floor(ship.position)), goal, occupancy, m_Found)) return false;
+    std::copy(m_Found.begin(), m_Found.end(), m_Paths.begin() + (size_t)(id & 0xFFFF) * MAX_PATH);
+    ship.pathLength = (int)m_Found.size();
     ship.pathIndex = 0;
     ship.state = ShipState::Sailing;
-    ship.harbor = harbor;
     return true;
 }
 
@@ -323,7 +358,7 @@ void ShipSystem::AssignRoute(ShipId id, int route) {
 void ShipSystem::FollowRoute(ShipId id, const GameObjectRegistry& objects, const OccupancyGrid& occupancy, IslandEconomyManager& economy) {
     Ship& ship = m_Ships[id & 0xFFFF];
     const TradeRoute& route = m_Routes[ship.route];
-    if (route.stopCount == 0 || ship.state == ShipState::Sailing) return;
+    if (route.stopCount == 0 || ship.state == ShipState::Sailing || ship.state == ShipState::Crossing) return;
     ship.stop %= route.stopCount;
 
     const RouteStop& stop = route.stops[ship.stop];
@@ -363,6 +398,13 @@ void ShipSystem::Update(const GameObjectRegistry& objects, const OccupancyGrid& 
             (!objects.IsAlive(ship.harbor) || glm::ivec2(glm::floor(ship.position)) != BerthTile(objects, ship.harbor))) {
             ship.state = ShipState::Idle;
         }
+        if (ship.state == ShipState::Crossing) {
+            if (--ship.crossTicks > 0) continue;
+            // In at the edge of the goal's map nearest the goal, and on to it
+            ship.position = ship.previous = Middle(EdgeTileNear(SessionAtTile(ship.crossGoal), ship.crossGoal));
+            ship.state = ShipState::Idle;
+            if (!SailTo(IdAtSlot(slot), ship.crossGoal, objects, occupancy, ship.crossHarbor)) ship.harbor = INVALID_GAME_OBJECT;
+        }
         if (ship.route >= 0) FollowRoute(IdAtSlot(slot), objects, occupancy, economy);
         if (ship.state != ShipState::Sailing) continue;
 
@@ -381,7 +423,11 @@ void ShipSystem::Update(const GameObjectRegistry& objects, const OccupancyGrid& 
                 remaining = 0.0f;
             }
         }
-        if (ship.pathIndex >= ship.pathLength) {
+        if (ship.pathIndex >= ship.pathLength && ship.crossNext) {
+            ship.crossNext = false;
+            ship.state = ShipState::Crossing;
+            ship.crossTicks = CROSSING_TICKS;
+        } else if (ship.pathIndex >= ship.pathLength) {
             bool docked = ship.harbor != INVALID_GAME_OBJECT && objects.IsAlive(ship.harbor);
             ship.state = docked ? ShipState::Docked : ShipState::Idle;
             if (!docked) ship.harbor = INVALID_GAME_OBJECT;

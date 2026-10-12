@@ -1,6 +1,6 @@
 # Voxel Anno roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way (8.1 and 8.2 done) and the UI milestone is done; 8.3 is next.
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 is under way (8.1 and 8.2 done), the UI milestone and the sessions (fixed-size maps, the Old and the New World) are done; 8.3 is next.
 
 ## Roadmap
 
@@ -14,6 +14,7 @@ The plan for turning the engine into an Anno 1800-inspired city-builder (see `CL
 | 6 (done) | Ships & trade | Harbor; ships move across the ocean using the shore map's water mask; trade routes between islands; settling a second island |
 | 7 (done) | Game UI (RmlUi) | The player-facing UI moves from Dear ImGui to RmlUi: styled Anno-like panels from markup and style sheets, data-bound to the simulation; ImGui stays for the debug tools |
 | 8 | Higher tiers & content | Workers → Artisans → Engineers → Investors, with their needs and chains; NPC traders |
+| Sessions (done) | Fixed maps, two worlds | Fixed-size maps as in Anno 1800, an Old World and a New World; switch between them; ships cross from one to the other |
 | UI (done) | Anno 1800 interface | The game plays like Anno 1800 through its interface: tool modes, a construction menu with rich tooltips, a docked object menu, island bar and inventory, notifications, statistics, a minimap |
 | 9 | Persistence & polish | Save/load (edited chunks + game objects), notifications, sound, balancing |
 
@@ -579,6 +580,17 @@ These are pure functions over the terrain noise, `IslandRegistry`, `OccupancyGri
   - **Cut road:** the cart turns around at the gap and brings its cargo home; with the way home cut it is home at once.
 - **Drawing** (`src/Gameplay/Carts`): placed between ticks with `GameClock::Alpha`, in the right-hand lane, easing over to the new side after a turn. `figures.comp` draws the cart kind, about 23 voxels long: a trotting horse with mane, tail, collar, saddle pad and reins; shafts; a wagon on four turning wheels; a driver in a straw hat; one row of cargo per good, colored by the good. Block IDs 102-114 (`CART_FIRST`..`CART_LAST`) are figure blocks too.
 - **F3:** `ProductionSystem::CartsOnRoad()` is ready for the overlay (step 7).
+
+## Sessions: fixed maps, the Old World and the New World (done)
+
+As in Anno 1800 the world is no longer endless: each session is a fixed square map with its own islands, and there are two, the Old World and the New World.
+
+- **Maps** (`src/World/Sessions.h`): a session is a 384 x 384 tile map (4608 voxel columns) at a fixed place in the one voxel space. The New World lies 16 000 columns east of the Old World, beyond any view distance, so only one is ever streamed in. The terrain makes islands only inside a map: none within 16 tiles of an edge, and they thin out over 24 tiles inside that. The sea goes on past the edge. The Old World's map was placed so its islands spread evenly round the spawn island.
+- **The New World** is tropical: palms (`assets/palm.vox`, from `tools/trees/generate.py`) instead of broadleaf trees, and mostly beaches. Lumberjacks fell palms like any tree.
+- **Camera:** the strategy camera stays over the map of the session it looks at. The minimap shows that whole map and its name; its button goes to the other session (the camera comes back where it last was there, the middle of the map at first). The New World opens once an island has Artisans. A notification or minimap click in another session jumps there instead of gliding.
+- **Ships** stay on the maps. An order or a trade route stop in the other session takes the ship to the nearest edge of its map; it crosses for a minute (off both maps, shown in its panel with the time left), comes in at the edge of the other map nearest its goal and sails on. That is how the New World is settled: a ship carrying planks crosses over and its first warehouse is built from them.
+- **Tests:** a ship crosses to the New World and back to its harbor; ships stay on the maps.
+- **Later:** the New World's own population (Jornaleros, Obreros) and goods (coffee, sugar, cotton, rum, ...); a world map to send ships from.
 
 ## Tile-aligned islands (done)
 

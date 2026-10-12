@@ -44,6 +44,13 @@ bool Minimap::Init(Rml::Context* context) {
     Rml::DataModelConstructor model = context->CreateDataModel("minimap");
     if (!model) return false;
     model.BindEventCallback("compass", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) { m_Compass = true; });
+    model.BindEventCallback("switch", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+        if (m_Session >= 0) m_SwitchTo = (m_Session + 1) % SESSION_COUNT;
+    });
+    model.Bind("session", &m_SessionName);
+    model.Bind("other", &m_OtherName);
+    model.Bind("other_open", &m_OtherOpen);
+    m_Model = model.GetModelHandle();
     m_Document = context->LoadDocument("assets/ui/minimap.rml");
     return m_Document != nullptr;
 }
@@ -52,12 +59,17 @@ Minimap::~Minimap() {
     if (m_Texture != 0) glDeleteTextures(1, &m_Texture);
 }
 
-void Minimap::SetCenter(TerrainGenerator& terrain, glm::ivec2 centerTile) {
-    m_Origin = centerTile - MAP_TILES / 2;
+void Minimap::ShowSession(int session) {
+    m_Session = session;
+    m_Origin = SESSIONS[session].originTile;
+    m_SessionName = SESSIONS[session].name;
+    m_OtherName = SESSIONS[(session + 1) % SESSION_COUNT].name;
+    m_Model.DirtyVariable("session");
+    m_Model.DirtyVariable("other");
     for (int z = 0; z < MAP_TILES; z++) {
         for (int x = 0; x < MAP_TILES; x++) {
             uint32_t color = Pack(22, 54, 82);
-            switch (terrain.TileKindAt(m_Origin.x + x, m_Origin.y + z)) {
+            switch (m_Terrain->TileKindAt(m_Origin.x + x, m_Origin.y + z)) {
             case TerrainGenerator::TileKind::Land: color = Pack(88, 128, 62); break;
             case TerrainGenerator::TileKind::Beach: color = Pack(200, 182, 128); break;
             case TerrainGenerator::TileKind::Cliff: color = Pack(118, 114, 104); break;
@@ -66,7 +78,6 @@ void Minimap::SetCenter(TerrainGenerator& terrain, glm::ivec2 centerTile) {
             m_Base[(size_t)z * MAP_TILES + x] = color;
         }
     }
-    m_HasCenter = true;
     m_LastRefresh = -1.0;
 }
 
@@ -99,8 +110,16 @@ void Minimap::Refresh(const Simulation& simulation) {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAP_TILES, MAP_TILES, GL_RGBA, GL_UNSIGNED_BYTE, m_Pixels.data());
 }
 
-void Minimap::Update(const Simulation& simulation, const StrategyCamera& camera, double now) {
-    if (!m_Document || !m_Document->IsVisible() || !m_HasCenter) return;
+void Minimap::Update(const Simulation& simulation, const StrategyCamera& camera, double now, bool otherOpen) {
+    if (!m_Document || !m_Document->IsVisible() || !m_Terrain) return;
+    glm::vec3 focusColumn = camera.FocusPoint() * VOXELS_PER_UNIT;
+    int session = SessionAtColumn((int)std::floor(focusColumn.x), (int)std::floor(focusColumn.z));
+    if (session >= 0 && session != m_Session) ShowSession(session);
+    if (m_Session < 0) return;
+    if (otherOpen != m_OtherOpen) {
+        m_OtherOpen = otherOpen;
+        m_Model.DirtyVariable("other_open");
+    }
     if (m_LastRefresh < 0.0 || now - m_LastRefresh >= REFRESH_SECONDS) {
         m_LastRefresh = now;
         Refresh(simulation);
@@ -126,7 +145,7 @@ void Minimap::Update(const Simulation& simulation, const StrategyCamera& camera,
     const ShipSystem& ships = simulation.Ships();
     for (int slot = 0; slot < ShipSystem::MAX_SHIPS; slot++) {
         ShipId ship = ships.IdAtSlot(slot);
-        if (ship == INVALID_SHIP) continue;
+        if (ship == INVALID_SHIP || ships.Get(ship).state == ShipState::Crossing) continue;
         draw->AddCircleFilled(toScreen(ships.Get(ship).position), 3.0f, IM_COL32(255, 255, 255, 255));
         draw->AddCircle(toScreen(ships.Get(ship).position), 3.0f, IM_COL32(20, 20, 20, 255));
     }
@@ -156,6 +175,12 @@ bool Minimap::TakeClick(glm::vec2& worldColumn) {
     worldColumn = (glm::vec2(m_Origin) + m_ClickPixel * (float)MAP_TILES) * (float)TILE_SIZE;
     m_ClickPixel = glm::vec2(-1.0f);
     return true;
+}
+
+bool Minimap::TakeSessionSwitch(int& session) {
+    session = m_SwitchTo;
+    m_SwitchTo = -1;
+    return session >= 0;
 }
 
 bool Minimap::TakeCompass() {

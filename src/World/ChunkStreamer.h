@@ -30,7 +30,7 @@ public:
     static constexpr int CPU_RADIUS = 20;                     // CPU voxel data is loaded within this radius...
     static constexpr int CPU_KEEP_RADIUS = CPU_RADIUS + 2;    // ...and freed (unless edited) beyond this one
 
-    ChunkStreamer(VoxelWorld& world, GpuChunkCache& cache, const VoxModel& trees);
+    ChunkStreamer(VoxelWorld& world, GpuChunkCache& cache, const VoxModel& trees, const VoxModel& palms);
     ~ChunkStreamer();
 
     // Starts the worker threads. The tree model must be loaded already.
@@ -98,6 +98,7 @@ private:
     VoxelWorld& m_World;
     GpuChunkCache& m_Cache;
     const VoxModel& m_Trees;
+    const VoxModel& m_Palms;
     const FelledTrees* m_Felled = nullptr;
 
     glm::ivec3 m_PlayerChunk = glm::ivec3(0);
