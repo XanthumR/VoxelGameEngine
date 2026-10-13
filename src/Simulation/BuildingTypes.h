@@ -8,7 +8,8 @@
 #include <cstdint>
 
 // Buildings sit on the grid of build tiles (TILE_SIZE in World/WorldConstants.h). Footprints, the
-// occupancy grid and placement snapping all work in tiles.
+// occupancy grid and placement snapping all work in tiles. Footprints are Anno 1800's (Anno
+// Designer's building data).
 
 // What a building does
 enum class BuildingRole : uint8_t {
@@ -62,62 +63,62 @@ struct BuildingType {
 
 // Index = BuildingComponent::type
 constexpr std::array<BuildingType, 50> BUILDING_TYPES = { {
-    { "Warehouse", 4, 4, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "warehouse", BuildCategory::Infrastructure, -1 },
+    { "Warehouse", 5, 5, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "warehouse", BuildCategory::Infrastructure, -1 },
     { "Farmer House", 3, 3, 14, 30, Block::PLANK, Block::ROOF, BuildingRole::Residence, 0, LookStyle::Gable, true, "farmer_house", BuildCategory::Farmers, -1 },
-    { "Marketplace", 4, 3, 10, 24, Block::PLANK, Block::AWNING, BuildingRole::Service, 0, LookStyle::Stall, true, "marketplace", BuildCategory::Farmers, -1, 0, 0, -1, ServiceType::Marketplace },
+    { "Marketplace", 6, 5, 10, 24, Block::PLANK, Block::AWNING, BuildingRole::Service, 0, LookStyle::Stall, true, "marketplace", BuildCategory::Farmers, -1, 0, 0, -1, ServiceType::Marketplace },
     { "Worker House", 3, 3, 24, 42, Block::PLANK, Block::ROOF, BuildingRole::Residence, 1, LookStyle::TwoStorey, false, "worker_house", BuildCategory::Workers, -1 },
-    { "Fishery", 3, 4, 12, 26, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "fishery", BuildCategory::Farmers, 0, 2, 6 },
-    { "Lumberjack", 3, 3, 12, 24, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "lumberjack", BuildCategory::Farmers, 1 },
-    { "Sawmill", 3, 3, 12, 26, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "sawmill", BuildCategory::Farmers, 2 },
+    { "Fishery", 5, 11, 12, 26, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "fishery", BuildCategory::Farmers, 0, 5, 6 },
+    { "Lumberjack", 4, 4, 12, 24, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "lumberjack", BuildCategory::Farmers, 1 },
+    { "Sawmill", 4, 3, 12, 26, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "sawmill", BuildCategory::Farmers, 2 },
     { "Sheep Farm", 3, 3, 12, 28, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "sheep_farm", BuildCategory::Farmers, 3 },
-    { "Framework Knitter", 3, 3, 20, 34, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "framework_knitter", BuildCategory::Farmers, 4 },
+    { "Framework Knitter", 4, 4, 20, 34, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "framework_knitter", BuildCategory::Farmers, 4 },
     { "Pig Farm", 3, 4, 10, 26, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "pig_farm", BuildCategory::Workers, 5 },
-    { "Slaughterhouse", 3, 3, 16, 32, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "slaughterhouse", BuildCategory::Workers, 6 },
+    { "Slaughterhouse", 4, 3, 16, 32, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "slaughterhouse", BuildCategory::Workers, 6 },
     // A warehouse on the coast with a pier: ships are built, load and unload here
-    { "Harbor", 4, 5, 16, 34, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "harbor", BuildCategory::Infrastructure, -1, 2, 6 },
+    { "Harbor", 7, 9, 16, 34, Block::STONE_WALL, Block::ROOF, BuildingRole::Storage, 0, LookStyle::Gable, true, "harbor", BuildCategory::Infrastructure, -1, 5, 6 },
     // Farm modules, as in Anno 1800: fenced pens and fields placed around their farm (from the
     // farm's panel, or right after placing the farm)
     { "Sheepfold", 3, 3, 4, 14, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "sheepfold", BuildCategory::Farmers, -1, 0, 0, 7 },
     { "Pigsty", 2, 3, 4, 12, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "pigsty", BuildCategory::Workers, -1, 0, 0, 9 },
     // Milestone 8.1: the rest of the Workers' needs, and the Artisans
-    { "School", 3, 3, 16, 38, Block::STONE_WALL, Block::ROOF, BuildingRole::Service, 0, LookStyle::Gable, true, "school", BuildCategory::Workers, -1, 0, 0, -1, ServiceType::School },
-    { "Grain Farm", 3, 3, 12, 28, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "grain_farm", BuildCategory::Workers, 7 },
-    { "Wheat Field", 3, 3, 4, 10, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "wheat_field", BuildCategory::Workers, -1, 0, 0, 15 },
-    { "Flour Mill", 3, 3, 16, 64, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "flour_mill", BuildCategory::Workers, 8 },
-    { "Bakery", 3, 3, 16, 34, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "bakery", BuildCategory::Workers, 9 },
+    { "School", 6, 5, 16, 38, Block::STONE_WALL, Block::ROOF, BuildingRole::Service, 0, LookStyle::Gable, true, "school", BuildCategory::Workers, -1, 0, 0, -1, ServiceType::School },
+    { "Grain Farm", 4, 3, 12, 28, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "grain_farm", BuildCategory::Workers, 7 },
+    { "Wheat Field", 6, 6, 4, 10, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "wheat_field", BuildCategory::Workers, -1, 0, 0, 15 },
+    { "Flour Mill", 4, 3, 16, 64, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "flour_mill", BuildCategory::Workers, 8 },
+    { "Bakery", 4, 3, 16, 34, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "bakery", BuildCategory::Workers, 9 },
     { "Rendering Works", 3, 3, 14, 34, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "rendering_works", BuildCategory::Workers, 10 },
-    { "Soap Factory", 3, 3, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "soap_factory", BuildCategory::Workers, 11 },
-    { "Clay Pit", 3, 3, 8, 24, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "clay_pit", BuildCategory::Workers, 12 },
-    { "Brick Factory", 3, 3, 14, 44, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "brick_factory", BuildCategory::Workers, 13 },
+    { "Soap Factory", 4, 4, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "soap_factory", BuildCategory::Workers, 11 },
+    { "Clay Pit", 5, 5, 8, 24, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "clay_pit", BuildCategory::Workers, 12 },
+    { "Brick Factory", 5, 5, 14, 44, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "brick_factory", BuildCategory::Workers, 13 },
     { "Artisan House", 3, 3, 30, 54, Block::STONE_WALL, Block::ROOF, BuildingRole::Residence, 2, LookStyle::TwoStorey, false, "artisan_house", BuildCategory::Artisans, -1 },
-    { "Variety Theatre", 4, 4, 22, 50, Block::STONE_WALL, Block::ROOF, BuildingRole::Service, 0, LookStyle::TwoStorey, true, "variety_theatre", BuildCategory::Artisans, -1, 0, 0, -1, ServiceType::Theatre },
-    { "Cattle Farm", 3, 3, 12, 28, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "cattle_farm", BuildCategory::Artisans, 14 },
-    { "Pasture", 3, 3, 4, 12, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "pasture", BuildCategory::Artisans, -1, 0, 0, 25 },
+    { "Variety Theatre", 4, 5, 22, 50, Block::STONE_WALL, Block::ROOF, BuildingRole::Service, 0, LookStyle::TwoStorey, true, "variety_theatre", BuildCategory::Artisans, -1, 0, 0, -1, ServiceType::Theatre },
+    { "Cattle Farm", 4, 5, 12, 28, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "cattle_farm", BuildCategory::Artisans, 14 },
+    { "Pasture", 3, 4, 4, 12, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "pasture", BuildCategory::Artisans, -1, 0, 0, 25 },
     { "Iron Mine", 3, 3, 14, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "iron_mine", BuildCategory::Artisans, 15 },
-    { "Charcoal Kiln", 3, 3, 10, 28, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "charcoal_kiln", BuildCategory::Artisans, 16 },
-    { "Furnace", 3, 3, 18, 52, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "furnace", BuildCategory::Artisans, 17 },
-    { "Steelworks", 3, 4, 20, 52, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "steelworks", BuildCategory::Artisans, 18 },
-    { "Cannery", 3, 3, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "cannery", BuildCategory::Artisans, 19 },
-    { "Sewing Machine Factory", 3, 3, 22, 46, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "sewing_machine_factory", BuildCategory::Artisans, 20 },
+    { "Charcoal Kiln", 5, 5, 10, 28, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "charcoal_kiln", BuildCategory::Artisans, 16 },
+    { "Furnace", 7, 4, 18, 52, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "furnace", BuildCategory::Artisans, 17 },
+    { "Steelworks", 10, 5, 20, 52, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "steelworks", BuildCategory::Artisans, 18 },
+    { "Cannery", 7, 6, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "cannery", BuildCategory::Artisans, 19 },
+    { "Sewing Machine Factory", 9, 6, 22, 46, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "sewing_machine_factory", BuildCategory::Artisans, 20 },
     // Milestone 8.2: the Engineers and the Investors
     { "Engineer House", 3, 3, 36, 64, Block::STONE_WALL, Block::ROOF, BuildingRole::Residence, 3, LookStyle::TwoStorey, false, "engineer_house", BuildCategory::Engineers, -1 },
-    { "University", 4, 4, 26, 64, Block::STONE_WALL, Block::ROOF, BuildingRole::Service, 0, LookStyle::TwoStorey, true, "university", BuildCategory::Engineers, -1, 0, 0, -1, ServiceType::University },
-    { "Sand Mine", 3, 3, 8, 26, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "sand_mine", BuildCategory::Engineers, 21 },
-    { "Glassworks", 3, 3, 18, 48, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "glassworks", BuildCategory::Engineers, 22 },
-    { "Window Makers", 3, 3, 18, 38, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "window_makers", BuildCategory::Engineers, 23 },
+    { "University", 9, 6, 26, 64, Block::STONE_WALL, Block::ROOF, BuildingRole::Service, 0, LookStyle::TwoStorey, true, "university", BuildCategory::Engineers, -1, 0, 0, -1, ServiceType::University },
+    { "Sand Mine", 10, 6, 8, 26, Block::WOOD, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "sand_mine", BuildCategory::Engineers, 21 },
+    { "Glassworks", 6, 4, 18, 48, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "glassworks", BuildCategory::Engineers, 22 },
+    { "Window Makers", 5, 5, 18, 38, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "window_makers", BuildCategory::Engineers, 23 },
     { "Copper Mine", 3, 3, 14, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "copper_mine", BuildCategory::Engineers, 24 },
-    { "Spectacle Factory", 3, 3, 22, 44, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "spectacle_factory", BuildCategory::Engineers, 25 },
-    { "Filament Factory", 3, 3, 18, 48, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "filament_factory", BuildCategory::Engineers, 26 },
-    { "Light Bulb Factory", 3, 3, 22, 46, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "light_bulb_factory", BuildCategory::Engineers, 27 },
+    { "Spectacle Factory", 6, 4, 22, 44, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "spectacle_factory", BuildCategory::Engineers, 25 },
+    { "Filament Factory", 7, 6, 18, 48, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "filament_factory", BuildCategory::Engineers, 26 },
+    { "Light Bulb Factory", 6, 6, 22, 46, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "light_bulb_factory", BuildCategory::Engineers, 27 },
     { "Investor House", 3, 3, 40, 76, Block::STONE_WALL, Block::ROOF, BuildingRole::Residence, 4, LookStyle::TwoStorey, false, "investor_house", BuildCategory::Investors, -1 },
-    { "Bank", 4, 4, 28, 60, Block::STONE_WALL, Block::ROOF, BuildingRole::Service, 0, LookStyle::TwoStorey, true, "bank", BuildCategory::Investors, -1, 0, 0, -1, ServiceType::Bank },
-    { "Vineyard", 3, 3, 12, 30, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "vineyard", BuildCategory::Investors, 28 },
-    { "Vine Rows", 3, 3, 4, 12, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "vine_rows", BuildCategory::Investors, -1, 0, 0, 44 },
-    { "Champagne Cellar", 3, 3, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "champagne_cellar", BuildCategory::Investors, 29 },
+    { "Bank", 12, 10, 28, 60, Block::STONE_WALL, Block::ROOF, BuildingRole::Service, 0, LookStyle::TwoStorey, true, "bank", BuildCategory::Investors, -1, 0, 0, -1, ServiceType::Bank },
+    { "Vineyard", 4, 3, 12, 30, Block::PLANK, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "vineyard", BuildCategory::Investors, 28 },
+    { "Vine Rows", 4, 8, 4, 12, Block::PLANK, Block::ROOF, BuildingRole::Module, 0, LookStyle::Stall, false, "vine_rows", BuildCategory::Investors, -1, 0, 0, 44 },
+    { "Champagne Cellar", 6, 5, 18, 40, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Gable, true, "champagne_cellar", BuildCategory::Investors, 29 },
     { "Gold Mine", 3, 3, 14, 44, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::Stall, true, "gold_mine", BuildCategory::Investors, 30 },
-    { "Goldsmiths", 3, 3, 22, 46, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "goldsmiths", BuildCategory::Investors, 31 },
+    { "Goldsmiths", 5, 4, 22, 46, Block::STONE_WALL, Block::ROOF, BuildingRole::Producer, 0, LookStyle::TwoStorey, true, "goldsmiths", BuildCategory::Investors, 31 },
     // NPC traders (8.3): placed by the game on the trader's island, never by the player
-    { "Trading Post", 4, 5, 16, 34, Block::STONE_WALL, Block::ROOF, BuildingRole::Trader, 0, LookStyle::Gable, false, "harbor", BuildCategory::Infrastructure, -1, 2, 6 },
+    { "Trading Post", 7, 9, 16, 34, Block::STONE_WALL, Block::ROOF, BuildingRole::Trader, 0, LookStyle::Gable, false, "harbor", BuildCategory::Infrastructure, -1, 5, 6 },
 } };
 constexpr uint16_t BUILDING_WAREHOUSE = 0;
 constexpr uint16_t BUILDING_FARMER_HOUSE = 1;

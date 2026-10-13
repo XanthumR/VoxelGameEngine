@@ -67,32 +67,15 @@ TEST(BuildingMarkerTest, ChimneysAndBerthsAreFoundAndNotDrawn) {
 
 TEST(CoastalPlacementTest, FisheryDockMustReachOverTheWater) {
     TestWorld& test = TestWorld::Get();
-    // Walk from the sea toward the spawn and try every rotation until a fishery fits
-    glm::ivec2 sea = SeaColumn();
-    test.LoadAround(sea, 6);
     IslandRegistry islands(test.terrain);
     OccupancyGrid occupancy;
     RoadNetwork roads;
     PlacementContext context{ test.world, islands, occupancy, roads };
-
-    glm::vec2 toSpawn = glm::normalize(glm::vec2(test.spawnColumn - sea));
-    for (int step = 0; step < 40; step++) {
-        glm::ivec2 column = sea + glm::ivec2(toSpawn * (float)(step * 6));
-        glm::ivec2 near(ColumnToTile(column.x), ColumnToTile(column.y));
-        for (int dz = -2; dz <= 2; dz++) {
-            for (int dx = -2; dx <= 2; dx++) {
-                for (uint8_t rotation = 0; rotation < 4; rotation++) {
-                    glm::ivec2 tile = near + glm::ivec2(dx, dz);
-                    if (ValidatePlacement(context, BUILDING_FISHERY, rotation, tile).error != PlacementError::None) continue;
-                    // Turned around, the dock faces the land
-                    PlacementError turned = ValidatePlacement(context, BUILDING_FISHERY, (uint8_t)((rotation + 2) & 3), tile).error;
-                    EXPECT_NE(turned, PlacementError::None);
-                    return;
-                }
-            }
-        }
-    }
-    FAIL() << "No coast spot for a fishery found";
+    glm::ivec2 tile;
+    uint8_t rotation;
+    ASSERT_TRUE(test.FindCoastSpot(context, BUILDING_FISHERY, tile, rotation)) << "No coast spot for a fishery found";
+    // Turned around, the dock faces the land
+    EXPECT_NE(ValidatePlacement(context, BUILDING_FISHERY, (uint8_t)((rotation + 2) & 3), tile).error, PlacementError::None);
 }
 
 TEST(SmokeTest, OnlyBuildingsInUseSmoke) {
@@ -223,29 +206,15 @@ TEST(ObjectShadowTest, FootprintFollowsTheLight) {
 
 TEST(CoastalPlacementTest, HarborPierMustReachOverTheWater) {
     TestWorld& test = TestWorld::Get();
-    glm::ivec2 sea = SeaColumn();
-    test.LoadAround(sea, 6);
     IslandRegistry islands(test.terrain);
     OccupancyGrid occupancy;
     RoadNetwork roads;
     PlacementContext context{ test.world, islands, occupancy, roads };
-
-    glm::vec2 toSpawn = glm::normalize(glm::vec2(test.spawnColumn - sea));
-    for (int step = 0; step < 40; step++) {
-        glm::ivec2 column = sea + glm::ivec2(toSpawn * (float)(step * 6));
-        glm::ivec2 near(ColumnToTile(column.x), ColumnToTile(column.y));
-        for (int dz = -2; dz <= 2; dz++) {
-            for (int dx = -2; dx <= 2; dx++) {
-                for (uint8_t rotation = 0; rotation < 4; rotation++) {
-                    glm::ivec2 tile = near + glm::ivec2(dx, dz);
-                    if (ValidatePlacement(context, BUILDING_HARBOR, rotation, tile).error != PlacementError::None) continue;
-                    EXPECT_NE(ValidatePlacement(context, BUILDING_HARBOR, (uint8_t)((rotation + 2) & 3), tile).error, PlacementError::None);
-                    return;
-                }
-            }
-        }
-    }
-    FAIL() << "No coast spot for a harbor found";
+    glm::ivec2 tile;
+    uint8_t rotation;
+    ASSERT_TRUE(test.FindCoastSpot(context, BUILDING_HARBOR, tile, rotation)) << "No coast spot for a harbor found";
+    // Turned around, the dock faces the land
+    EXPECT_NE(ValidatePlacement(context, BUILDING_HARBOR, (uint8_t)((rotation + 2) & 3), tile).error, PlacementError::None);
 }
 
 TEST(HarborTest, IsAStorageBuildingWithABerth) {

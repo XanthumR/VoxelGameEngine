@@ -103,6 +103,7 @@ bool RoadTool::Build(glm::ivec2 tile) {
     PlacementContext context = m_Simulation.MakePlacementContext(m_World);
     if (ValidateRoadTile(context, tile).error != PlacementError::None) return false;
     m_Simulation.Roads().Add(tile);
+    m_Simulation.ClearTrees(tile, glm::ivec2(1));
 
     glm::ivec3 minColumn(tile.x * TILE_SIZE, BUILD_GROUND_Y - 1, tile.y * TILE_SIZE);
     m_Editor.FillBox(minColumn + glm::ivec3(0, 1, 0), glm::ivec3(TILE_SIZE, ROAD_CLEARANCE, TILE_SIZE), Block::AIR); // Grass tufts

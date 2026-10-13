@@ -140,10 +140,10 @@ glm::ivec2 ShipSystem::BerthTile(const GameObjectRegistry& objects, GameObjectId
     const VoxelAnchorComponent& anchor = objects.Anchor(harbor);
     glm::ivec2 tiles = FootprintTiles(type, building.rotation);
     glm::ivec2 minTile(ColumnToTile(anchor.origin.x), ColumnToTile(anchor.origin.z));
-    // The back row's middle tile, then two steps out (the model's +v is the back), clear of the pier
+    // The back row's middle tile, then a step out (the model's +v is the back), at the dock's end
     glm::ivec2 pierEnd = minTile + RotateToFootprint(type.footprintWidth / 2, type.footprintDepth - 1, building.rotation, tiles);
     glm::ivec2 out = RotateToFootprint(0, 1, building.rotation, tiles) - RotateToFootprint(0, 0, building.rotation, tiles);
-    return pierEnd + out * 2;
+    return pierEnd + out;
 }
 
 // Samples the straight line between two tile middles every quarter tile

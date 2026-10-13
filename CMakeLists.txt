@@ -111,6 +111,7 @@ set(LOGIC_SOURCES
     src/Simulation/TreeRegistry.cpp
     src/World/BuildingModel.cpp
     src/World/TerrainGenerator.cpp
+    src/World/Foliage.cpp
     src/World/Islands.cpp
     src/World/VoxModel.cpp
     src/World/VoxelWorld.cpp)

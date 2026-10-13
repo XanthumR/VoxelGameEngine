@@ -23,6 +23,7 @@ void Simulation::PlaceLiftedBuilding(GameObjectId id, glm::ivec2 minTile, uint8_
     anchor.origin = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y, minTile.y * TILE_SIZE);
     anchor.footprint = tiles * TILE_SIZE;
     m_Occupancy.Occupy(minTile, tiles, id);
+    ClearTrees(minTile, tiles);
     if (BUILDING_TYPES[building.type].role == BuildingRole::Producer) ProductionSystem::RecallCart(m_Objects.Production(id));
     MarkBuildingsChanged();
 }

@@ -374,6 +374,7 @@ GameObjectId BuildTool::Place(uint16_t type, uint8_t rotation, glm::ivec2 minTil
     anchor.origin = glm::ivec3(minTile.x * TILE_SIZE, BUILD_GROUND_Y, minTile.y * TILE_SIZE);
     anchor.footprint = tiles * TILE_SIZE;
     m_Simulation.Occupancy().Occupy(minTile, tiles, id);
+    m_Simulation.ClearTrees(minTile, tiles);
     m_Simulation.Ships().PayBuildCost(type, check.island, minTile, tiles, m_Simulation.Economy(), m_Simulation.Coins());
     if (building.role == BuildingRole::Storage) m_Simulation.Economy().OnWarehouseAdded(check.island);
     m_Simulation.MarkBuildingsChanged();

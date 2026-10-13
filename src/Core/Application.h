@@ -45,7 +45,7 @@
 #include "UI/TopBar.h"
 #include "World/ChunkStreamer.h"
 #include "World/TerrainGenerator.h"
-#include "World/VoxModel.h"
+#include "World/Foliage.h"
 #include "World/VoxelWorld.h"
 #include "World/WorldEditor.h"
 
@@ -103,8 +103,7 @@ private:
     int m_WindowWidth = 0, m_WindowHeight = 0; // Framebuffer pixels
 
     // World (declaration order matters: later members reference earlier ones)
-    VoxModel m_Trees;
-    VoxModel m_Palms;
+    FoliageLibrary m_Foliage;
     VoxelWorld m_World;
     GpuChunkCache m_Cache;
     ChunkStreamer m_Streamer;

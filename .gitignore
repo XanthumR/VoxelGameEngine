@@ -367,3 +367,6 @@ imgui.ini
 build/
 out/
 saves/
+
+# Visual Studio folder settings (per machine)
+CMakeSettings.json

@@ -11,7 +11,7 @@
 // so a save only loads in the build that wrote it or one with the same layouts: SAVE_VERSION goes
 // up whenever a saved struct or the order changes.
 constexpr uint32_t SAVE_MAGIC = 0x54584F56; // "VOXT"
-constexpr uint32_t SAVE_VERSION = 3; // 3: the islands laid out by size class
+constexpr uint32_t SAVE_VERSION = 5; // 3: the islands laid out by size class; 4: Anno 1800 footprints; 5: foliage
 
 // What the list of saves shows of each, written right after the magic word and the version, so
 // listing reads only the start of each file

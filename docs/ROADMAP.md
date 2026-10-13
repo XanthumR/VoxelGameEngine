@@ -1,6 +1,6 @@
 # Voxtaria roadmap
 
-The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 (8.1-8.3), the UI milestone and the sessions (fixed-size maps, the Old and the New World) are done; Milestone 9 is done (9.1-9.3).
+The plan for turning the engine into an Anno 1800-inspired city-builder (see `CLAUDE.md` for the coding rules). Each milestone is detailed when it starts. Milestones 1-7 and the scale-up (bigger grid, detailed buildings and people, bigger islands) are done; Milestone 8 (8.1-8.3), the UI milestone and the sessions (fixed-size maps, the Old and the New World) are done; Milestone 9 is done (9.1-9.6).
 
 ## Roadmap
 
@@ -586,7 +586,7 @@ These are pure functions over the terrain noise, `IslandRegistry`, `OccupancyGri
 As in Anno 1800 the world is no longer endless: each session is a fixed square map with its own islands, and there are two, the Old World and the New World.
 
 - **Maps** (`src/World/Sessions.h`): a session is a 384 x 384 tile map (4608 voxel columns) at a fixed place in the one voxel space. The New World lies 16 000 columns east of the Old World, beyond any view distance, so only one is ever streamed in. The terrain makes islands only inside a map: none within 16 tiles of an edge, and they thin out over 24 tiles inside that. The sea goes on past the edge. The Old World's map was placed so its islands spread evenly round the spawn island.
-- **The New World** is tropical: palms (`assets/palm.vox`, from `tools/trees/generate.py`) instead of broadleaf trees, and mostly beaches. Lumberjacks fell palms like any tree.
+- **The New World** is tropical: palms (now `assets/foliage/palm_n.vox`, see 9.6) instead of broadleaf trees, and mostly beaches. Lumberjacks fell palms like any tree.
 - **Camera:** the strategy camera stays over the map of the session it looks at. The minimap shows that whole map and its name; its button goes to the other session (the camera comes back where it last was there, the middle of the map at first). The New World opens once an island has Artisans. A notification or minimap click in another session jumps there instead of gliding.
 - **Ships** stay on the maps. An order or a trade route stop in the other session takes the ship to the nearest edge of its map; it crosses for a minute (off both maps, shown in its panel with the time left), comes in at the edge of the other map nearest its goal and sails on. That is how the New World is settled: a ship carrying planks crosses over and its first warehouse is built from them.
 - **Tests:** a ship crosses to the New World and back to its harbor; ships stay on the maps.
@@ -813,6 +813,23 @@ A trader's island with its own harbor that the player's ships can sail to: it se
 - **Layout** (`src/World/Islands`): each session has a fixed mix (Old World: 5 Small, 4 Medium, 3 Large, 1 Extra large; New World: 4 Small, 3 Medium, 2 Large). Each island is an oval at a random angle, up to 1.5 times as long as wide, its coast pushed in and out by noise; it is scaled until its land, one connected piece with its lakes filled, comes within 1% of a target inside its class. The biggest are placed first, each at the best of 16 random spots that fit (the one farthest from the islands so far), with 10 sea tiles to any other island and the trader's. Worked out once from fixed seeds, the same in every game; the terrain reads land from it in place of the old island noise.
 - **Maps** grew from 384 to 512 tiles a side to fit them; the player starts on a Large island of the Old World (`SpawnSearchColumn`). Saves from before (version 2) no longer load: the land under them moved.
 - **Tests** (`tests/IslandTests.cpp`): every planned island placed and within its class, the islands apart, the spawn on the start island.
+
+### 9.5 Anno 1800 building sizes (done)
+
+- **Footprints** from Anno Designer's building data, in tiles: Warehouse 5x5, Marketplace 6x5, School 6x5, Variety Theatre 4x5, University 9x6, Bank 12x10, Harbor 7x9 and Fishery 5x11 (the short side on the sea, as there are few long straight coasts), Lumberjack 4x4, Sawmill, Slaughterhouse, Flour Mill, Bakery, Grain Farm and Vineyard 4x3, Framework Knitter and Soap Factory 4x4, Clay Pit, Brick Factory, Charcoal Kiln and Window Makers 5x5, Cattle Farm 4x5, Furnace 7x4, Steelworks 10x5, Cannery 7x6, Sewing Machine Factory 9x6, Sand Mine 10x6, Glassworks and Spectacle Factory 6x4, Filament Factory 7x6, Light Bulb Factory 6x6, Champagne Cellar 6x5, Goldsmiths 5x4; the NPC Trading Post 7x9 like the harbor. Houses, the sheep and pig farms with their pens, the mines and the rendering works were already Anno's size. Before, almost every producer was 3x3: about half of Anno's area overall.
+- **Fields** as in Anno: a grain farm's 4 wheat fields of 6x6 (144 tiles) within 6 tiles, a vineyard's 4 vine rows of 4x8 (128) within 8, a cattle farm's 4 pastures of 3x4.
+- **Models** (`tools/building_models/generate.py`, `ANNO_SIZES`): each building's model is set into its new footprint (at the front; coastal ones at the back, on the water) and a yard of its kind fills the rest: paving or earth, a wall or fence, a few lean-to sheds, and a prop per free tile from the goods it works with (crates, barrels, sacks, log piles, heaps of coal, ore, clay or sand, brick pallets, steel beams, glass racks, hand carts); public buildings get gardens, walks and a fountain; the harbor and fishery a quay and a dock along their whole width. Moving parts move with them. The build menu's pictures were rendered again.
+- **Trees** no longer block building or roads: placing over them fells them (`TreeRegistry::FellOver`), as in Anno.
+- **Docks** as in Anno 1800: the back 5 rows of a fishery (5 x 5 of its 5 x 11) and of a harbor or trading post (7 x 5 of 7 x 9) stand over the water (`dockRows` 5); the model's pier runs on to the dock's end, where the boat or ship moors (the berth marker; ships one tile out, `ShipSystem::BerthTile`). The dock's last row must be all open sea, so a ship can always reach it. The trader's island became a rectangle with rounded corners, so the trading post fits along its side.
+- **Saves:** `SAVE_VERSION` 4.
+
+### 9.6 Foliage (done)
+
+- **Models** (`tools/foliage/generate.py` -> `assets/foliage/`, 34 of them; the old `assets/tree.vox` and `palm.vox` are gone). Old World: oak, beech, birch and spruce (two each); bushes (green, berries, blossom), boulders (plain, mossy, a pile), fallen logs and a stump with mushrooms, wildflower patches and ferns. New World: three palms and a jungle tree; banana plants, monstera, agave, hibiscus, tropical ferns, a fallen palm and driftwood. Boulders grow in both. Each is stamped in one of four quarter turns. Own colors, block IDs 193-222 (`FOLIAGE_PALETTE` in `shade.comp`); the old tree palette (6-39) is gone.
+- **Forests and meadows** as in Anno (`TerrainGenerator::FoliageAt`, the table in `src/World/Foliage.h`): a low-frequency forest noise. Trees stand one per 9 x 9-column cell at a hashed spot: nearly always in a forest, seldom in a meadow (palm groves thinner, so the crowns show). Ground cover one per 6 x 6 cell: ferns, logs and stumps under the trees, flowers, bushes and rocks in the open. Each kind has a weight for forests and one for meadows: spruce and beech deep in the woods, oak and birch at the edges and alone. Nothing within 3 columns of the beach.
+- **Wood:** only trees are wood: lumberjacks count and fell those (`TreeRegistry::ForEachStanding`); a building or road clears every kind (`FellOver`), and all of it grows back once the spot is free.
+- **Saves:** `SAVE_VERSION` 5 (where foliage stands moved).
+- **Tests** (`tests/FoliageTests.cpp`): every model loads and fits the reach; the start island has forests and meadows; each session grows its own climate; lumberjacks see only trees, buildings clear everything.
 
 ## UI milestone: the Anno 1800 interface, in detail
 

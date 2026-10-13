@@ -6,39 +6,61 @@ building type is in `src/Simulation/BuildingTypes.h` (`modelName`). New building
 from their object ID, so neighbouring houses differ. A type without a usable model falls back to the
 procedural look (`src/Simulation/BuildingLook.cpp`), and the game prints a warning.
 
+Footprints are Anno 1800's. Most models are the building itself set into a yard (paving or earth, a
+wall or fence, sheds and the goods it works with) that `tools/building_models/generate.py` adds
+(`ANNO_SIZES`, `enlarge`).
+
 | Building | File | Size (x by y by z) |
 |---|---|---|
-| Warehouse | `warehouse_n.vox` | 48 x 48 x up to 40 |
+| Warehouse | `warehouse_n.vox` | 60 x 60 x up to 40 |
 | Farmer House | `farmer_house_n.vox` | 36 x 36 x up to 30 |
+| Marketplace | `marketplace_n.vox` | 72 x 60 x up to 24 |
 | Worker House | `worker_house_n.vox` | 36 x 36 x up to 42 |
-| Marketplace | `marketplace_n.vox` | 48 x 36 x up to 24 |
-| Fishery | `fishery_n.vox` | 36 x 48 x up to 32 (a coastal building: see below) |
-| Lumberjack | `lumberjack_n.vox` | 36 x 36 x up to 24 |
-| Sawmill | `sawmill_n.vox` | 36 x 36 x up to 26 |
+| Fishery | `fishery_n.vox` | 132 x 60 x up to 26 (a coastal building: see below) |
+| Lumberjack | `lumberjack_n.vox` | 48 x 48 x up to 24 |
+| Sawmill | `sawmill_n.vox` | 48 x 36 x up to 26 |
 | Sheep Farm | `sheep_farm_n.vox` | 36 x 36 x up to 28 |
-| Framework Knitter | `framework_knitter_n.vox` | 36 x 36 x up to 34 |
-| Pig Farm | `pig_farm_n.vox` | 36 x 36 x up to 22 |
-| Slaughterhouse | `slaughterhouse_n.vox` | 36 x 36 x up to 32 |
-| School | `school_n.vox` | 36 x 36 x up to 38 |
-| Grain Farm, Wheat Field | `grain_farm_n.vox`, `wheat_field_n.vox` | 36 x 36 x up to 28, 10 |
-| Flour Mill | `flour_mill_n.vox` | 36 x 36 x up to 64 |
-| Bakery, Rendering Works | `bakery_n.vox`, `rendering_works_n.vox` | 36 x 36 x up to 34 |
-| Soap Factory | `soap_factory_n.vox` | 36 x 36 x up to 40 |
-| Clay Pit, Brick Factory | `clay_pit_n.vox`, `brick_factory_n.vox` | 36 x 36 x up to 24, 44 |
+| Framework Knitter | `framework_knitter_n.vox` | 48 x 48 x up to 34 |
+| Pig Farm | `pig_farm_n.vox` | 36 x 48 x up to 26 |
+| Slaughterhouse | `slaughterhouse_n.vox` | 48 x 36 x up to 32 |
+| Harbor | `harbor_n.vox` | 108 x 84 x up to 34 (a coastal building: see below) |
+| Sheepfold | `sheepfold_n.vox` | 36 x 36 x up to 14 |
+| Pigsty | `pigsty_n.vox` | 24 x 36 x up to 12 |
+| School | `school_n.vox` | 72 x 60 x up to 38 |
+| Grain Farm | `grain_farm_n.vox` | 48 x 36 x up to 28 |
+| Wheat Field | `wheat_field_n.vox` | 72 x 72 x up to 10 |
+| Flour Mill | `flour_mill_n.vox` | 48 x 36 x up to 64 |
+| Bakery | `bakery_n.vox` | 48 x 36 x up to 34 |
+| Rendering Works | `rendering_works_n.vox` | 36 x 36 x up to 34 |
+| Soap Factory | `soap_factory_n.vox` | 48 x 48 x up to 40 |
+| Clay Pit | `clay_pit_n.vox` | 60 x 60 x up to 24 |
+| Brick Factory | `brick_factory_n.vox` | 60 x 60 x up to 44 |
 | Artisan House | `artisan_house_n.vox` | 36 x 36 x up to 54 |
-| Variety Theatre | `variety_theatre_n.vox` | 48 x 48 x up to 50 |
-| Cattle Farm, Pasture | `cattle_farm_n.vox`, `pasture_n.vox` | 36 x 36 x up to 28, 12 |
-| Iron Mine, Charcoal Kiln | `iron_mine_n.vox`, `charcoal_kiln_n.vox` | 36 x 36 x up to 40, 28 |
-| Furnace | `furnace_n.vox` | 36 x 36 x up to 52 |
-| Steelworks | `steelworks_n.vox` | 36 x 48 x up to 52 |
-| Cannery, Sewing Machine Factory | `cannery_n.vox`, `sewing_machine_factory_n.vox` | 36 x 36 x up to 40, 46 |
-| Engineer House, Investor House | `engineer_house_n.vox`, `investor_house_n.vox` | 36 x 36 x up to 64, 76 |
-| University, Bank | `university_n.vox`, `bank_n.vox` | 48 x 48 x up to 64, 60 |
-| Sand Mine, Glassworks, Window Makers | `sand_mine_n.vox`, `glassworks_n.vox`, `window_makers_n.vox` | 36 x 36 x up to 26, 48, 38 |
-| Copper Mine, Gold Mine | `copper_mine_n.vox`, `gold_mine_n.vox` | 36 x 36 x up to 40, 44 |
-| Spectacle Factory, Filament Factory, Light Bulb Factory | `spectacle_factory_n.vox`, `filament_factory_n.vox`, `light_bulb_factory_n.vox` | 36 x 36 x up to 44, 48, 46 |
-| Vineyard, Vine Rows | `vineyard_n.vox`, `vine_rows_n.vox` | 36 x 36 x up to 30, 12 |
-| Champagne Cellar, Goldsmiths | `champagne_cellar_n.vox`, `goldsmiths_n.vox` | 36 x 36 x up to 40, 46 |
+| Variety Theatre | `variety_theatre_n.vox` | 48 x 60 x up to 50 |
+| Cattle Farm | `cattle_farm_n.vox` | 48 x 60 x up to 28 |
+| Pasture | `pasture_n.vox` | 36 x 48 x up to 12 |
+| Iron Mine | `iron_mine_n.vox` | 36 x 36 x up to 40 |
+| Charcoal Kiln | `charcoal_kiln_n.vox` | 60 x 60 x up to 28 |
+| Furnace | `furnace_n.vox` | 84 x 48 x up to 52 |
+| Steelworks | `steelworks_n.vox` | 120 x 60 x up to 52 |
+| Cannery | `cannery_n.vox` | 84 x 72 x up to 40 |
+| Sewing Machine Factory | `sewing_machine_factory_n.vox` | 108 x 72 x up to 46 |
+| Engineer House | `engineer_house_n.vox` | 36 x 36 x up to 64 |
+| University | `university_n.vox` | 108 x 72 x up to 64 |
+| Sand Mine | `sand_mine_n.vox` | 120 x 72 x up to 26 |
+| Glassworks | `glassworks_n.vox` | 72 x 48 x up to 48 |
+| Window Makers | `window_makers_n.vox` | 60 x 60 x up to 38 |
+| Copper Mine | `copper_mine_n.vox` | 36 x 36 x up to 40 |
+| Spectacle Factory | `spectacle_factory_n.vox` | 72 x 48 x up to 44 |
+| Filament Factory | `filament_factory_n.vox` | 84 x 72 x up to 48 |
+| Light Bulb Factory | `light_bulb_factory_n.vox` | 72 x 72 x up to 46 |
+| Investor House | `investor_house_n.vox` | 36 x 36 x up to 76 |
+| Bank | `bank_n.vox` | 144 x 120 x up to 60 |
+| Vineyard | `vineyard_n.vox` | 48 x 36 x up to 30 |
+| Vine Rows | `vine_rows_n.vox` | 48 x 96 x up to 12 |
+| Champagne Cellar | `champagne_cellar_n.vox` | 72 x 60 x up to 40 |
+| Gold Mine | `gold_mine_n.vox` | 36 x 36 x up to 44 |
+| Goldsmiths | `goldsmiths_n.vox` | 60 x 48 x up to 46 |
 
 ## Rules
 

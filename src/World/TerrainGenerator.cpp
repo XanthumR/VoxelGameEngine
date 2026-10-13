@@ -3,6 +3,7 @@
 #include "World/BlockTypes.h"
 #include "World/Chunk.h"
 #include "World/FelledTrees.h"
+#include "World/Foliage.h"
 #include "World/Islands.h"
 #include "World/Sessions.h"
 #include "World/VoxModel.h"
@@ -11,8 +12,15 @@
 #include <cmath>
 #include <cstdlib>
 
-TerrainGenerator::TerrainGenerator(const VoxModel& trees, const VoxModel* palms) : m_Trees(trees), m_Palms(palms ? *palms : trees) {
+TerrainGenerator::TerrainGenerator(const FoliageLibrary& foliage) : m_Foliage(foliage) {
     m_Noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+
+    // Forests and meadows a few dozen tiles across
+    m_ForestNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    m_ForestNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    m_ForestNoise.SetFractalOctaves(2);
+    m_ForestNoise.SetFrequency(0.0065f);
+    m_ForestNoise.SetSeed(21);
 
     // Stretches of cliff a few dozen tiles long between beaches
     m_CoastNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -236,65 +244,121 @@ void TerrainGenerator::GenerateChunk(int cx, int cy, int cz, std::vector<uint8_t
     }
 
     // Trees on grass, rooted in this chunk or overhanging from a neighbour
-    if (!m_Trees.IsEmpty() && startY < GROUND_TOP + std::max(m_Trees.max.y, m_Palms.max.y)) StampTrees(startX, startY, startZ, data);
+    if (!m_Foliage.IsEmpty() && startY < GROUND_TOP + m_Foliage.Height()) StampTrees(startX, startY, startZ, data);
 
     // Grass tufts in their rest pose, after trees so they only fill air
     if (GRASS_TUFTS_ENABLED) StampGrass(startX, startY, startZ, data);
 }
 
-float TerrainGenerator::TreeNoise(int wx, int wz) {
-    return m_Noise.GetNoise((float)wx * 15.0f, (float)wz * 15.0f);
+namespace {
+
+uint32_t CellHash(int cx, int cz, uint32_t salt) {
+    uint32_t h = (uint32_t)cx * 0x8DA6B343u ^ (uint32_t)cz * 0xD8163841u ^ salt;
+    h ^= h >> 15;
+    h *= 0x2C1B3C6Du;
+    h ^= h >> 12;
+    h *= 0x297A2D39u;
+    return h ^ (h >> 15);
 }
 
-bool TerrainGenerator::IsTreeRoot(int wx, int wz) {
-    float noise = TreeNoise(wx, wz);
-    if (noise <= 0.85f) return false;
-    if (BiomeNoise(wx, wz) < -0.2f) return false; // No trees in the Crystalline Peaks biome (open grassland)
+// The cell's spot, a column at least one in from the cell's edges
+glm::ivec2 CellSpot(int cx, int cz, int cell, uint32_t hash) {
+    return glm::ivec2(cx * cell + 1 + (int)(hash % (uint32_t)(cell - 2)), cz * cell + 1 + (int)((hash >> 8) % (uint32_t)(cell - 2)));
+}
 
-    // One tree per clump of high tree noise: only its peak (ties go to the lower x, then z)
-    for (int dz = -TREE_SPACING; dz <= TREE_SPACING; dz++) {
-        for (int dx = -TREE_SPACING; dx <= TREE_SPACING; dx++) {
-            if (dx == 0 && dz == 0) continue;
-            float other = TreeNoise(wx + dx, wz + dz);
-            if (other > noise || (other == noise && (dx < 0 || (dx == 0 && dz < 0)))) return false;
-        }
+float Chance(uint32_t hash) { return (float)(hash >> 20) / 4096.0f; }
+
+constexpr uint32_t TREE_SALT = 0x7EE5u, DECOR_SALT = 0xDEC0u;
+constexpr int FOLIAGE_LAND_MARGIN = 3; // Land this many columns round a root, so nothing hangs over the beach
+
+} // namespace
+
+float TerrainGenerator::ForestNoise(int wx, int wz) {
+    float noise = m_ForestNoise.GetNoise((float)wx, (float)wz);
+    return std::clamp(noise / 0.25f + 0.5f, 0.0f, 1.0f); // Forest above 0, with a short edge
+}
+
+int TerrainGenerator::PickKind(bool trees, glm::ivec2 root, float forest, uint32_t hash) {
+    if (m_Foliage.IsEmpty()) return -1;
+    for (glm::ivec2 d : { glm::ivec2(0), glm::ivec2(FOLIAGE_LAND_MARGIN, 0), glm::ivec2(-FOLIAGE_LAND_MARGIN, 0), glm::ivec2(0, FOLIAGE_LAND_MARGIN),
+                          glm::ivec2(0, -FOLIAGE_LAND_MARGIN) }) {
+        if (IsSandy(root.x + d.x, root.y + d.y)) return -1;
     }
-    return !IsSandy(wx, wz); // No trees on beaches or underwater
+    int session = SessionAtColumn(root.x, root.y);
+    Climate climate = session >= 0 && SESSIONS[session].tropical ? Climate::Tropical : Climate::Temperate;
+    bool inForest = forest > 0.5f;
+    auto weight = [&](const FoliageKind& kind) {
+        if ((kind.kind == FoliageClass::Tree) != trees || (kind.climate != climate && kind.climate != Climate::Both)) return 0;
+        return (int)(inForest ? kind.forestWeight : kind.meadowWeight);
+    };
+    int total = 0;
+    for (const FoliageKind& kind : FOLIAGE_KINDS) total += weight(kind);
+    if (total == 0) return -1;
+    int pick = (int)((hash >> 4) % (uint32_t)total);
+    for (int i = 0; i < (int)FOLIAGE_KINDS.size(); i++) {
+        pick -= weight(FOLIAGE_KINDS[i]);
+        if (pick < 0) return FoliageModelIndex(i, (int)(hash >> 30));
+    }
+    return -1;
 }
 
-const VoxModel& TerrainGenerator::TreeModelAt(int wx, int wz) const {
-    int session = SessionAtColumn(wx, wz);
-    return session >= 0 && SESSIONS[session].tropical ? m_Palms : m_Trees;
+int TerrainGenerator::TreeInCell(int cx, int cz, glm::ivec2& root) {
+    uint32_t hash = CellHash(cx, cz, TREE_SALT);
+    root = CellSpot(cx, cz, TREE_CELL, hash);
+    float forest = ForestNoise(root.x, root.y);
+    int session = SessionAtColumn(root.x, root.y);
+    float thin = session >= 0 && SESSIONS[session].tropical ? 0.55f : 1.0f; // Palm groves stand apart, so their crowns show
+    if (Chance(hash) >= (0.04f + 0.86f * forest) * thin) return -1; // Nearly always in a forest, seldom in a meadow
+    return PickKind(true, root, forest, CellHash(cx, cz, TREE_SALT + 1));
 }
 
-// Roots are scanned in a margin around the chunk so trees rooted in a neighbour stamp their
-// overhanging part here too, keeping trees whole across chunk borders
+int TerrainGenerator::DecorInCell(int cx, int cz, glm::ivec2& root) {
+    uint32_t hash = CellHash(cx, cz, DECOR_SALT);
+    root = CellSpot(cx, cz, DECOR_CELL, hash);
+    if (Chance(hash) >= 0.4f) return -1;
+    // Not at a tree's foot: the tree cell's spot, whether a tree grows there or not
+    int tcx = FloorDiv(root.x, TREE_CELL), tcz = FloorDiv(root.y, TREE_CELL);
+    glm::ivec2 tree = CellSpot(tcx, tcz, TREE_CELL, CellHash(tcx, tcz, TREE_SALT));
+    if (std::abs(tree.x - root.x) <= 2 && std::abs(tree.y - root.y) <= 2) return -1;
+    return PickKind(false, root, ForestNoise(root.x, root.y), CellHash(cx, cz, DECOR_SALT + 1));
+}
+
+int TerrainGenerator::FoliageAt(int wx, int wz) {
+    glm::ivec2 root;
+    int model = TreeInCell(FloorDiv(wx, TREE_CELL), FloorDiv(wz, TREE_CELL), root);
+    if (model >= 0 && root == glm::ivec2(wx, wz)) return model;
+    model = DecorInCell(FloorDiv(wx, DECOR_CELL), FloorDiv(wz, DECOR_CELL), root);
+    return model >= 0 && root == glm::ivec2(wx, wz) ? model : -1;
+}
+
+const VoxModel& TerrainGenerator::FoliageModel(int model) const {
+    return m_Foliage.Model(model);
+}
+
+int TerrainGenerator::FoliageReach() const {
+    return m_Foliage.Reach();
+}
+
+// Roots are scanned in a margin around the chunk so foliage rooted in a neighbour stamps its
+// overhanging part here too, keeping it whole across chunk borders
 void TerrainGenerator::StampTrees(int startX, int startY, int startZ, std::vector<uint8_t>& data) {
-    const glm::ivec3 treeMin = glm::min(m_Trees.min, m_Palms.min), treeMax = glm::max(m_Trees.max, m_Palms.max);
-    for (int rz = -treeMax.z; rz < CHUNK_SIZE - treeMin.z; rz++) {
-        int wz = startZ + rz;
-        for (int rx = -treeMax.x; rx < CHUNK_SIZE - treeMin.x; rx++) {
-            int wx = startX + rx;
-
-            if (!IsTreeRoot(wx, wz)) continue;
-            if (m_Felled && m_Felled->Contains(glm::ivec2(wx, wz))) continue; // Cut down by a lumberjack
-
-            int rootY = TreeRootY(wx, wz);
-            int localY = rootY - startY;
-            if (localY + treeMax.y < 0 || localY + treeMin.y >= CHUNK_SIZE) continue;
-
-            const VoxModel& model = TreeModelAt(wx, wz);
-            if (localY + model.max.y < 0 || localY + model.min.y >= CHUNK_SIZE) continue;
-            for (const VoxelOffset& offset : model.voxels) {
-                int tx = rx + offset.x;
-                int ty = localY + offset.y;
-                int tz = rz + offset.z;
-                if (tx >= 0 && tx < CHUNK_SIZE && ty >= 0 && ty < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) {
-                    data[LocalIndex(tx, ty, tz)] = (uint8_t)offset.blockType;
-                }
+    int reach = m_Foliage.Reach();
+    ForEachFoliageRoot(glm::ivec2(startX, startZ) - reach, glm::ivec2(startX, startZ) + CHUNK_SIZE - 1 + reach, [&](glm::ivec2 root, int index) {
+        if (m_Felled && m_Felled->Contains(root)) return; // Cut down by a lumberjack, or cleared by a building
+        const VoxModel& model = m_Foliage.Model(index);
+        int rx = root.x - startX, rz = root.y - startZ;
+        if (rx + model.max.x < 0 || rx + model.min.x >= CHUNK_SIZE || rz + model.max.z < 0 || rz + model.min.z >= CHUNK_SIZE) return;
+        int localY = TreeRootY(root.x, root.y) - startY;
+        if (localY + model.max.y < 0 || localY + model.min.y >= CHUNK_SIZE) return;
+        for (const VoxelOffset& offset : model.voxels) {
+            int tx = rx + offset.x;
+            int ty = localY + offset.y;
+            int tz = rz + offset.z;
+            if (tx >= 0 && tx < CHUNK_SIZE && ty >= 0 && ty < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) {
+                data[LocalIndex(tx, ty, tz)] = (uint8_t)offset.blockType;
             }
         }
-    }
+    });
 }
 
 // Decided only by noise and a hash of the cell, so every chunk (and the main thread) agrees on

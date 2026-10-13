@@ -58,7 +58,9 @@ public:
     const NotificationSystem& Notifications() const { return m_Notifications; }
 
     // Everything placement checks against, for this world
-    PlacementContext MakePlacementContext(const VoxelWorld& world) { return { world, m_Islands, m_Occupancy, m_Roads, &m_Objects }; }
+    // Fells the trees over a footprint, as a building or road goes there
+    void ClearTrees(glm::ivec2 minTile, glm::ivec2 tiles) { m_Trees.FellOver(minTile * TILE_SIZE, (minTile + tiles) * TILE_SIZE - 1, m_TickCount); }
+    PlacementContext MakePlacementContext(const VoxelWorld& world) { return { world, m_Islands, m_Occupancy, m_Roads, &m_Objects, &m_Trees }; }
 
     // Moving a building: lifted, it gives up its tiles while the player drags it; placed again, it
     // takes the new ones (the caller has validated them). The game object keeps its residents,

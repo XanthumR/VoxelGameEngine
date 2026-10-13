@@ -18,7 +18,7 @@ Voxtaria (voxel + Victoria) is a Victorian-era city-builder and trade game in th
 
 - **Voxel renderer:** no meshing; compute shaders ray-march chunked voxel data with sun and moon shadows, a day-night cycle, an FFT ocean, animated grass and chimney smoke. Moving things (walkers, carts, boats, ships) are voxel objects with their own models that float on the waves.
 - **Islands:** islands in four sizes as in Anno 1800 (Small, Medium, Large and Extra large, from about 1500 to 9000 build tiles), each built from 12 x 12-voxel tiles with beaches, cliffs, caves and trees.
-- **Building:** place, rotate, move (hold left click and drag) and demolish buildings on the tile grid. A green or red preview shows whether a spot is valid. Buildings are MagicaVoxel `.vox` models.
+- **Building:** place, rotate, move (hold left click and drag) and demolish buildings on the tile grid, at Anno 1800's sizes; building over trees clears them. A green or red preview shows whether a spot is valid. Buildings are MagicaVoxel `.vox` models, each with a yard of its kind.
 - **Roads and logistics:** drag L-shaped roads. Buildings need a road to a warehouse; producers' carts carry goods along the roads.
 - **Population:** Farmers, Workers, Artisans, Engineers and Investors live in houses that grow, upgrade and shrink depending on how well their needs are met (goods, and services such as the marketplace, school, theatre, university and bank).
 - **Production chains:** over thirty producers, from fisheries and sawmills to steelworks, glassworks and goldsmiths, with farm modules (pens and fields). Workforce, location rules (coast, trees, modules) and input buffers apply.

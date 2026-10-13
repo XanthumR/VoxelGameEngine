@@ -181,7 +181,7 @@ vec3 getFalseColor(float level) {
     return c;
 }
 
-// Block colors (IDs from src/World/BlockTypes.h; 5-33 and 36-39 are the tree palette, 40-43 and 46 building materials, 44-45 road, 47-59 figures: people, smoke, boats; 102-114 horse carts)
+// Block colors (IDs from src/World/BlockTypes.h; 5 the hotbar plant, 40-43 and 46 building materials, 44-45 road, 47-59 figures: people, smoke, boats; 102-114 horse carts)
 // Building model materials, block IDs 60-99 (src/World/BlockTypes.h, and the .vox palette written
 // by tools/building_models/generate.py: keep the three in step)
 const int MODEL_MATERIALS_FIRST = 60;
@@ -315,6 +315,43 @@ const vec3 EXTRA_PALETTE[33] = vec3[](
     vec3(0.92, 0.90, 0.86)  // 192 marble
 );
 
+// Foliage: trees, bushes, rocks, logs and flowers, block IDs 193-222 (src/World/BlockTypes.h,
+// tools/foliage/generate.py)
+const int FOLIAGE_FIRST = 193;
+const int FOLIAGE_LAST = 222;
+const vec3 FOLIAGE_PALETTE[30] = vec3[](
+    vec3(0.36, 0.24, 0.14), // 193 bark
+    vec3(0.22, 0.15, 0.09), // 194 bark dark
+    vec3(0.88, 0.86, 0.80), // 195 birch bark
+    vec3(0.14, 0.13, 0.12), // 196 birch bark mark
+    vec3(0.09, 0.25, 0.05), // 197 leaves dark
+    vec3(0.15, 0.37, 0.08), // 198 leaves
+    vec3(0.25, 0.50, 0.11), // 199 leaves light
+    vec3(0.44, 0.58, 0.15), // 200 leaves yellow
+    vec3(0.05, 0.18, 0.09), // 201 needles dark
+    vec3(0.09, 0.27, 0.13), // 202 needles
+    vec3(0.30, 0.42, 0.12), // 203 moss
+    vec3(0.62, 0.61, 0.57), // 204 rock light
+    vec3(0.48, 0.47, 0.45), // 205 rock
+    vec3(0.34, 0.34, 0.33), // 206 rock dark
+    vec3(0.95, 0.94, 0.90), // 207 blossom white
+    vec3(0.94, 0.60, 0.72), // 208 blossom pink
+    vec3(0.70, 0.08, 0.12), // 209 berries
+    vec3(0.30, 0.42, 0.86), // 210 flower blue
+    vec3(0.56, 0.30, 0.72), // 211 flower purple
+    vec3(0.22, 0.46, 0.14), // 212 fern
+    vec3(0.24, 0.54, 0.12), // 213 palm frond
+    vec3(0.13, 0.36, 0.07), // 214 palm frond dark
+    vec3(0.55, 0.42, 0.28), // 215 palm trunk
+    vec3(0.42, 0.66, 0.18), // 216 banana leaf
+    vec3(0.36, 0.56, 0.46), // 217 agave
+    vec3(0.90, 0.18, 0.20), // 218 hibiscus
+    vec3(0.36, 0.24, 0.12), // 219 coconut
+    vec3(0.80, 0.14, 0.10), // 220 mushroom
+    vec3(0.50, 0.44, 0.36), // 221 dead wood
+    vec3(0.95, 0.55, 0.12)  // 222 flower orange
+);
+
 vec3 getAlbedo(int voxelID, ivec3 mapPos) {
     vec3 albedo = vec3(1.0);
     if (voxelID >= MODEL_MATERIALS_FIRST && voxelID <= MODEL_MATERIALS_LAST) {
@@ -327,43 +364,16 @@ vec3 getAlbedo(int voxelID, ivec3 mapPos) {
         float variation = 0.93 + 0.07 * hash(vec2(mapPos.xz) * 0.91 + float(mapPos.y) * 3.7);
         return EXTRA_PALETTE[voxelID - EXTRA_MATERIALS_FIRST] * variation;
     }
+    if (voxelID >= FOLIAGE_FIRST && voxelID <= FOLIAGE_LAST) {
+        float variation = 0.90 + 0.10 * hash(vec2(mapPos.xz) * 0.91 + float(mapPos.y) * 3.7);
+        return FOLIAGE_PALETTE[voxelID - FOLIAGE_FIRST] * variation;
+    }
     if (voxelID == 1) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000); // Grass
     else if (voxelID == 2) albedo = vec3(0.180, 0.110, 0.050); // Dirt
     else if (voxelID == 3) albedo = hash(vec2(mapPos.xz) + float(mapPos.y) * 3.0) >= 0.5 ? vec3(0.42, 0.42, 0.40) : vec3(0.36, 0.36, 0.35); // Stone
     else if (voxelID == 4) albedo = hash(vec2(mapPos.xz)) >= 0.5 ? vec3(0.80, 0.72, 0.48) : vec3(0.74, 0.66, 0.43); // Sand
-    else if (voxelID == 5) albedo = vec3(0.157, 0.341, 0.016); // color_5
-    else if (voxelID == 6) albedo = vec3(0.137, 0.306, 0.016); // color_6
-    else if (voxelID == 7) albedo = vec3(0.106, 0.227, 0.008); // color_7
-    else if (voxelID == 8) albedo = vec3(0.043, 0.106, 0.004); // color_8
-    else if (voxelID == 9) albedo = vec3(0.086, 0.075, 0.004); // color_9
-    else if (voxelID == 10) albedo = vec3(0.125, 0.278, 0.012); // color_10
-    else if (voxelID == 11) albedo = vec3(0.075, 0.176, 0.004); // color_11
-    else if (voxelID == 12) albedo = vec3(0.204, 0.439, 0.020); // color_12
-    else if (voxelID == 13) albedo = vec3(0.259, 0.557, 0.027); // color_13
-    else if (voxelID == 14) albedo = vec3(0.180, 0.400, 0.020); // color_14
-    else if (voxelID == 15) albedo = vec3(0.153, 0.475, 0.055); // color_15
-    else if (voxelID == 16) albedo = vec3(0.165, 0.278, 0.031); // color_16
-    else if (voxelID == 17) albedo = vec3(0.125, 0.110, 0.008); // color_17
-    else if (voxelID == 18) albedo = vec3(0.216, 0.188, 0.012); // color_18
-    else if (voxelID == 19) albedo = vec3(0.220, 0.486, 0.027); // color_19
-    else if (voxelID == 20) albedo = vec3(0.235, 0.631, 0.157); // color_20
-    else if (voxelID == 21) albedo = vec3(0.086, 0.302, 0.043); // color_21
-    else if (voxelID == 22) albedo = vec3(0.145, 0.561, 0.090); // color_22
-    else if (voxelID == 23) albedo = vec3(0.180, 0.149, 0.012); // color_23
-    else if (voxelID == 24) albedo = vec3(0.114, 0.357, 0.047); // color_24
-    else if (voxelID == 25) albedo = vec3(0.216, 0.588, 0.078); // color_25
-    else if (voxelID == 26) albedo = vec3(0.145, 0.427, 0.059); // color_26
-    else if (voxelID == 27) albedo = vec3(0.188, 0.525, 0.071); // color_27
-    else if (voxelID == 28) albedo = vec3(0.196, 0.612, 0.192); // color_28
-    else if (voxelID == 29) albedo = vec3(0.161, 0.216, 0.012); // color_29
+    else if (voxelID == 5) albedo = vec3(0.157, 0.341, 0.016); // Plant (hotbar block)
     else if (voxelID == 30) albedo = vec3(0.0, 0.8, 0.6); // Bioluminescent cavern
-    else if (voxelID == 31) albedo = vec3(0.149, 0.698, 0.165); // color_31
-    else if (voxelID == 33) albedo = vec3(0.000, 0.000, 0.000); // color_33
-    // Tree palette colors 1-4, moved off the terrain IDs by the .vox loader
-    else if (voxelID == 36) albedo = hash(mapPos.xz) >= 0.5 ? vec3(0.035, 0.731, 0.000) : vec3(0.035, 0.576, 0.000);
-    else if (voxelID == 37) albedo = vec3(0.090, 0.204, 0.008);
-    else if (voxelID == 38) albedo = vec3(0.078, 0.114, 0.004);
-    else if (voxelID == 39) albedo = vec3(0.031, 0.071, 0.000);
     else if (voxelID == 35) albedo = vec3(0.04, 0.22, 0.32); // Water (ocean; waves applied in trace.comp)
     // Building materials (Block::WOOD .. Block::STONE_WALL)
     else if (voxelID == 40) albedo = vec3(0.30, 0.18, 0.08); // Wood

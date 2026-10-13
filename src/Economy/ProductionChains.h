@@ -37,14 +37,14 @@ constexpr std::array<ProductionChain, 32> PRODUCTION_CHAINS = { {
     { TIER_FARMERS, 10, 1, { ItemType::Wool, ItemType::Wool }, ItemType::WorkClothes, 300, LocationRule::None, 0, 0 },       // Framework Knitter
     { TIER_WORKERS, 5, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Pigs, 400, LocationRule::Modules, 3, 5 },          // Pig Farm
     { TIER_WORKERS, 10, 1, { ItemType::Pigs, ItemType::Pigs }, ItemType::Sausages, 300, LocationRule::None, 0, 0 },          // Slaughterhouse
-    { TIER_FARMERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Grain, 300, LocationRule::Modules, 3, 4 },         // Grain Farm
+    { TIER_FARMERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Grain, 300, LocationRule::Modules, 6, 4 },         // Grain Farm: 4 fields of 6 x 6 (144 tiles, as in Anno)
     { TIER_FARMERS, 10, 1, { ItemType::Grain, ItemType::Grain }, ItemType::Flour, 300, LocationRule::None, 0, 0 },           // Flour Mill
     { TIER_WORKERS, 10, 1, { ItemType::Flour, ItemType::Flour }, ItemType::Bread, 300, LocationRule::None, 0, 0 },           // Bakery
     { TIER_WORKERS, 5, 1, { ItemType::Pigs, ItemType::Pigs }, ItemType::Tallow, 300, LocationRule::None, 0, 0 },            // Rendering Works
     { TIER_WORKERS, 10, 1, { ItemType::Tallow, ItemType::Tallow }, ItemType::Soap, 300, LocationRule::None, 0, 0 },          // Soap Factory
     { TIER_WORKERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Clay, 300, LocationRule::Coast, 2, 0 },             // Clay Pit
     { TIER_WORKERS, 15, 1, { ItemType::Clay, ItemType::Clay }, ItemType::Bricks, 300, LocationRule::None, 0, 0 },            // Brick Factory
-    { TIER_FARMERS, 5, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Beef, 600, LocationRule::Modules, 3, 3 },            // Cattle Farm
+    { TIER_FARMERS, 5, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Beef, 600, LocationRule::Modules, 3, 4 },            // Cattle Farm
     { TIER_WORKERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Iron, 300, LocationRule::None, 0, 0 },              // Iron Mine
     { TIER_FARMERS, 5, 1, { ItemType::Wood, ItemType::Wood }, ItemType::Coal, 300, LocationRule::None, 0, 0 },               // Charcoal Kiln
     { TIER_WORKERS, 20, 2, { ItemType::Iron, ItemType::Coal }, ItemType::Steel, 300, LocationRule::None, 0, 0 },             // Furnace
@@ -58,7 +58,7 @@ constexpr std::array<ProductionChain, 32> PRODUCTION_CHAINS = { {
     { TIER_ENGINEERS, 25, 2, { ItemType::Glass, ItemType::Copper }, ItemType::Glasses, 300, LocationRule::None, 0, 0 },      // Spectacle Factory
     { TIER_WORKERS, 20, 1, { ItemType::Coal, ItemType::Coal }, ItemType::Filaments, 300, LocationRule::None, 0, 0 },         // Filament Factory
     { TIER_ENGINEERS, 30, 2, { ItemType::Glass, ItemType::Filaments }, ItemType::LightBulbs, 300, LocationRule::None, 0, 0 }, // Light Bulb Factory
-    { TIER_WORKERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Grapes, 600, LocationRule::Modules, 3, 4 },         // Vineyard
+    { TIER_WORKERS, 10, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Grapes, 600, LocationRule::Modules, 8, 4 },         // Vineyard: 4 vine rows of 4 x 8 (128 tiles)
     { TIER_INVESTORS, 25, 2, { ItemType::Grapes, ItemType::Glass }, ItemType::Champagne, 300, LocationRule::None, 0, 0 },    // Champagne Cellar
     { TIER_ENGINEERS, 20, 0, { ItemType::Wood, ItemType::Wood }, ItemType::Gold, 450, LocationRule::None, 0, 0 },            // Gold Mine
     { TIER_INVESTORS, 25, 1, { ItemType::Gold, ItemType::Gold }, ItemType::Jewelry, 300, LocationRule::None, 0, 0 },         // Goldsmiths

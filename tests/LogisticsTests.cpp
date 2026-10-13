@@ -40,7 +40,7 @@ struct LogisticsFixture {
 // The warehouse is 4x4 tiles at (0,0)-(3,3); the road starts touching its right side at x = 4
 TEST(LogisticsTest, DistanceGrowsAlongTheRoad) {
     LogisticsFixture f;
-    GameObjectId warehouse = f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    GameObjectId warehouse = f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     f.AddRoadX(4, 10, 1);
     f.Run();
     EXPECT_EQ(f.roads.Find({ 4, 1 })->distance, 1);
@@ -50,7 +50,7 @@ TEST(LogisticsTest, DistanceGrowsAlongTheRoad) {
 
 TEST(LogisticsTest, RangeStopsAtExactlyThirtyTiles) {
     LogisticsFixture f;
-    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     f.AddRoadX(4, 4 + WAREHOUSE_ROAD_RANGE + 5, 1);
     f.Run();
     EXPECT_EQ(f.roads.Find({ 4 + WAREHOUSE_ROAD_RANGE - 1, 1 })->distance, WAREHOUSE_ROAD_RANGE);
@@ -59,7 +59,7 @@ TEST(LogisticsTest, RangeStopsAtExactlyThirtyTiles) {
 
 TEST(LogisticsTest, HouseOnAnInRangeRoadIsConnected) {
     LogisticsFixture f;
-    GameObjectId warehouse = f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    GameObjectId warehouse = f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     f.AddRoadX(4, 20, 1);
     GameObjectId house = f.AddBuilding(BUILDING_FARMER_HOUSE, { 12, 2 }); // Its top side touches the road at z = 1
     f.Run();
@@ -74,7 +74,7 @@ TEST(LogisticsTest, HouseOnAnInRangeRoadIsConnected) {
 
 TEST(LogisticsTest, HouseOnlyOnAnOutOfRangeRoadIsNotConnected) {
     LogisticsFixture f;
-    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     f.AddRoadX(4, 4 + WAREHOUSE_ROAD_RANGE + 10, 1);
     GameObjectId house = f.AddBuilding(BUILDING_FARMER_HOUSE, { 4 + WAREHOUSE_ROAD_RANGE + 2, 2 });
     f.Run();
@@ -83,7 +83,7 @@ TEST(LogisticsTest, HouseOnlyOnAnOutOfRangeRoadIsNotConnected) {
 
 TEST(LogisticsTest, HouseWithoutRoadIsNotConnected) {
     LogisticsFixture f;
-    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     GameObjectId house = f.AddBuilding(BUILDING_FARMER_HOUSE, { 6, 0 });
     f.Run();
     EXPECT_FALSE(f.objects.Logistics(house).connected);
@@ -92,7 +92,7 @@ TEST(LogisticsTest, HouseWithoutRoadIsNotConnected) {
 
 TEST(LogisticsTest, RemovingARoadTileBreaksTheConnection) {
     LogisticsFixture f;
-    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     f.AddRoadX(4, 20, 1);
     GameObjectId house = f.AddBuilding(BUILDING_FARMER_HOUSE, { 12, 2 });
     f.Run();
@@ -106,8 +106,8 @@ TEST(LogisticsTest, RemovingARoadTileBreaksTheConnection) {
 
 TEST(LogisticsTest, NearestWarehouseWins) {
     LogisticsFixture f;
-    GameObjectId west = f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
-    GameObjectId east = f.AddBuilding(BUILDING_WAREHOUSE, { 25, 0 });
+    GameObjectId west = f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
+    GameObjectId east = f.AddBuilding(BUILDING_WAREHOUSE, { 25, -1 });
     f.AddRoadX(4, 24, 1); // Between the two
     GameObjectId nearEast = f.AddBuilding(BUILDING_FARMER_HOUSE, { 20, 2 });
     GameObjectId nearWest = f.AddBuilding(BUILDING_FARMER_HOUSE, { 5, 2 });
@@ -119,7 +119,7 @@ TEST(LogisticsTest, NearestWarehouseWins) {
 
 TEST(LogisticsTest, OnlyRebuildsWhenSomethingChanged) {
     LogisticsFixture f;
-    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     EXPECT_TRUE(f.logistics.Update(f.objects, f.roads, f.buildingsRevision));
     EXPECT_FALSE(f.logistics.Update(f.objects, f.roads, f.buildingsRevision));
     f.roads.Add({ 4, 0 });
@@ -138,26 +138,26 @@ TEST(LogisticsTest, PreviewReachMatchesARealWarehouse) {
 
 constexpr size_t MARKET = (size_t)ServiceType::Marketplace;
 
-// Marketplace: 4x3 tiles at (6, 2)-(9, 4), touching the road at z = 1 along x 6..9
+// Marketplace: 6x5 tiles at (6, 2)-(11, 6), touching the road at z = 1 along x 6..11
 TEST(LogisticsTest, MarketReachSpreadsFromAConnectedMarketplace) {
     LogisticsFixture f;
-    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     f.AddRoadX(4, 40, 1);
     GameObjectId market = f.AddBuilding(BUILDING_MARKETPLACE, { 6, 2 });
     f.Run();
-    EXPECT_EQ(f.roads.Find({ 9, 1 })->serviceDistance[MARKET], 1);
-    EXPECT_EQ(f.roads.Find({ 9, 1 })->service[MARKET], market);
-    EXPECT_EQ(f.roads.Find({ 9 + MARKET_ROAD_RANGE - 1, 1 })->serviceDistance[MARKET], MARKET_ROAD_RANGE);
-    EXPECT_EQ(f.roads.Find({ 9 + MARKET_ROAD_RANGE, 1 })->serviceDistance[MARKET], RoadTile::UNREACHED);
+    EXPECT_EQ(f.roads.Find({ 11, 1 })->serviceDistance[MARKET], 1);
+    EXPECT_EQ(f.roads.Find({ 11, 1 })->service[MARKET], market);
+    EXPECT_EQ(f.roads.Find({ 11 + MARKET_ROAD_RANGE - 1, 1 })->serviceDistance[MARKET], MARKET_ROAD_RANGE);
+    EXPECT_EQ(f.roads.Find({ 11 + MARKET_ROAD_RANGE, 1 })->serviceDistance[MARKET], RoadTile::UNREACHED);
 }
 
 TEST(LogisticsTest, HouseInMarketReachIsServed) {
     LogisticsFixture f;
-    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     f.AddRoadX(4, 40, 1);
     GameObjectId market = f.AddBuilding(BUILDING_MARKETPLACE, { 6, 2 });
     GameObjectId near = f.AddBuilding(BUILDING_FARMER_HOUSE, { 12, 2 });
-    GameObjectId far = f.AddBuilding(BUILDING_FARMER_HOUSE, { 9 + MARKET_ROAD_RANGE + 1, 2 });
+    GameObjectId far = f.AddBuilding(BUILDING_FARMER_HOUSE, { 11 + MARKET_ROAD_RANGE + 1, 2 });
     f.Run();
     EXPECT_TRUE(f.objects.Logistics(near).InReach(ServiceType::Marketplace));
     EXPECT_EQ(f.objects.Logistics(near).services[MARKET], market);
@@ -177,7 +177,7 @@ TEST(LogisticsTest, MarketplaceWithoutWarehouseServesNobody) {
 
 TEST(LogisticsTest, NearestMarketplaceWins) {
     LogisticsFixture f;
-    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     f.AddRoadX(4, 40, 1);
     GameObjectId west = f.AddBuilding(BUILDING_MARKETPLACE, { 6, 2 });
     GameObjectId east = f.AddBuilding(BUILDING_MARKETPLACE, { 26, 2 });
@@ -189,16 +189,16 @@ TEST(LogisticsTest, NearestMarketplaceWins) {
 
 TEST(LogisticsTest, EachServiceSpreadsItsOwnRange) {
     LogisticsFixture f;
-    f.AddBuilding(BUILDING_WAREHOUSE, { 0, 0 });
+    f.AddBuilding(BUILDING_WAREHOUSE, { -1, -1 }); // 5 x 5: its east side touches the road at x = 4
     f.AddRoadX(4, 60, 1);
-    GameObjectId school = f.AddBuilding(BUILDING_SCHOOL, { 6, 2 }); // 3x3: touches the road along x 6..8
+    GameObjectId school = f.AddBuilding(BUILDING_SCHOOL, { 6, 2 }); // 6x5: touches the road along x 6..11
     const size_t SCHOOL = (size_t)ServiceType::School;
     int range = SERVICE_ROAD_RANGE[SCHOOL];
-    GameObjectId near = f.AddBuilding(BUILDING_FARMER_HOUSE, { 8 + range - 2, 2 });
-    GameObjectId far = f.AddBuilding(BUILDING_FARMER_HOUSE, { 8 + range + 1, 2 });
+    GameObjectId near = f.AddBuilding(BUILDING_FARMER_HOUSE, { 11 + range - 2, 2 });
+    GameObjectId far = f.AddBuilding(BUILDING_FARMER_HOUSE, { 11 + range + 1, 2 });
     f.Run();
-    EXPECT_EQ(f.roads.Find({ 8, 1 })->serviceDistance[SCHOOL], 1);
-    EXPECT_EQ(f.roads.Find({ 8 + range, 1 })->serviceDistance[SCHOOL], RoadTile::UNREACHED);
+    EXPECT_EQ(f.roads.Find({ 11, 1 })->serviceDistance[SCHOOL], 1);
+    EXPECT_EQ(f.roads.Find({ 11 + range, 1 })->serviceDistance[SCHOOL], RoadTile::UNREACHED);
     EXPECT_EQ(f.objects.Logistics(near).services[SCHOOL], school);
     EXPECT_FALSE(f.objects.Logistics(far).InReach(ServiceType::School));
     EXPECT_FALSE(f.objects.Logistics(near).InReach(ServiceType::Marketplace)); // A school is no marketplace

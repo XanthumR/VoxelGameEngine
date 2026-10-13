@@ -1,6 +1,6 @@
 #include "World/Islands.h"
 #include "World/TerrainGenerator.h"
-#include "World/VoxModel.h"
+#include "World/Foliage.h"
 
 #include <gtest/gtest.h>
 
@@ -55,8 +55,8 @@ TEST(IslandTest, IslandsKeepTheirDistance) {
 }
 
 TEST(IslandTest, TheSpawnIsOnTheStartIsland) {
-    VoxModel noTrees;
-    TerrainGenerator terrain(noTrees);
+    FoliageLibrary noFoliage;
+    TerrainGenerator terrain(noFoliage);
     glm::ivec2 spawn = terrain.FindSpawnColumn(SpawnSearchColumn());
     glm::ivec2 local = glm::ivec2(ColumnToTile(spawn.x), ColumnToTile(spawn.y)) - SESSIONS[SESSION_OLD_WORLD].originTile;
     const SessionIslands& old = IslandsOf(SESSION_OLD_WORLD);

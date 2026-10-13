@@ -151,12 +151,14 @@ TEST(ProducerLocationTest, FarmModulesCountInRangeUpToTheFullCount) {
 TEST(TreeRegistryTest, TreesStandApart) {
     TestWorld& test = TestWorld::Get();
     std::vector<glm::ivec2> roots;
-    test.terrain.ForEachTreeRoot(test.spawnColumn - 200, test.spawnColumn + 200, [&](glm::ivec2 root) { roots.push_back(root); });
+    test.terrain.ForEachFoliageRoot(test.spawnColumn - 200, test.spawnColumn + 200, [&](glm::ivec2 root, int model) {
+        if (IsTreeModel(model)) roots.push_back(root);
+    });
     ASSERT_FALSE(roots.empty());
     for (size_t i = 0; i < roots.size(); i++) {
         for (size_t j = i + 1; j < roots.size(); j++) {
             glm::ivec2 d = glm::abs(roots[i] - roots[j]);
-            EXPECT_FALSE(d.x <= TerrainGenerator::TREE_SPACING && d.y <= TerrainGenerator::TREE_SPACING)
+            EXPECT_FALSE(d.x <= 2 && d.y <= 2)
                 << roots[i].x << "," << roots[i].y << " and " << roots[j].x << "," << roots[j].y;
         }
     }
@@ -229,17 +231,15 @@ TEST(TreeRegistryTest, NoRegrowthUnderABuilding) {
 }
 
 TEST(TreeRegistryTest, GeneratedChunksLeaveFelledTreesOut) {
-    VoxModel model;
-    ASSERT_TRUE(model.Load(std::string(ASSET_DIRECTORY) + "/tree.vox"));
-    TerrainGenerator generator(model);
+    TerrainGenerator generator(TestWorld::Get().foliage);
     FelledTrees felled;
     generator.SetFelledTrees(&felled);
 
     glm::ivec2 spawn = TestWorld::Get().spawnColumn;
     bool found = false;
     glm::ivec2 root(0);
-    generator.ForEachTreeRoot(spawn - 300, spawn + 300, [&](glm::ivec2 candidate) {
-        if (!found) {
+    generator.ForEachFoliageRoot(spawn - 300, spawn + 300, [&](glm::ivec2 candidate, int model) {
+        if (!found && IsTreeModel(model)) {
             root = candidate;
             found = true;
         }

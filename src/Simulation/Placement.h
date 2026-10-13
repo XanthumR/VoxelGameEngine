@@ -10,6 +10,7 @@
 class GameObjectRegistry;
 class OccupancyGrid;
 class RoadNetwork;
+class TreeRegistry;
 class VoxelWorld;
 
 // Buildings and roads stand on flat island ground: the first air voxel above the grass
@@ -53,6 +54,7 @@ struct PlacementContext {
     const OccupancyGrid& occupancy;
     const RoadNetwork& roads;
     const GameObjectRegistry* objects = nullptr; // For farm modules (no farms without it)
+    TreeRegistry* trees = nullptr;               // Trees in the way are cleared, not blocking (they block without it)
 };
 
 // Can a building of this type and rotation stand with its minimum corner on minTile?

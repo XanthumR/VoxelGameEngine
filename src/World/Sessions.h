@@ -47,15 +47,19 @@ constexpr int TilesToEdge(glm::ivec2 tile) {
     int b = SESSION_TILES - 1 - (local.x > local.y ? local.x : local.y);
     return a < b ? a : b;
 }
-// The trader's island: a fixed oval of land in the open sea, the same in every game (the islands
-// round it come from noise). TRADER_ISLAND_RADIUS is its half size in tiles along x and z.
-constexpr glm::ivec2 TRADER_ISLAND_RADIUS(7, 5);
+// The trader's island: a fixed rectangle of land with rounded corners in the open sea, the same in
+// every game; its straight sides are long enough for the trading post (7 tiles wide).
+// TRADER_ISLAND_RADIUS is its half size in tiles along x and z.
+constexpr glm::ivec2 TRADER_ISLAND_RADIUS(8, 6);
+constexpr int TRADER_ISLAND_CORNER = 3; // Tiles
 constexpr bool InTraderIsland(glm::ivec2 tile) {
     int session = SessionAtTile(tile);
     if (session < 0) return false;
     glm::ivec2 d = tile - SESSIONS[session].originTile - SESSIONS[session].traderTile;
-    return d.x * d.x * TRADER_ISLAND_RADIUS.y * TRADER_ISLAND_RADIUS.y + d.y * d.y * TRADER_ISLAND_RADIUS.x * TRADER_ISLAND_RADIUS.x <=
-           TRADER_ISLAND_RADIUS.x * TRADER_ISLAND_RADIUS.x * TRADER_ISLAND_RADIUS.y * TRADER_ISLAND_RADIUS.y;
+    int x = (d.x < 0 ? -d.x : d.x) - (TRADER_ISLAND_RADIUS.x - TRADER_ISLAND_CORNER);
+    int z = (d.y < 0 ? -d.y : d.y) - (TRADER_ISLAND_RADIUS.y - TRADER_ISLAND_CORNER);
+    if (x > TRADER_ISLAND_CORNER || z > TRADER_ISLAND_CORNER) return false;
+    return x <= 0 || z <= 0 || x * x + z * z <= TRADER_ISLAND_CORNER * TRADER_ISLAND_CORNER;
 }
 
 // The middle of a session's map, in world columns

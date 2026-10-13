@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <cstdlib>
 
-ChunkStreamer::ChunkStreamer(VoxelWorld& world, GpuChunkCache& cache, const VoxModel& trees, const VoxModel& palms)
-    : m_World(world), m_Cache(cache), m_Trees(trees), m_Palms(palms) {}
+ChunkStreamer::ChunkStreamer(VoxelWorld& world, GpuChunkCache& cache, const FoliageLibrary& foliage)
+    : m_World(world), m_Cache(cache), m_Foliage(foliage) {}
 
 ChunkStreamer::~ChunkStreamer() {
     Stop();
@@ -39,7 +39,7 @@ void ChunkStreamer::Stop() {
 }
 
 void ChunkStreamer::WorkerLoop() {
-    TerrainGenerator generator(m_Trees, &m_Palms);
+    TerrainGenerator generator(m_Foliage);
     generator.SetFelledTrees(m_Felled);
 
     while (m_Running) {

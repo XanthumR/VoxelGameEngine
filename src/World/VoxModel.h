@@ -11,7 +11,7 @@ struct VoxelOffset {
 };
 
 // A MagicaVoxel (.vox) model as voxel offsets from its root: centered on X/Z, base at y = 0.
-// Used for the trees stamped into the terrain.
+// Used for the foliage stamped into the terrain (World/Foliage.h).
 struct VoxModel {
     std::vector<VoxelOffset> voxels;
     glm::ivec3 min = glm::ivec3(0); // Bounds of the offsets

@@ -62,31 +62,24 @@ struct HarborFixture {
 
     HarborFixture() { harbor = AddHarbor(0); }
 
-    // A harbor on another coast of the spawn island: from the spawn out to sea in the next free
-    // direction until one fits. island 0 = the real island's ID; others pretend it is another island.
+    // A harbor on the spawn island's coast, the free spot nearest the spawn. island 0 = the real island's ID; others pretend it is another island.
     GameObjectId AddHarbor(IslandId island) {
         TestWorld& test = TestWorld::Get();
         PlacementContext context{ test.world, islands, occupancy, roads };
-        glm::ivec2 spawn(ColumnToTile(test.spawnColumn.x), ColumnToTile(test.spawnColumn.y));
-        for (glm::ivec2 direction : { glm::ivec2(1, 0), glm::ivec2(-1, 0), glm::ivec2(0, 1), glm::ivec2(0, -1) }) {
-            for (int ring = 0; ring < 120; ring++) {
-                glm::ivec2 tile = spawn + direction * ring;
-                test.LoadAround(tile * TILE_SIZE, 2);
-                for (uint8_t rotation = 0; rotation < 4; rotation++) {
-                    PlacementCheck check = ValidatePlacement(context, BUILDING_HARBOR, rotation, tile);
-                    if (check.error != PlacementError::None) continue;
-                    GameObjectId id = objects.Create();
-                    objects.Building(id).type = BUILDING_HARBOR;
-                    objects.Building(id).rotation = rotation;
-                    objects.Building(id).island = island == 0 ? check.island : island;
-                    glm::ivec2 tiles = FootprintTiles(BUILDING_TYPES[BUILDING_HARBOR], rotation);
-                    objects.Anchor(id).origin = glm::ivec3(tile.x * TILE_SIZE, BUILD_GROUND_Y, tile.y * TILE_SIZE);
-                    objects.Anchor(id).footprint = tiles * TILE_SIZE;
-                    occupancy.Occupy(tile, tiles, id);
-                    economy.OnWarehouseAdded(objects.Building(id).island);
-                    return id;
-                }
-            }
+        glm::ivec2 tile;
+        uint8_t rotation;
+        if (test.FindCoastSpot(context, BUILDING_HARBOR, tile, rotation)) {
+            GameObjectId id = objects.Create();
+            objects.Building(id).type = BUILDING_HARBOR;
+            objects.Building(id).rotation = rotation;
+            PlacementCheck check = ValidatePlacement(context, BUILDING_HARBOR, rotation, tile);
+            objects.Building(id).island = island == 0 ? check.island : island;
+            glm::ivec2 tiles = FootprintTiles(BUILDING_TYPES[BUILDING_HARBOR], rotation);
+            objects.Anchor(id).origin = glm::ivec3(tile.x * TILE_SIZE, BUILD_GROUND_Y, tile.y * TILE_SIZE);
+            objects.Anchor(id).footprint = tiles * TILE_SIZE;
+            occupancy.Occupy(tile, tiles, id);
+            economy.OnWarehouseAdded(objects.Building(id).island);
+            return id;
         }
         return INVALID_GAME_OBJECT;
     }

@@ -5,6 +5,7 @@
 #include "Simulation/ProducerLocation.h"
 #include "Simulation/OccupancyGrid.h"
 #include "Simulation/RoadNetwork.h"
+#include "Simulation/TreeRegistry.h"
 #include "World/BlockTypes.h"
 #include "World/Sessions.h"
 #include "World/TerrainGenerator.h"
@@ -30,13 +31,26 @@ const char* PlacementErrorText(PlacementError error) {
     case PlacementError::NeedsStorage: return "settle this island with a warehouse or harbor first";
     case PlacementError::NeedsShip: return "needs a ship of yours within 4 tiles carrying the planks";
     case PlacementError::OtherIsland: return "a building can only move within its island";
-    case PlacementError::NeedsFarm: return "must be near its farm (3 tiles), and the farm must have room";
+    case PlacementError::NeedsFarm: return "must be near its farm, and the farm must have room";
     case PlacementError::TraderIsland: return "this island belongs to a trader";
     }
     return "?";
 }
 
 namespace {
+
+// A column under a standing tree counts as open ground: placing there fells the tree, as in Anno
+bool UnderTree(const PlacementContext& context, int x, int z) {
+    return context.trees && context.trees->AnyTreeOver(glm::ivec2(x, z), glm::ivec2(x, z));
+}
+
+// Space for `clearance` voxels above the ground, but for trees
+bool ColumnClear(const PlacementContext& context, int x, int z, int clearance, bool underTree) {
+    for (int y = BUILD_GROUND_Y; y < BUILD_GROUND_Y + clearance; y++) {
+        if (IsSolidBlock(context.world.GetVoxel(x, y, z))) return underTree || UnderTree(context, x, z);
+    }
+    return true;
+}
 
 // Checks the columns of a rectangle: loaded, grass at island height, `clearance` voxels of
 // non-solid space above, and all on one island (also the island already in check, if any)
@@ -48,15 +62,17 @@ bool CheckGround(const PlacementContext& context, glm::ivec2 minColumn, glm::ive
                 check.error = PlacementError::NotLoaded;
                 return false;
             }
+            bool underTree = false; // A trunk stands on the ground voxel
             if (world.GetVoxel(x, BUILD_GROUND_Y - 1, z) != Block::GRASS) {
-                check.error = world.GetVoxel(x, SEA_LEVEL, z) == Block::WATER ? PlacementError::Water : PlacementError::NotFlat;
-                return false;
-            }
-            for (int y = BUILD_GROUND_Y; y < BUILD_GROUND_Y + clearance; y++) {
-                if (IsSolidBlock(world.GetVoxel(x, y, z))) {
-                    check.error = PlacementError::Blocked;
+                underTree = context.islands.Terrain().TerrainHeightAt(x, z) == BUILD_GROUND_Y && UnderTree(context, x, z);
+                if (!underTree) {
+                    check.error = world.GetVoxel(x, SEA_LEVEL, z) == Block::WATER ? PlacementError::Water : PlacementError::NotFlat;
                     return false;
                 }
+            }
+            if (!ColumnClear(context, x, z, clearance, underTree)) {
+                check.error = PlacementError::Blocked;
+                return false;
             }
 
             IslandId island = context.islands.IslandIdAt(x, z);
@@ -112,11 +128,9 @@ bool CheckShoreTile(const PlacementContext& context, glm::ivec2 minColumn, int c
                     if (island != NO_ISLAND) check.island = island;
                 }
             }
-            for (int y = BUILD_GROUND_Y; y < BUILD_GROUND_Y + clearance; y++) {
-                if (IsSolidBlock(world.GetVoxel(x, y, z))) {
-                    check.error = PlacementError::Blocked;
-                    return false;
-                }
+            if (!ColumnClear(context, x, z, clearance, false)) {
+                check.error = PlacementError::Blocked;
+                return false;
             }
         }
     }
@@ -166,6 +180,12 @@ PlacementCheck ValidatePlacement(const PlacementContext& context, uint16_t type,
             for (int u = 0; u < building.footprintWidth; u++) {
                 glm::ivec2 tile = minTile + RotateToFootprint(u, v, rotation, tiles);
                 if (!CheckShoreTile(context, tile * TILE_SIZE, BuildingHeight(building), dock, count, check)) return check;
+                // The dock's end is all open sea, where ships and boats moor
+                TerrainGenerator::TileKind kind = context.islands.Terrain().TileKindAt(tile.x, tile.y);
+                if (v == depthTiles - 1 && kind != TerrainGenerator::TileKind::Sea && kind != TerrainGenerator::TileKind::Cliff) {
+                    check.error = PlacementError::DockNotOverWater;
+                    return check;
+                }
             }
         }
         if (count.islandHeightColumns * 2 < count.landColumns || check.island == NO_ISLAND) {

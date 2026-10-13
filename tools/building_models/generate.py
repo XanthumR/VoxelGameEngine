@@ -56,6 +56,8 @@ COLORS = {
     170: (219, 224, 204), 171: (204, 163, 61), 172: (128, 20, 31), 173: (168, 77, 51), 174: (140, 168, 194),
     175: (219, 168, 158), 176: (92, 148, 128), 177: (204, 184, 140), 178: (230, 222, 199),
     188: (92, 158, 122), 189: (189, 107, 61), 190: (245, 199, 61), 191: (92, 36, 102), 192: (235, 230, 219),
+    # Foliage (tools/foliage/generate.py)
+    193: (92, 61, 36), 194: (56, 38, 23), 195: (224, 219, 204), 196: (36, 33, 31), 197: (23, 64, 13), 198: (38, 94, 20), 199: (64, 128, 28), 200: (112, 148, 38), 201: (13, 46, 23), 202: (23, 69, 33), 203: (76, 107, 31), 204: (158, 156, 145), 205: (122, 120, 115), 206: (87, 87, 84), 207: (242, 240, 230), 208: (240, 153, 184), 209: (178, 20, 31), 210: (76, 107, 219), 211: (143, 76, 184), 212: (56, 117, 36), 213: (61, 138, 31), 214: (33, 92, 18), 215: (140, 107, 71), 216: (107, 168, 46), 217: (92, 143, 117), 218: (230, 46, 51), 219: (92, 61, 31), 220: (204, 36, 26), 221: (128, 112, 92), 222: (242, 140, 31),
 }
 
 
@@ -1048,29 +1050,6 @@ def grain_farm():
     return m
 
 
-def wheat_field():
-    """36 x 36 x 10: a grain field (a farm module): rows of ripe wheat over furrows, a few sheaves
-    and a scarecrow."""
-    m = Model(36, 36, 10)
-    for v in range(36):
-        for u in range(36):
-            if v % 4 == 3:
-                m.set(u, v, 0, GARDEN_SOIL)  # Furrow
-                continue
-            top = 3 + (u * 7 + v * 11) % 3 // 2
-            m.box(u, v, 0, u, v, top - 1, WHEAT_STALK)
-            m.set(u, v, top, WHEAT)
-            if (u * 13 + v * 5) % 4 == 0:
-                m.set(u, v, top + 1, WHEAT)
-    # A scarecrow in the middle
-    m.box(17, 17, 0, 17, 17, 8, TIMBER_DARK)
-    m.box(14, 17, 6, 20, 17, 6, TIMBER_DARK)
-    m.box(16, 17, 4, 18, 17, 6, SHUTTER_BLUE)
-    m.box(16, 17, 7, 18, 17, 8, SACK)
-    m.box(15, 16, 9, 19, 18, 9, HAY)
-    return m
-
-
 def flour_mill():
     """36 x 36 x 64: a tower windmill: a tapering round tower of white plaster on a stone base,
     a balcony round it, a thatched cap and four lattice sails with canvas; sacks of flour by the
@@ -1454,20 +1433,6 @@ def cattle_farm():
     m.box(27, 5, 0, 33, 11, 3, HAY)
     m.box(28, 6, 4, 32, 10, 5, HAY)
     m.box(29, 7, 6, 31, 9, 6, HAY)
-    return m
-
-
-def pasture():
-    """36 x 36 x 12: a cattle pasture (a farm module): a fenced meadow with cows, a water trough,
-    a shade tree and a salt lick."""
-    m = Model(36, 36, 12)
-    fence(m, 0, 0, 35, 35, gate=(15, 19))
-    m.box(26, 4, 0, 33, 5, 1, TIMBER_DARK)
-    m.box(27, 4, 1, 32, 5, 1, WELL_WATER)
-    tree(m, 30, 29, 0, height=8, crown=4)
-    m.box(4, 30, 0, 5, 31, 1, STONE_LIGHT)
-    for u, v in ((12, 4), (3, 14), (16, 31), (27, 16)):
-        m.set(u, v, 0, FLOWER_YELLOW)
     return m
 
 
@@ -1924,10 +1889,10 @@ def moving_parts():
 
     # Wheat field: a crow circles over it
     def crow(c):
-        c.box(27, 17, 13, 27, 18, 13, COAL)
-        c.box(25, 17, 14, 29, 17, 14, COAL)
-        c.set(27, 19, 13, BRASS)
-    part('wheat_field', 'crow', (17, 17, 13), 'spin', 'up', 0.7, 0, crow)
+        c.box(45, 35, 13, 45, 36, 13, COAL)
+        c.box(43, 35, 14, 47, 35, 14, COAL)
+        c.set(45, 37, 13, BRASS)
+    part('wheat_field', 'crow', (35, 35, 13), 'spin', 'up', 0.7, 0, crow)
 
     # Rendering works: paddles stir the vats
     for i, cu in enumerate((26, 31)):
@@ -1991,7 +1956,7 @@ def moving_parts():
     # Animals walking about
     wander('sheepfold', 'sheep', (16, 13), (8, 8), 5)
     wander('pigsty', 'pig', (11, 13), (5, 6), 3)
-    wander('pasture', 'cow', (15, 16), (8, 7), 4)
+    wander('pasture', 'cow', (18, 24), (9, 13), 4)
     wander('cattle_farm', 'calf', (22, 8), (3, 2), 1)
     wander('pig_farm', 'pig', (7, 11), (2, 1), 1)
     wander('sheep_farm', 'sheep', (9, 6), (3, 2), 1)
@@ -2510,30 +2475,6 @@ def vineyard():
     return m
 
 
-def vine_rows():
-    """36 x 36 x 12: vine rows (a farm module): trellises of posts and wires heavy with leaves and
-    grape clusters, over bare soil."""
-    m = Model(36, 36, 12)
-    for v in range(36):
-        for u in range(36):
-            m.set(u, v, 0, GARDEN_SOIL if v % 6 else 1)
-    for v in range(2, 36, 6):
-        for u in range(1, 35):
-            if u % 6 == 1:
-                m.box(u, v, 1, u, v, 8, TIMBER_DARK)  # Posts
-            m.set(u, v, 4, FENCE_WOOD)                # Wires
-            m.set(u, v, 7, FENCE_WOOD)
-            for y in range(3, 9):
-                for dv in (-1, 0, 1):
-                    if (u * 7 + y * 3 + dv * 5 + v) % 4 != 0:
-                        m.set(u, v + dv, y, LEAVES)
-            if (u * 5 + v) % 7 == 0:
-                m.box(u, v - 1, 3, u, v - 1, 4, GRAPE)
-            if (u * 3 + v) % 9 == 0:
-                m.box(u, v + 1, 4, u, v + 1, 5, GRAPE)
-    return m
-
-
 def champagne_cellar():
     """36 x 36 x 40: a champagne house: a stone manor with a little tower, an arched cellar door
     going down into the ground, barrels and racks of green bottles, a courtyard."""
@@ -2635,6 +2576,392 @@ def moving_parts_82(part):
     part('goldsmiths', 'sign', (28, 4, 12), 'swing', 'across', 1.4, 0.25, ring_sign)
 
 
+# --- Anno 1800 footprints ----------------------------------------------------------------------
+# Anno 1800's building sizes in tiles (Anno Designer's building data). Each model above is the
+# building itself; enlarge() sets it into the bigger footprint (at the front, in the middle; coastal
+# ones at the back, on the water) and fills the ground round it with a yard of the building's kind:
+# paving or bare earth, a wall or fence, sheds, and the goods it works with.
+# model name -> (width, depth in tiles, yard kit)
+ANNO_SIZES = {
+    'warehouse_1': (5, 5, 'storage'),
+    'marketplace_1': (6, 5, 'market'),
+    'fishery_1': (5, 11, 'fishery'),  # The short side faces the sea
+    'lumberjack_1': (4, 4, 'timber'),
+    'sawmill_1': (4, 3, 'timber'),
+    'framework_knitter_1': (4, 4, 'textile'),
+    'slaughterhouse_1': (4, 3, 'food'),
+    'harbor_1': (7, 9, 'harbor'),     # The short side faces the sea
+    'school_1': (6, 5, 'garden'),
+    'grain_farm_1': (4, 3, 'farm'),
+    'flour_mill_1': (4, 3, 'farm'),
+    'bakery_1': (4, 3, 'food'),
+    'soap_factory_1': (4, 4, 'industry'),
+    'clay_pit_1': (5, 5, 'clay'),
+    'brick_factory_1': (5, 5, 'bricks'),
+    'variety_theatre_1': (4, 5, 'garden'),
+    'cattle_farm_1': (4, 5, 'farm'),
+    'charcoal_kiln_1': (5, 5, 'charcoal'),
+    'furnace_1': (7, 4, 'iron'),
+    'steelworks_1': (10, 5, 'steel'),
+    'cannery_1': (7, 6, 'food'),
+    'sewing_machine_factory_1': (9, 6, 'industry'),
+    'university_1': (9, 6, 'garden'),
+    'sand_mine_1': (10, 6, 'sand'),
+    'glassworks_1': (6, 4, 'glass'),
+    'window_makers_1': (5, 5, 'glass'),
+    'spectacle_factory_1': (6, 4, 'industry'),
+    'filament_factory_1': (7, 6, 'industry'),
+    'light_bulb_factory_1': (6, 6, 'industry'),
+    'bank_1': (12, 10, 'garden'),
+    'vineyard_1': (4, 3, 'farm'),
+    'champagne_cellar_1': (6, 5, 'cellar'),
+    'goldsmiths_1': (5, 4, 'industry'),
+}
+TILE = 12
+DOCK_ROWS = 5  # Tiles of a coastal footprint over the water (dockRows in BuildingTypes.h), as in Anno 1800
+
+# What each kind of yard holds: its ground, its edge, whether it has sheds, and the props one per
+# free tile (picked at random, so a prop listed twice comes twice as often)
+YARD_KITS = {
+    'storage': ('cobble', 'wall', True, ['crates', 'barrels', 'sacks', 'cart:85', 'crates']),
+    'market': ('cobble', None, False, ['stall', 'stall', 'stall', 'crates', 'barrels', 'lamp', 'tree']),
+    'timber': ('earth', 'fence', False, ['logs', 'logs', 'planks', 'cart:64']),
+    'textile': ('cobble', 'wall', True, ['sacks:96', 'crates', 'barrels', 'cart:96']),
+    'food': ('cobble', 'wall', True, ['barrels', 'crates', 'sacks', 'cart:177']),
+    'farm': ('grass', 'fence', False, ['hay', 'hay', 'vegetables', 'vegetables', 'sacks', 'cart:84', 'tree']),
+    'industry': ('cobble', 'wall', True, ['crates', 'crates', 'barrels', 'heap:163', 'cart:85', 'lamp']),
+    'clay': ('earth', 'fence', False, ['heap:162', 'heap:162', 'heap:162', 'barrels', 'cart:162']),
+    'bricks': ('cobble', 'wall', True, ['bricks', 'bricks', 'bricks', 'heap:162', 'heap:163', 'cart:173']),
+    'charcoal': ('earth', 'fence', False, ['logs', 'logs', 'heap:163', 'heap:163', 'cart:163']),
+    'iron': ('cobble', 'wall', True, ['heap:164', 'heap:164', 'heap:163', 'heap:163', 'steel', 'cart:164']),
+    'steel': ('cobble', 'wall', True, ['steel', 'steel', 'steel', 'heap:164', 'heap:163', 'heap:163', 'cart:165']),
+    'glass': ('cobble', 'wall', True, ['glass', 'glass', 'heap:61', 'crates', 'cart:188']),
+    'sand': ('earth', 'fence', False, ['heap:61', 'heap:61', 'heap:61', 'heap:61', 'barrels', 'cart:61']),
+    'cellar': ('cobble', 'wall', False, ['barrels', 'barrels', 'barrels', 'crates', 'cart:86', 'tree']),
+    'garden': ('garden', 'hedge', False, ['flowers', 'flowers', 'tree', 'tree', 'lamp', 'bench']),
+    'harbor': ('quay', None, True, ['crates', 'barrels', 'sacks', 'hay', 'crates', 'cart:85']),
+    'fishery': ('quay', None, False, ['fish', 'fish', 'barrels', 'crates', 'nets']),
+}
+
+
+def yard_cart(m, u, v, y, cargo):
+    """A two-wheeled hand cart with a load."""
+    m.box(u + 1, v + 3, y + 2, u + 8, v + 6, y + 2, TIMBER_LIGHT)
+    m.box(u + 1, v + 3, y + 3, u + 1, v + 6, y + 4, TIMBER_DARK)
+    m.box(u + 8, v + 3, y + 3, u + 8, v + 6, y + 4, TIMBER_DARK)
+    m.box(u + 2, v + 4, y + 3, u + 7, v + 5, y + 4, cargo)
+    for wheel_v in (v + 2, v + 7):
+        m.box(u + 3, wheel_v, y, u + 5, wheel_v, y + 2, TIMBER_DARK)
+        m.set(u + 4, wheel_v, y + 1, IRON)
+    m.box(u + 9, v + 4, y + 1, u + 10, v + 4, y + 1, TIMBER_DARK)  # Shafts
+    m.box(u + 9, v + 5, y + 1, u + 10, v + 5, y + 1, TIMBER_DARK)
+
+
+def yard_heap(m, u, v, y, block, rng):
+    """A rough mound of a raw material."""
+    for layer in range(5):
+        for hv in range(v + 1 + layer, v + 11 - layer):
+            for hu in range(u + 1 + layer, u + 11 - layer):
+                if layer < 3 or rng.random() < 0.8:
+                    m.set(hu, hv, y + layer, block)
+
+
+def yard_shed(m, u0, v0, u1, v1, y, wall, rng):
+    """A low open-fronted lean-to for storage: a back wall, posts at the front, a slate roof
+    sloping down to the front, goods inside."""
+    for u in list(range(u0, u1 + 1, 5)) + [u1]:
+        m.box(u, v0, y, u, v0, y + 5, TIMBER_DARK)
+    m.box(u0, v1, y, u1, v1, y + 8, wall)
+    for v in range(v0, v1 + 1):
+        top = y + 5 + 3 * (v - v0) // max(1, v1 - v0)
+        m.box(u0, v, y, u0, v, top, wall)
+        m.box(u1, v, y, u1, v, top, wall)
+        m.box(u0 - 1, v, top + 1, u1 + 1, v, top + 1, ROOF_SLATE)
+    m.box(u0 - 1, v0 - 1, y + 6, u1 + 1, v0 - 1, y + 6, ROOF_SLATE)  # The eave
+    for u in range(u0 + 2, u1 - 3, 4):
+        crate(m, u, v1 - 4, y)
+        if rng.random() < 0.5:
+            crate(m, u, v1 - 4, y + 3)
+    barrel(m, u0 + 2, v0 + 3, y)
+
+
+def yard_prop(m, kind, u, v, y, rng):
+    """One prop on the tile whose corner is (u, v)."""
+    name, _, block = kind.partition(':')
+    if name == 'crates':
+        for du, dv in ((2, 2), (6, 2), (2, 6), (6, 7)):
+            if rng.random() < 0.8:
+                crate(m, u + du, v + dv, y)
+        crate(m, u + 3, v + 3, y + 3)
+    elif name == 'barrels':
+        for du, dv in ((2, 2), (6, 2), (2, 6), (6, 6)):
+            if rng.random() < 0.85:
+                barrel(m, u + du, v + dv, y)
+    elif name == 'sacks':
+        for row in range(3):
+            sacks(m, u + 1, v + 2 + 3 * row, y, 3, int(block) if block else SACK)
+        sacks(m, u + 2, v + 4, y + 2, 2, int(block) if block else SACK)
+    elif name == 'cart':
+        yard_cart(m, u, v, y, int(block))
+    elif name == 'heap':
+        yard_heap(m, u, v, y, int(block), rng)
+    elif name == 'logs':
+        for layer in range(4):
+            for lv in range(v + 2 + layer, v + 9 - layer):
+                m.box(u + 1, lv, y + layer, u + 10, lv, y + layer, TIMBER_LIGHT)
+                m.set(u + 1, lv, y + layer, PLASTER_CREAM)
+                m.set(u + 10, lv, y + layer, PLASTER_CREAM)
+    elif name == 'planks':
+        for layer in range(5):
+            m.box(u + 2, v + 2, y + layer, u + 9, v + 8, y + layer, TIMBER_LIGHT if layer % 2 == 0 else PLASTER_CREAM)
+    elif name == 'bricks':
+        for pu, pv in ((u + 1, v + 1), (u + 6, v + 6)):
+            m.box(pu, pv, y, pu + 4, pv + 4, y, TIMBER_DARK)  # Pallet
+            for layer in range(1, 5):
+                m.box(pu, pv, y + layer, pu + 4, pv + 4, y + layer, BRICK_RED if layer % 2 else CHIMNEY_BRICK)
+    elif name == 'steel':
+        for layer in range(4):  # Beams on timber spacers, layer on layer
+            for spacer in (u + 2, u + 9):
+                m.box(spacer, v + 2, y + 2 * layer, spacer, v + 8, y + 2 * layer, TIMBER_DARK)
+            for bar in range(v + 2, v + 9, 2):
+                m.box(u + 1, bar, y + 2 * layer + 1, u + 10, bar, y + 2 * layer + 1, STEEL)
+    elif name == 'glass':
+        m.box(u + 1, v + 2, y, u + 10, v + 3, y, TIMBER_DARK)  # A rack of panes on edge
+        for pu in range(u + 2, u + 10, 2):
+            m.box(pu, v + 2, y + 1, pu, v + 3, y + 6, GLASS_GREEN if pu % 4 else WINDOW_GLASS)
+        crate(m, u + 2, v + 6, y)
+        crate(m, u + 6, v + 6, y)
+    elif name == 'hay':
+        for du, dv in ((1, 1), (6, 1), (1, 6)):
+            m.box(u + du, v + dv, y, u + du + 3, v + dv + 3, y + 2, HAY)
+        m.box(u + 3, v + 3, y + 3, u + 6, v + 6, y + 4, HAY)
+    elif name == 'vegetables':
+        for row in range(v + 1, v + 11):
+            m.box(u + 1, row, y, u + 10, row, y, GARDEN_SOIL)
+            if row % 2:
+                for col in range(u + 1, u + 11, 2):
+                    m.set(col, row, y + 1, VEGETABLES)
+    elif name == 'tree':
+        tree(m, u + 5, v + 5, y, height=rng.choice((8, 9, 10)), crown=4)
+    elif name == 'lamp':
+        lamp_post(m, u + 5, v + 5)
+    elif name == 'flowers':
+        m.ring(u + 2, v + 2, u + 9, v + 9, y, y, STONE_LIGHT)
+        m.box(u + 3, v + 3, y, u + 8, v + 8, y, GARDEN_SOIL)
+        for fu in range(u + 3, u + 9):
+            for fv in range(v + 3, v + 9):
+                m.set(fu, fv, y + 1, rng.choice((FLOWER_RED, FLOWER_YELLOW, LEAVES, LEAVES)))
+    elif name == 'bench':
+        m.box(u + 3, v + 5, y + 2, u + 8, v + 6, y + 2, TIMBER_LIGHT)
+        m.box(u + 3, v + 7, y + 3, u + 8, v + 7, y + 4, TIMBER_LIGHT)
+        for leg in (u + 3, u + 8):
+            m.box(leg, v + 5, y, leg, v + 5, y + 1, IRON)
+            m.box(leg, v + 7, y, leg, v + 7, y + 2, IRON)
+        lamp_post(m, u + 1, v + 9)
+    elif name == 'stall':
+        colors = (AWNING_RED, AWNING_WHITE, AWNING_BLUE, AWNING_YELLOW)
+        awning = rng.choice(colors)
+        for pu, pv in ((u + 1, v + 1), (u + 10, v + 1), (u + 1, v + 9), (u + 10, v + 9)):
+            m.box(pu, pv, y, pu, pv, y + 8, TIMBER_DARK)
+        for av in range(v, v + 11):
+            m.box(u, av, y + 9 + (1 if 3 <= av - v <= 7 else 0), u + 11, av, y + 9 + (1 if 3 <= av - v <= 7 else 0),
+                  awning if (av - v) % 2 == 0 else AWNING_WHITE)
+        m.box(u + 2, v + 2, y, u + 9, v + 3, y + 2, TIMBER_LIGHT)  # Counter
+        goods = rng.choice((VEGETABLES, FISH_SILVER, BREAD, WOOL_WHITE, SAUSAGE, FLOWER_RED))
+        m.box(u + 2, v + 2, y + 3, u + 9, v + 3, y + 3, goods)
+        crate(m, u + 3, v + 6, y)
+        barrel(m, u + 7, v + 6, y)
+    elif name == 'fish':
+        for pu in (u + 1, u + 10):
+            m.box(pu, v + 5, y, pu, v + 5, y + 8, TIMBER_DARK)
+        m.box(u + 1, v + 5, y + 8, u + 10, v + 5, y + 8, TIMBER_DARK)
+        for fu in range(u + 2, u + 10, 2):
+            m.box(fu, v + 5, y + 5, fu, v + 5, y + 7, FISH_SILVER)
+        barrel(m, u + 3, v + 8, y)
+    elif name == 'nets':
+        for nu in range(u + 1, u + 11):
+            for nv in range(v + 2, v + 10):
+                if (nu + nv) % 2 == 0:
+                    m.set(nu, nv, y, FENCE_WOOD)
+        m.box(u + 4, v + 4, y + 1, u + 6, v + 6, y + 1, FENCE_WOOD)
+
+
+def enlarge(name, old, tiles_w, tiles_d, kit):
+    """The model old set into a footprint of tiles_w x tiles_d tiles with a yard round it.
+    Returns the new model and where old's corner went (du, dv)."""
+    ground, edge, has_sheds, props = YARD_KITS[kit]
+    W, D = tiles_w * TILE, tiles_d * TILE
+    coastal = ground == 'quay'
+    du = (W - old.width) // 2 // TILE * TILE  # Whole tiles, so the yard's tiles line up
+    # Coastal: DOCK_ROWS of the footprint at the back stand over the water. The model's own two dock
+    # rows start where the new dock does, and its pier is drawn on out to the dock's end.
+    dock_v = D - DOCK_ROWS * TILE
+    dv = dock_v - (old.depth - 2 * TILE) if coastal else 0
+    m = Model(W, D, old.height)
+    for (u, v, y), block in old.voxels.items():
+        m.voxels[(u + du, v + dv, y)] = block
+    G = 6 if coastal else 0  # Ground level in the model: coastal models reach down into the sea
+    if coastal:
+        rows = {}
+        for (u, v, y), block in old.voxels.items():
+            if v >= old.depth - TILE and block != BOAT_BERTH:
+                rows.setdefault(v, []).append((u, y, block))
+        for v in range(dv + old.depth, D):  # The pier's last tile again and again, pilings and all
+            for u, y, block in rows.get(old.depth - TILE + (v - dv - old.depth) % TILE, []):
+                m.voxels[(u + du, v, y)] = block
+        for (u, v, y), block in list(m.voxels.items()):  # The berth to the dock's end
+            if block == BOAT_BERTH:
+                del m.voxels[(u, v, y)]
+                m.voxels[(u, D - 1, y)] = BOAT_BERTH
+
+    def free(u, v):
+        return not (du <= u < du + old.width and dv <= v < dv + old.depth)
+
+    rng = __import__('random').Random(name)
+
+    # Ground
+    for v in range(D):
+        for u in range(W):
+            if not free(u, v):
+                continue
+            if coastal:
+                if v < dock_v:  # Beside the pier the dock rows stay open water
+                    m.box(u, v, 0, u, v, G - 2, STONE_DARK)
+                    quay = v >= dock_v - 7
+                    m.set(u, v, G - 1, (COBBLE if (u // 3 + v // 3) % 2 else STONE_LIGHT) if quay else 1)
+            elif ground == 'cobble':
+                m.set(u, v, 0, COBBLE if (u // 3 + v // 3) % 2 else STONE_LIGHT)
+            elif ground == 'earth' and (u * 7 + v * 13) % 5 < 3:
+                m.set(u, v, 0, MUD)
+            elif ground == 'garden' and (u % TILE < 2 or v % TILE < 2):
+                m.set(u, v, 0, COBBLE)  # Walks between the beds
+
+    # Edge: round the yard, open at the front (the road side)
+    if edge is not None:
+        for v in range(D):
+            for u in range(W):
+                border = u in (0, W - 1) or v == D - 1
+                if not border or not free(u, v):
+                    continue
+                if edge == 'wall':
+                    m.box(u, v, 0, u, v, 2, STONE_LIGHT)
+                    m.set(u, v, 3, STONE_DARK)
+                elif edge == 'hedge':
+                    m.box(u, v, 0, u, v, 2, LEAVES)
+                elif (u + v) % 3 == 0:
+                    m.box(u, v, 0, u, v, 3, FENCE_WOOD)
+                else:
+                    m.set(u, v, 1, FENCE_WOOD)
+                    m.set(u, v, 3, FENCE_WOOD)
+
+    # Tiles free of the building: sheds on pairs of free tiles first, then a prop on each other one
+    cells = [(cu, cv) for cv in range(tiles_d) for cu in range(tiles_w)
+             if all(free(cu * TILE + i, cv * TILE + j) for i in (0, TILE - 1) for j in (0, TILE - 1))
+             and (not coastal or cv * TILE < dock_v)]
+    taken = set()
+    sheds = len(cells) // 12 + (1 if len(cells) >= 4 else 0) if has_sheds else 0  # A few, so the building stays the eye-catcher
+    for cu, cv in sorted(cells, key=lambda cell: -cell[1]):  # At the back first
+        if sheds > 0:
+            pair = (cu + 1, cv)
+            if (cu, cv) in taken or pair not in cells or pair in taken or cv * TILE >= (dock_v if coastal else D):
+                continue
+            sheds -= 1
+            taken.update(((cu, cv), pair))
+            yard_shed(m, cu * TILE + 1, cv * TILE + 1, cu * TILE + 2 * TILE - 2, cv * TILE + TILE - 2, G, STONE_LIGHT if ground == 'cobble' else TIMBER_LIGHT, rng)
+    fountain = ground == 'garden'
+    for cu, cv in cells:
+        if (cu, cv) in taken:
+            continue
+        if fountain and (cu + 1, cv) in cells and (cu, cv + 1) in cells and (cu + 1, cv + 1) in cells and \
+                not {(cu + 1, cv), (cu, cv + 1), (cu + 1, cv + 1)} & taken:
+            fountain = False
+            taken.update(((cu + 1, cv), (cu, cv + 1), (cu + 1, cv + 1)))
+            cu0, cv0 = cu * TILE + TILE, cv * TILE + TILE
+            cylinder(m, cu0, cv0, 9, 0, 2, STONE_LIGHT, hollow=True)
+            cylinder(m, cu0, cv0, 8, 0, 1, WELL_WATER)
+            cylinder(m, cu0, cv0, 2, 0, 6, STONE_LIGHT)
+            cylinder(m, cu0, cv0, 3, 7, 7, STONE_LIGHT)
+            m.set(cu0, cv0, 8, WELL_WATER)
+            continue
+        yard_prop(m, rng.choice(props), cu * TILE, cv * TILE, G, rng)
+    return m, (du, dv)
+
+
+def wheat_field(width=72, depth=72):
+    """A grain field (a farm module), 6 x 6 tiles: rows of ripe wheat over furrows, a few sheaves
+    and a scarecrow in the middle."""
+    m = Model(width, depth, 10)
+    for v in range(depth):
+        for u in range(width):
+            if v % 4 == 3:
+                m.set(u, v, 0, GARDEN_SOIL)  # Furrow
+                continue
+            top = 3 + (u * 7 + v * 11) % 3 // 2
+            m.box(u, v, 0, u, v, top - 1, WHEAT_STALK)
+            m.set(u, v, top, WHEAT)
+            if (u * 13 + v * 5) % 4 == 0:
+                m.set(u, v, top + 1, WHEAT)
+    cu, cv = width // 2 - 1, depth // 2 - 1
+    m.box(cu, cv, 0, cu, cv, 8, TIMBER_DARK)
+    m.box(cu - 3, cv, 6, cu + 3, cv, 6, TIMBER_DARK)
+    m.box(cu - 1, cv, 4, cu + 1, cv, 6, SHUTTER_BLUE)
+    m.box(cu - 1, cv, 7, cu + 1, cv, 8, SACK)
+    m.box(cu - 2, cv - 1, 9, cu + 2, cv + 1, 9, HAY)
+    for su, sv in ((10, 14), (52, 22), (24, 55), (60, 60)):  # Sheaves
+        m.box(su, sv, 0, su + 1, sv + 1, 5, WHEAT)
+    return m
+
+
+def pasture(width=36, depth=48):
+    """A cattle pasture (a farm module), 3 x 4 tiles: a fenced meadow with a water trough, a shade
+    tree and a salt lick."""
+    m = Model(width, depth, 12)
+    fence(m, 0, 0, width - 1, depth - 1, gate=(15, 19))
+    m.box(26, 4, 0, 33, 5, 1, TIMBER_DARK)
+    m.box(27, 4, 1, 32, 5, 1, WELL_WATER)
+    tree(m, 29, depth - 7, 0, height=8, crown=4)
+    m.box(4, depth - 6, 0, 5, depth - 5, 1, STONE_LIGHT)
+    for u, v in ((12, 4), (3, 14), (16, depth - 5), (27, 22), (8, 33)):
+        m.set(u, v, 0, FLOWER_YELLOW)
+    return m
+
+
+def vine_rows(width=48, depth=96):
+    """Vine rows (a farm module), 4 x 8 tiles: trellises of posts and wires heavy with leaves and
+    grape clusters, over bare soil."""
+    m = Model(width, depth, 12)
+    for v in range(depth):
+        for u in range(width):
+            m.set(u, v, 0, GARDEN_SOIL if v % 6 else 1)
+    for v in range(2, depth, 6):
+        for u in range(1, width - 1):
+            if u % 6 == 1:
+                m.box(u, v, 1, u, v, 8, TIMBER_DARK)  # Posts
+            m.set(u, v, 4, FENCE_WOOD)                # Wires
+            m.set(u, v, 7, FENCE_WOOD)
+            for y in range(3, 9):
+                for dv in (-1, 0, 1):
+                    if (u * 7 + y * 3 + dv * 5 + v) % 4 != 0:
+                        m.set(u, v + dv, y, LEAVES)
+            if (u * 5 + v) % 7 == 0:
+                m.box(u, v - 1, 3, u, v - 1, 4, GRAPE)
+            if (u * 3 + v) % 9 == 0:
+                m.box(u, v + 1, 4, u, v + 1, 5, GRAPE)
+    return m
+
+
+def anno_footprints(models, lines):
+    """Sets the models in ANNO_SIZES into their Anno footprints and moves their moving parts along."""
+    for name, (tiles_w, tiles_d, kit) in ANNO_SIZES.items():
+        models[name], (du, dv) = enlarge(name, models[name], tiles_w, tiles_d, kit)
+        building = name[:-2]
+        for i, line in enumerate(lines):
+            f = line.split(' ')
+            if f[0] == building:
+                f[2], f[3] = str(int(f[2]) + du), str(int(f[3]) + dv)
+                lines[i] = ' '.join(f)
+
+
 def main():
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     out = os.path.join(root, 'assets', 'buildings')
@@ -2699,6 +3026,7 @@ def main():
     }
     # The moving parts and their manifest are always written
     files, lines = moving_parts()
+    anno_footprints(models, lines)
     parts_dir = os.path.join(out, 'parts')
     os.makedirs(parts_dir, exist_ok=True)
     for name, model in files.items():
